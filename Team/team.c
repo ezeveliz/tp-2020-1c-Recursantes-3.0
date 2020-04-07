@@ -1,0 +1,5 @@
+#include "team.h"
+
+int main() {
+    return 0;
+}

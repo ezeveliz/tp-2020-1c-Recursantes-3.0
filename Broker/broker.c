@@ -15,7 +15,10 @@ int main(int argc, char **argv) {
     log_info(logger,"Log started.");
     set_config();
     log_info(logger,"Configuration succesfully setted.");
+    tests_broker();
     return EXIT_SUCCESS;
+
+
 }
 
 /*
@@ -42,3 +45,74 @@ void set_config(){
 /*
 * Configuration ends
 */
+
+
+void tests_broker(){
+    //mem_assert recive mensaje de error y una condicion, si falla el test lo loggea
+    #define test_assert(message, test) do { if (!(test)) { log_error(test_logger, message); tests_fail++; } tests_run++; } while (0)
+    t_log* test_logger = log_create("memory_tests.log", "MEM", true, LOG_LEVEL_TRACE);
+    int tests_run = 0;
+    int tests_fail = 0;
+
+    //le voy a pasar el debugger a esto a ver si anda
+    t_new_pokemon* new_pokemon = create_new_pokemon("Pikachu", 5, 2, 3);
+    t_new_pokemon* otro_new_pokemon = void_a_new_pokemon(new_pokemon_a_void(new_pokemon));
+
+    log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
+    log_destroy(test_logger);
+}
+
+
+// Pongo estas funciones aca, para debuggear facil, despues las ponemos en la libreria
+t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad){
+    t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
+    new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    new_pokemon->nombre_pokemon = nombre_pokemon;
+    new_pokemon->pos_x = pos_x;
+    new_pokemon->pos_y = pos_y;
+    new_pokemon->cantidad = cantidad;
+}
+
+void* new_pokemon_a_void(t_new_pokemon* new_pokemon){
+    void* stream = malloc(sizeof(uint32_t)*4 + new_pokemon->nombre_pokemon_length);
+    int offset = 0;
+
+    memcpy(stream + offset, &new_pokemon->nombre_pokemon_length, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, new_pokemon->nombre_pokemon, new_pokemon->nombre_pokemon_length);
+    offset += new_pokemon->nombre_pokemon_length;
+
+    memcpy(stream + offset, &new_pokemon->pos_x, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, &new_pokemon->pos_y, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, &new_pokemon->cantidad, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    return stream;
+}
+
+t_new_pokemon* void_a_new_pokemon(void* stream){
+    t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
+
+    memcpy(&(new_pokemon->nombre_pokemon_length), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    new_pokemon->nombre_pokemon = malloc(new_pokemon->nombre_pokemon_length);
+    memcpy(new_pokemon->nombre_pokemon, stream, new_pokemon->nombre_pokemon_length);
+    stream += new_pokemon->nombre_pokemon_length;
+
+    memcpy(&(new_pokemon->pos_x), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    memcpy(&(new_pokemon->pos_y), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    memcpy(&(new_pokemon->cantidad), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    return new_pokemon;
+}

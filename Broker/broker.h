@@ -5,6 +5,8 @@
 #ifndef TEAM_BROKER_H
 #define TEAM_BROKER_H
 
+#include <stdint.h>
+#include <string.h>
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
@@ -37,7 +39,20 @@ void read_config();
  * Configuration ends
  */
 
+
 t_log * logger;
 
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+    uint32_t cantidad;
+} t_new_pokemon;
+
+void tests_broker();
+t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
+void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
+t_new_pokemon* void_a_new_pokemon(void* stream);
 
 #endif //TEAM_BROKER_H

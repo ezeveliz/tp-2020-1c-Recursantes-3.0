@@ -42,6 +42,11 @@ void read_config();
 
 t_log * logger;
 
+/*
+ *
+ * NEW_POKEMON STARTS
+ *
+ * */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -50,9 +55,40 @@ typedef struct {
     uint32_t cantidad;
 } t_new_pokemon;
 
-void tests_broker();
+
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
 t_new_pokemon* void_a_new_pokemon(void* stream);
 
+/*
+ *
+ * NEW_POKEMON ENDS
+ *
+ * */
+
+/*
+ *
+ * GET_POKEMON STARTS
+ *
+ * */
+
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+
+} t_get_pokemon;
+
+t_get_pokemon* create_get_pokemon(char* nombre_pokemon);
+void* get_pokemon_a_void(t_get_pokemon* get_pokemon);
+t_get_pokemon* void_a_get_pokemon(void* stream);
+
+
+/*
+ *
+ * GET_POKEMON ENDS
+ *
+ * */
+
+void tests_broker();
 #endif //TEAM_BROKER_H

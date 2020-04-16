@@ -55,8 +55,13 @@ void tests_broker(){
     int tests_fail = 0;
 
     //le voy a pasar el debugger a esto a ver si anda
+
     t_new_pokemon* new_pokemon = create_new_pokemon("Pikachu", 5, 2, 3);
     t_new_pokemon* otro_new_pokemon = void_a_new_pokemon(new_pokemon_a_void(new_pokemon));
+   /* t_get_pokemon* Pika = create_get_pokemon("Pikachu");
+    void* streamPika = get_pokemon_a_void(Pika);
+    t_get_pokemon* PikaAgain = void_a_get_pokemon(streamPika);
+    log_info(logger, "%s encontrado!", PikaAgain->nombre_pokemon);*/
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
@@ -64,6 +69,11 @@ void tests_broker(){
 
 
 // Pongo estas funciones aca, para debuggear facil, despues las ponemos en la libreria
+/*
+ *
+ * NEW_POKEMON STARTS
+ *
+ * */
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad){
     t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
     new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
@@ -116,3 +126,54 @@ t_new_pokemon* void_a_new_pokemon(void* stream){
 
     return new_pokemon;
 }
+/*
+ *
+ * NEW_POKEMON ENDS
+ *
+ * */
+
+/*
+ *
+ * GET_POKEMON STARTS
+ *
+ * */
+
+t_get_pokemon* create_get_pokemon(char* nombre_pokemon){
+    t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
+    get_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    get_pokemon->nombre_pokemon = nombre_pokemon;
+    return get_pokemon;
+}
+
+void* get_pokemon_a_void(t_get_pokemon* get_pokemon){
+    void* stream = malloc(sizeof(uint32_t) + get_pokemon->nombre_pokemon_length);
+    int offset = 0;
+
+    memcpy(stream + offset, &get_pokemon->nombre_pokemon_length, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, get_pokemon->nombre_pokemon, get_pokemon->nombre_pokemon_length);
+    offset += get_pokemon->nombre_pokemon_length;
+
+    return stream;
+}
+
+t_get_pokemon* void_a_get_pokemon(void* stream){
+    t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
+
+    memcpy(&(get_pokemon->nombre_pokemon_length), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    get_pokemon->nombre_pokemon = malloc(get_pokemon->nombre_pokemon_length);
+    memcpy(get_pokemon->nombre_pokemon, stream, get_pokemon->nombre_pokemon_length);
+    stream += get_pokemon->nombre_pokemon_length;
+
+    return get_pokemon;
+}
+
+
+/*
+ *
+ * GET_POKEMON ENDS
+ *
+ * */

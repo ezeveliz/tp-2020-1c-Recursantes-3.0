@@ -112,16 +112,19 @@ void tests_broker(){
     int tests_run = 0;
     int tests_fail = 0;
 
-    //le voy a pasar el debugger a esto a ver si anda
+  /*  t_new_pokemon* new_pokemon = create_new_pokemon("Pikachu", 5, 2, 3);
+    t_new_pokemon* otro_new_pokemon = void_a_new_pokemon(new_pokemon_a_void(new_pokemon));*/
 
-    t_new_pokemon* new_pokemon = create_new_pokemon("Pikachu", 5, 2, 3);
-    t_new_pokemon* otro_new_pokemon = void_a_new_pokemon(new_pokemon_a_void(new_pokemon));
    /* t_get_pokemon* Pika = create_get_pokemon("Pikachu");
     void* streamPika = get_pokemon_a_void(Pika);
     t_get_pokemon* PikaAgain = void_a_get_pokemon(streamPika);
     log_info(logger, "%s encontrado!", PikaAgain->nombre_pokemon);*/
 
-    t_localized_pokemon* new_localized_pokemon = create_localized_pokemon("Tu vieja", 3, 1,1, 2,2, 3,3);
+   /* t_localized_pokemon* new_localized_pokemon = create_localized_pokemon("Tu vieja", 3, 1,1, 2,2, 3,3);
+    t_localized_pokemon* another_bitch = void_a_localized_pokemon(localized_pokemon_a_void(new_localized_pokemon));
+    for(int i=0;i<6;i++){
+        log_info(logger,"%d \n", another_bitch->coordenadas[i]);
+    }*/
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
@@ -238,17 +241,73 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
  *
  * */
 
+/*
+ *
+ * LOCALIZED_POKEMON STARTS
+ *
+ * */
 
 t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
     t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
     localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
-    localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2);
+    localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
 
     va_list ap;
     va_start(ap, cantidad_coordenadas*2);
     for (int i = 0; i < cantidad_coordenadas*2; ++i) {
         localized_pokemon->coordenadas[i] = va_arg(ap, uint32_t);
     }
+    va_end(ap);
+
+    return localized_pokemon;
 }
+
+void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon){
+    int len = sizeof(uint32_t) + localized_pokemon->nombre_pokemon_length + sizeof(uint32_t)*(localized_pokemon->cantidad_coordenas*2 + 1);
+    void* stream = malloc(sizeof(uint32_t) + localized_pokemon->nombre_pokemon_length + sizeof(uint32_t)*(localized_pokemon->cantidad_coordenas*2 + 1));
+    int offset = 0;
+
+    memcpy(stream + offset, &localized_pokemon->nombre_pokemon_length, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, localized_pokemon->nombre_pokemon, localized_pokemon->nombre_pokemon_length);
+    offset += localized_pokemon->nombre_pokemon_length;
+
+    memcpy(stream + offset, &localized_pokemon->cantidad_coordenas, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, localized_pokemon->coordenadas, sizeof(uint32_t)*localized_pokemon->cantidad_coordenas*2);
+    offset += sizeof(uint32_t)*localized_pokemon->cantidad_coordenas*2;
+
+    return stream;
+}
+
+t_localized_pokemon* void_a_localized_pokemon(void* stream){
+    t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
+
+    memcpy(&(localized_pokemon->nombre_pokemon_length), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    localized_pokemon->nombre_pokemon = malloc(localized_pokemon->nombre_pokemon_length);
+    memcpy(localized_pokemon->nombre_pokemon, stream, localized_pokemon->nombre_pokemon_length);
+    stream += localized_pokemon->nombre_pokemon_length;
+
+    memcpy(&(localized_pokemon->cantidad_coordenas), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    localized_pokemon->coordenadas = malloc(sizeof(uint32_t)*localized_pokemon->cantidad_coordenas*2);
+    memcpy(localized_pokemon->coordenadas, stream, sizeof(uint32_t)*localized_pokemon->cantidad_coordenas*2);
+    stream += sizeof(uint32_t)*localized_pokemon->cantidad_coordenas*2;
+
+
+
+    return localized_pokemon;
+}
+
+/*
+ *
+ * LOCALIZED_POKEMON ENDS
+ *
+ * */

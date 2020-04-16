@@ -15,10 +15,15 @@ int main(int argc, char **argv) {
     log_info(logger,"Log started.");
     set_config();
     log_info(logger,"Configuration succesfully setted.");
+
+    pthread_t server_thread;
+    pthread_create(&server_thread, NULL, server_function, NULL);
+
     tests_broker();
+
+    pthread_join(server_thread, NULL);
+
     return EXIT_SUCCESS;
-
-
 }
 
 /*
@@ -45,6 +50,59 @@ void set_config(){
 /*
 * Configuration ends
 */
+
+
+void *server_function(void *arg) {
+
+    int socket;
+
+    if((socket = create_socket()) == -1) {
+        log_error(logger, "Error al crear el socket");
+    }
+
+    if ((bind_socket(socket, config.broker_port)) == -1) {
+        log_error(logger, "Error al bindear el socket");
+    }
+
+    //--Funcion que se ejecuta cuando se conecta un nuevo programa
+    void new(int fd, char *ip, int port) {
+        if(&fd != null && ip != null && &port != null) {
+            log_info(logger, "Nueva conexión");
+        }
+    }
+
+    //--Funcion que se ejecuta cuando se pierde la conexion con un cliente
+    void lost(int fd, char *ip, int port) {
+        if(&fd == null && ip == null && &port == null){
+            log_info(logger, "Se perdió una conexión");
+            //Cierro la conexión fallida
+            log_info(logger, "Cerrando conexión");
+            close(fd);
+        }
+    }
+
+    //--funcion que se ejecuta cuando se recibe un nuevo mensaje de un cliente ya conectado
+    void incoming(int fd, char *ip, int port, MessageHeader *headerStruct) {
+
+        t_list *cosas = receive_package(fd, headerStruct);
+
+        switch (headerStruct->type) {
+            case ABC:;
+                {
+//                    chat_mensaje* mensaje = void_a_mensaje(list_get(cosas, 0));
+//                    mostrar_mensaje(mensaje);
+                    break;
+                }
+
+            default: {
+                log_warning(logger, "Operacion desconocida. No quieras meter la pata\n");
+                break;
+            }
+        }
+    }
+    log_info(logger, "Hilo de servidor iniciado...");
+    start_multithread_server(socket, &new, &lost, &incoming);
+}
 
 
 void tests_broker(){

@@ -33,7 +33,8 @@ char * cfg_path;
 t_config * cfg_file;
 BrokerCFG config;
 
-void read_config();
+void set_config();
+void *server_function(void *arg);
 
 /*
  * Configuration ends
@@ -41,6 +42,7 @@ void read_config();
 
 
 t_log * logger;
+
 
 /*
  *
@@ -54,8 +56,6 @@ typedef struct {
     uint32_t pos_y;
     uint32_t cantidad;
 } t_new_pokemon;
-
-
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
 t_new_pokemon* void_a_new_pokemon(void* stream);

@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <stdarg.h>
+
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
@@ -56,6 +58,7 @@ typedef struct {
     uint32_t pos_y;
     uint32_t cantidad;
 } t_new_pokemon;
+
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
 t_new_pokemon* void_a_new_pokemon(void* stream);
@@ -89,6 +92,19 @@ t_get_pokemon* void_a_get_pokemon(void* stream);
  * GET_POKEMON ENDS
  *
  * */
+
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t cantidad_coordenas;
+    uint32_t* coordenadas;
+} t_localized_pokemon;
+
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...);
+void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon);
+t_localized_pokemon* void_a_localized_pokemon(void* stream);
+
 
 void tests_broker();
 #endif //TEAM_BROKER_H

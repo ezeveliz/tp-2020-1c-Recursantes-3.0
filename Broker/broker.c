@@ -121,6 +121,8 @@ void tests_broker(){
     t_get_pokemon* PikaAgain = void_a_get_pokemon(streamPika);
     log_info(logger, "%s encontrado!", PikaAgain->nombre_pokemon);*/
 
+    t_localized_pokemon* new_localized_pokemon = create_localized_pokemon("Tu vieja", 3, 1,1, 2,2, 3,3);
+
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
 }
@@ -235,3 +237,18 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
  * GET_POKEMON ENDS
  *
  * */
+
+
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
+    t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
+    localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    localized_pokemon->nombre_pokemon = nombre_pokemon;
+    localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
+    localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2);
+
+    va_list ap;
+    va_start(ap, cantidad_coordenadas*2);
+    for (int i = 0; i < cantidad_coordenadas*2; ++i) {
+        localized_pokemon->coordenadas[i] = va_arg(ap, uint32_t);
+    }
+}

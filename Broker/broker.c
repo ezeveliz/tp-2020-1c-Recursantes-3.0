@@ -126,6 +126,9 @@ void tests_broker(){
         log_info(logger,"%d \n", another_bitch->coordenadas[i]);
     }*/
 
+//   t_caught_pokemon* x = create_caught_pokemon(1);
+//   t_caught_pokemon* y = void_a_caught_pokemon(caught_pokemon_a_void(x));
+
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
 }
@@ -311,3 +314,28 @@ t_localized_pokemon* void_a_localized_pokemon(void* stream){
  * LOCALIZED_POKEMON ENDS
  *
  * */
+
+t_caught_pokemon* create_caught_pokemon(uint32_t atrapado){
+    t_caught_pokemon* caught_pokemon = malloc(sizeof(t_caught_pokemon));
+    caught_pokemon->atrapado = atrapado;
+    return caught_pokemon;
+}
+
+void* caught_pokemon_a_void(t_caught_pokemon* caught_pokemon){
+    void* stream = malloc(sizeof(uint32_t));
+    int offset = 0;
+
+    memcpy(stream + offset, &caught_pokemon->atrapado, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    return stream;
+}
+
+t_caught_pokemon* void_a_caught_pokemon(void* stream){
+    t_caught_pokemon* caught_pokemon = malloc(sizeof(t_caught_pokemon));
+
+    memcpy(&(caught_pokemon->atrapado), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    return caught_pokemon;
+}

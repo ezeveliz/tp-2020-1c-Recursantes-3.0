@@ -106,5 +106,14 @@ void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon);
 t_localized_pokemon* void_a_localized_pokemon(void* stream);
 
 
+typedef struct {
+    uint32_t atrapado;
+} t_caught_pokemon;
+
+t_caught_pokemon* create_caught_pokemon(uint32_t atrapado);
+void* caught_pokemon_a_void(t_caught_pokemon* caught_pokemon);
+t_caught_pokemon* void_a_caught_pokemon(void* stream);
+
+
 void tests_broker();
 #endif //TEAM_BROKER_H

@@ -129,6 +129,9 @@ void tests_broker(){
 //   t_caught_pokemon* x = create_caught_pokemon(1);
 //   t_caught_pokemon* y = void_a_caught_pokemon(caught_pokemon_a_void(x));
 
+  /*  t_catch_pokemon* pika = create_catch_pokemon("Pikachu", 3, 4);
+    t_catch_pokemon* pikaAgain = void_a_catch_pokemon(catch_pokemon_a_void(pika));
+*/
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
 }
@@ -194,12 +197,6 @@ t_new_pokemon* void_a_new_pokemon(void* stream){
 }
 /*
  *
- * NEW_POKEMON ENDS
- *
- * */
-
-/*
- *
  * GET_POKEMON STARTS
  *
  * */
@@ -236,14 +233,6 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
 
     return get_pokemon;
 }
-
-
-/*
- *
- * GET_POKEMON ENDS
- *
- * */
-
 /*
  *
  * LOCALIZED_POKEMON STARTS
@@ -308,13 +297,11 @@ t_localized_pokemon* void_a_localized_pokemon(void* stream){
 
     return localized_pokemon;
 }
-
 /*
  *
- * LOCALIZED_POKEMON ENDS
+ * CAUGHT_POKEMON STARTS
  *
  * */
-
 t_caught_pokemon* create_caught_pokemon(uint32_t atrapado){
     t_caught_pokemon* caught_pokemon = malloc(sizeof(t_caught_pokemon));
     caught_pokemon->atrapado = atrapado;
@@ -338,4 +325,55 @@ t_caught_pokemon* void_a_caught_pokemon(void* stream){
     stream += sizeof(uint32_t);
 
     return caught_pokemon;
+}
+
+/*
+ *
+ * CATCH_POKEMON STARTS
+ *
+ * */
+t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y){
+    t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
+    catch_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    catch_pokemon->nombre_pokemon = nombre_pokemon;
+    catch_pokemon->pos_x = pos_x;
+    catch_pokemon->pos_y = pos_y;
+}
+
+void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon){
+    void* stream = malloc(sizeof(uint32_t)*3 + catch_pokemon->nombre_pokemon_length);
+    int offset = 0;
+
+    memcpy(stream + offset, &catch_pokemon->nombre_pokemon_length, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, catch_pokemon->nombre_pokemon, catch_pokemon->nombre_pokemon_length);
+    offset += catch_pokemon->nombre_pokemon_length;
+
+    memcpy(stream + offset, &catch_pokemon->pos_x, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, &catch_pokemon->pos_y, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    return stream;
+}
+
+t_catch_pokemon* void_a_catch_pokemon(void* stream){
+    t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
+
+    memcpy(&(catch_pokemon->nombre_pokemon_length), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    catch_pokemon->nombre_pokemon = malloc(catch_pokemon->nombre_pokemon_length);
+    memcpy(catch_pokemon->nombre_pokemon, stream, catch_pokemon->nombre_pokemon_length);
+    stream += catch_pokemon->nombre_pokemon_length;
+
+    memcpy(&(catch_pokemon->pos_x), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    memcpy(&(catch_pokemon->pos_y), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    return catch_pokemon;
 }

@@ -65,12 +65,6 @@ t_new_pokemon* void_a_new_pokemon(void* stream);
 
 /*
  *
- * NEW_POKEMON ENDS
- *
- * */
-
-/*
- *
  * GET_POKEMON STARTS
  *
  * */
@@ -89,7 +83,7 @@ t_get_pokemon* void_a_get_pokemon(void* stream);
 
 /*
  *
- * GET_POKEMON ENDS
+ * LOCALIZED_POKEMON STARTS
  *
  * */
 
@@ -105,6 +99,11 @@ t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t can
 void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon);
 t_localized_pokemon* void_a_localized_pokemon(void* stream);
 
+/*
+ *
+ * CAUGHT_POKEMON STARTS
+ *
+ * */
 
 typedef struct {
     uint32_t atrapado;
@@ -117,3 +116,20 @@ t_caught_pokemon* void_a_caught_pokemon(void* stream);
 
 void tests_broker();
 #endif //TEAM_BROKER_H
+
+/*
+ *
+ * CATCH_POKEMON STARTS
+ *
+ * */
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+} t_catch_pokemon;
+
+t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon);
+t_catch_pokemon* void_a_catch_pokemon(void* stream);

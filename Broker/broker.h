@@ -133,3 +133,21 @@ typedef struct {
 t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
 void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon);
 t_catch_pokemon* void_a_catch_pokemon(void* stream);
+
+/*
+ *
+ * APPEARED_POKEMON STARTS
+ *
+ * */
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+} t_appeared_pokemon;
+
+t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon);
+t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
+

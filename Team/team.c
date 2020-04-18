@@ -32,6 +32,9 @@ int main() {
 void initialize_structures(){
 
     config = malloc(sizeof(TEAMConfig));
+    config -> algoritmo_planificacion = malloc(sizeof(char));
+    config -> ip_broker = malloc(sizeof(char));
+    config -> log_file = malloc(sizeof(char));
 }
 
 void read_config_options() {
@@ -42,17 +45,11 @@ void read_config_options() {
     config -> objetivos_entrenadores = config_get_array_value(config_file, "OBJETIVOS_ENTRENADORES");
     config -> tiempo_reconexion = config_get_int_value(config_file, "TIEMPO_RECONEXION");
     config -> retardo_ciclo_cpu = config_get_int_value(config_file, "RETARDO_CICLO_CPU");
-
-    config -> algoritmo_planificacion = malloc(sizeof(char));
     strcpy(config -> algoritmo_planificacion, config_get_string_value(config_file, "ALGORITMO_PLANIFICACION"));
     config -> quantum = config_get_int_value(config_file, "QUANTUM");
     config -> estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
-
-    config -> ip_broker = malloc(sizeof(char));
     strcpy(config -> ip_broker, config_get_string_value(config_file, "IP_BROKER"));
     config -> puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
-
-    config -> log_file = malloc(sizeof(char));
     strcpy(config -> log_file, config_get_string_value(config_file, "LOG_FILE"));
     config_destroy(config_file);
 }

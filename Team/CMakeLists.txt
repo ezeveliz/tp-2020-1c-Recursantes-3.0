@@ -3,8 +3,8 @@ project(team C)
 
 set(CMAKE_C_STANDARD 99)
 
-include_directories("/usr/include/commons")
+include_directories("/usr/include/commons" "/usr/include/altaLibreria")
 
 add_executable(team team.c team.h teamStructures.h)
 
-target_link_libraries(team "/usr/lib/libcommons.so" pthread)
+target_link_libraries(team "/usr/lib/libcommons.so" "/usr/lib/libaltaLibreria.so" pthread )

@@ -156,4 +156,30 @@ void* server_client(void* params);
 int start_multithread_server(int socket, void (*new_connection)(int fd, char *ip, int port),
     void (*lost_connection)(int fd, char *ip, int port),
     void (*incoming_message)(int fd, char *ip, int port, MessageHeader *header));
+
+
+t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
+void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
+t_new_pokemon* void_a_new_pokemon(void* stream);
+
+t_get_pokemon* create_get_pokemon(char* nombre_pokemon);
+void* get_pokemon_a_void(t_get_pokemon* get_pokemon);
+t_get_pokemon* void_a_get_pokemon(void* stream);
+
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...);
+void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon);
+t_localized_pokemon* void_a_localized_pokemon(void* stream);
+
+t_caught_pokemon* create_caught_pokemon(uint32_t atrapado);
+void* caught_pokemon_a_void(t_caught_pokemon* caught_pokemon);
+t_caught_pokemon* void_a_caught_pokemon(void* stream);
+
+t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon);
+t_catch_pokemon* void_a_catch_pokemon(void* stream);
+
+t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon);
+t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
+
 #endif

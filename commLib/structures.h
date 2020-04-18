@@ -43,4 +43,44 @@ typedef struct t_thread_client {
     void (*incoming_message)(int, char*, int, MessageHeader*);
 }t_thread_client;
 
+
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+    uint32_t cantidad;
+} t_new_pokemon;
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+} t_get_pokemon;
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t cantidad_coordenas;
+    uint32_t* coordenadas;
+} t_localized_pokemon;
+
+typedef struct {
+    uint32_t atrapado;
+} t_caught_pokemon;
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+} t_catch_pokemon;
+
+typedef struct {
+    uint32_t nombre_pokemon_length;
+    char* nombre_pokemon;
+    uint32_t pos_x;
+    uint32_t pos_y;
+} t_appeared_pokemon;
+
 #endif

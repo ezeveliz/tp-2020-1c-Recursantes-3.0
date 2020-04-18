@@ -1,5 +1,14 @@
 #include "team.h"
 
+TEAMConfig* config;
+
 int main() {
-    return 0;
+
+    read_config_options();
+
+}
+
+void read_config_options() {
+    t_config *config_file = config_create("../team.config");
+
 }

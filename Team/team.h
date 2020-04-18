@@ -10,4 +10,9 @@
 
 #include "teamStructures.h"
 
+/**
+ * Leo archivo de configuracion
+ */
+void read_config_options();
+
 #endif //TEAM_TEAM_H

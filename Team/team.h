@@ -7,12 +7,23 @@
 
 #include <commons/config.h>
 #include <commons/log.h>
+#include <stdlib.h>
 
 #include "teamStructures.h"
+
+/**
+ * Inicializo las estructuras necesarias
+ */
+void initialize_structures();
 
 /**
  * Leo archivo de configuracion
  */
 void read_config_options();
+
+/**
+ * Inicializo el log en la ruta especificada por archivo de configuracion
+ */
+void start_log();
 
 #endif //TEAM_TEAM_H

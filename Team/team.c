@@ -1,9 +1,10 @@
 #include "team.h"
 
-TEAMConfig* config;
+TEAMConfig config;
 t_log* logger;
 int server_socket;
 bool server_socket_initialized = false;
+t_config *config_file;
 
 int main() {
     pthread_t connect_thread;
@@ -27,36 +28,32 @@ int main() {
             crear hilo de entrenador();
         }
      */
+     config_destroy(config_file);
 }
 
 void initialize_structures(){
 
-    config = malloc(sizeof(TEAMConfig));
-    config -> algoritmo_planificacion = malloc(sizeof(char));
-    config -> ip_broker = malloc(sizeof(char));
-    config -> log_file = malloc(sizeof(char));
 }
 
 void read_config_options() {
 
-    t_config *config_file = config_create("../team.config");
-    config -> posiciones_entrenadores = config_get_array_value(config_file, "POSICIONES_ENTRENADORES");
-    config -> pokemon_entrenadores = config_get_array_value(config_file, "POKEMON_ENTRENADORES");
-    config -> objetivos_entrenadores = config_get_array_value(config_file, "OBJETIVOS_ENTRENADORES");
-    config -> tiempo_reconexion = config_get_int_value(config_file, "TIEMPO_RECONEXION");
-    config -> retardo_ciclo_cpu = config_get_int_value(config_file, "RETARDO_CICLO_CPU");
-    strcpy(config -> algoritmo_planificacion, config_get_string_value(config_file, "ALGORITMO_PLANIFICACION"));
-    config -> quantum = config_get_int_value(config_file, "QUANTUM");
-    config -> estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
-    strcpy(config -> ip_broker, config_get_string_value(config_file, "IP_BROKER"));
-    config -> puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
-    strcpy(config -> log_file, config_get_string_value(config_file, "LOG_FILE"));
-    config_destroy(config_file);
+    config_file = config_create("../team.config");
+    config.posiciones_entrenadores = config_get_array_value(config_file, "POSICIONES_ENTRENADORES");
+    config.pokemon_entrenadores = config_get_array_value(config_file, "POKEMON_ENTRENADORES");
+    config.objetivos_entrenadores = config_get_array_value(config_file, "OBJETIVOS_ENTRENADORES");
+    config.tiempo_reconexion = config_get_int_value(config_file, "TIEMPO_RECONEXION");
+    config.retardo_ciclo_cpu = config_get_int_value(config_file, "RETARDO_CICLO_CPU");
+    config.algoritmo_planificacion = config_get_string_value(config_file, "ALGORITMO_PLANIFICACION");
+    config.quantum = config_get_int_value(config_file, "QUANTUM");
+    config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
+    config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
+    config.puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
+    config.log_file = config_get_string_value(config_file, "LOG_FILE");
 }
 
 void start_log() {
     //TODO: cambiar el 1 por un 0 para la entrega
-    logger = log_create(config -> log_file, "team", 1, LOG_LEVEL_TRACE);
+    logger = log_create(config.log_file, "team", 1, LOG_LEVEL_TRACE);
 }
 
 void attempt_connection() {
@@ -65,7 +62,7 @@ void attempt_connection() {
         log_error(logger, "Error al crear el socket de cliente");
         return;
     }
-    if(-1 == connect_socket(server_socket, config->ip_broker, config->puerto_broker)){
+    if(-1 == connect_socket(server_socket, config.ip_broker, config.puerto_broker)){
         log_error(logger, "Error al conectarse al Broker");
         return;
     }
@@ -83,7 +80,7 @@ void* attempt_connection_thread(void* arg) {
     while(!server_socket_initialized) {
 
         attempt_connection();
-        sleep(config->tiempo_reconexion);
+        sleep(config.tiempo_reconexion);
     }
     subscribe_to_mq();
 }

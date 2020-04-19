@@ -156,4 +156,146 @@ void* server_client(void* params);
 int start_multithread_server(int socket, void (*new_connection)(int fd, char *ip, int port),
     void (*lost_connection)(int fd, char *ip, int port),
     void (*incoming_message)(int fd, char *ip, int port, MessageHeader *header));
+
+
+/**
+ * Constructor de t_new_pokemon
+ * @param nombre_pokemon, nombre del pokemon
+ * @param pos_x, Posicion en X
+ * @param pos_y, Posicion en Y
+ * @param cantidad, Cantidad de pokemon de esa especie en esa posicion
+ * @return Puntero a la estructura creada
+ */
+t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad);
+
+/**
+ * Serealizar t_new_pokemon
+ * @param new_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* new_pokemon_a_void(t_new_pokemon* new_pokemon);
+
+/**
+ * Deserealizar t_new_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_new_pokemon* void_a_new_pokemon(void* stream);
+
+
+/**
+ * Constructor de t_get_pokemon
+ * @param nombre_pokemon, nombre del pokemon
+ * @return Puntero a la estructura creada
+ */
+t_get_pokemon* create_get_pokemon(char* nombre_pokemon);
+
+/**
+ * Serealizar t_get_pokemon
+ * @param get_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* get_pokemon_a_void(t_get_pokemon* get_pokemon);
+
+/**
+ * Deserealizar t_get_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_get_pokemon* void_a_get_pokemon(void* stream);
+
+
+/**
+ * Constructor de t_localized_pokemon
+ * @param nombre_pokemon, Nombre del pokemon
+ * @param cantidad_coordenadas, Cantidad de pares de coordenadas que le voy a pasar por parametro
+ * @param coordenas, posicion en x coma posicion en y
+ * @return Puntero a la estructura creada
+ */
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...);
+
+/**
+ * Serealizar t_localized_pokemon
+ * @param localized_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon);
+
+/**
+ * Deserealizar t_localized_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_localized_pokemon* void_a_localized_pokemon(void* stream);
+
+
+/**
+ * Constructor de t_caught_pokemon
+ * @param atrapado, 1 es verdadero 0 es falso
+ * @return Puntero a la estructura creada
+ */
+t_caught_pokemon* create_caught_pokemon(uint32_t atrapado);
+
+/**
+ * Serealizar t_caught_pokemon
+ * @param caught_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* caught_pokemon_a_void(t_caught_pokemon* caught_pokemon);
+
+/**
+ * Deserealizar t_caught_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_caught_pokemon* void_a_caught_pokemon(void* stream);
+
+
+/**
+ * Constructor de t_catch_pokemon
+ * @param nombre_pokemon, nombre del pokemon
+ * @param pos_x, Posicion en X
+ * @param pos_y, Posicion en Y
+ * @return Puntero a la estructura creada
+ */
+t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+
+/**
+ * Serealizar t_catch_pokemon
+ * @param catch_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon);
+
+/**
+ * Deserealizar t_catch_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_catch_pokemon* void_a_catch_pokemon(void* stream);
+
+
+/**
+ * Constructor de t_catch_pokemon
+ * @param nombre_pokemon, nombre del pokemon
+ * @param pos_x, Posicion en X
+ * @param pos_y, Posicion en Y
+ * @return Puntero a la estructura creada
+ */
+t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y);
+
+/**
+ * Serealizar t_appeared_pokemon
+ * @param appeared_pokemon, puntero a la estructura
+ * @return Puntero a void de la estructura
+ */
+void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon);
+
+/**
+ * Deserealizar t_appeared_pokemon
+ * @param stream, puntero void de la estructura
+ * @return Puntero a la estructura
+ */
+t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
+
 #endif

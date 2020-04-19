@@ -7,6 +7,7 @@ bool server_socket_initialized = false;
 t_config *config_file;
 
 int main() {
+    MessageType test = ABC;
     pthread_t connect_thread;
 
     initialize_structures();
@@ -29,6 +30,8 @@ int main() {
         }
      */
      config_destroy(config_file);
+
+     send_to_server(test);
 }
 
 void initialize_structures(){
@@ -60,10 +63,12 @@ void attempt_connection() {
 
     if((server_socket = create_socket()) == -1) {
         log_error(logger, "Error al crear el socket de cliente");
+        printf("No se pudo crear");
         return;
     }
     if(-1 == connect_socket(server_socket, config.ip_broker, config.puerto_broker)){
         log_error(logger, "Error al conectarse al Broker");
+        printf("No se pudo conectar");
         return;
     }
 
@@ -83,4 +88,17 @@ void* attempt_connection_thread(void* arg) {
         sleep(config.tiempo_reconexion);
     }
     subscribe_to_mq();
+}
+
+
+void send_to_server(MessageType mensaje){
+
+    t_paquete* paquete = create_package(mensaje);
+
+   add_to_package(paquete,(void*) &mensaje, sizeof(int));
+
+   if(send_package(paquete, server_socket)  == -1){
+       printf("No se pudo mandar");
+   }
+
 }

@@ -14,7 +14,7 @@
 #include <pthread.h>
 #include <string.h>
 
-#include "teamStructures.h"
+#include "../teamStructures.h"
 
 void start_log();
 

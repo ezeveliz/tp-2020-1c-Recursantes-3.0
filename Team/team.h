@@ -17,14 +17,14 @@
 #include "teamStructures.h"
 
 /**
- * Inicializo las estructuras necesarias
- */
-void initialize_structures();
-
-/**
  * Leo archivo de configuracion
  */
 void read_config_options();
+
+/**
+ * Inicializo las estructuras necesarias
+ */
+void initialize_structures();
 
 /**
  * Inicializo el log en la ruta especificada por archivo de configuracion
@@ -32,7 +32,7 @@ void read_config_options();
 void start_log();
 
 /**
- * Me suscribo a las colas del broker
+ * Funcion para suscribirme a las listas del Broker, solo se llama una vez despues de haberme podido conectar
  */
 void subscribe_to_mq();
 
@@ -47,5 +47,18 @@ void attempt_connection();
  * @return
  */
 void* attempt_connection_thread(void* arg);
+
+/**
+ * Funcion que va a correr en el hilo del servidor para escuchar los mensajes del gameboy
+ * @param arg
+ * @return
+ */
+void* server_function(void* arg);
+
+/**
+ * Envio un mensaje de prueba al servidor(Broker)
+ * @param mensaje
+ */
+void send_to_server(MessageType mensaje);
 
 #endif //TEAM_TEAM_H

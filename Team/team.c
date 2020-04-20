@@ -9,21 +9,36 @@ t_config *config_file;
 int main() {
     MessageType test = ABC;
     pthread_t connect_thread;
+    pthread_t server_thread;
 
-    initialize_structures();
     read_config_options();
+    initialize_structures();
     start_log();
 
+    //Intento conectarme una vez al broker y suscribirme a las listas
     attempt_connection();
+    //Creo el servidor para que el GameBoy me mande mensajes
+    pthread_create(&server_thread, NULL, server_function, NULL);
 
-    //Si no me pude conectar al Broker, levanto un hilo que siga intentando conectarse
+    //Si no me pude conectar al Broker, levanto un hilo que siga intentando conectarse cada n segundos
     if(!server_socket_initialized) {
 
         pthread_create(&connect_thread, NULL, attempt_connection_thread, NULL);
         pthread_detach(connect_thread);
 
     }
+
+    // ESTO QUE ESTA ACA ABAJO ES CACA FEA, BUSCAR ALGO MEJOR
     //Itero la lista de entrenadores, y creo un hilo por cada un
+    char** ptr = config.posiciones_entrenadores;
+    int pos = 0;
+    //Itero el array de posiciones de entrenadores
+    for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
+        if(coordenada[0] == '[') {
+            log_info(logger, "entrenador: %d", pos);
+            pos++;
+        }
+    }
     /**
         for (entrenador as entrenador) {
             crear hilo de entrenador();
@@ -31,11 +46,11 @@ int main() {
      */
      config_destroy(config_file);
 
+     //Esta linea esta solo de prueba
      send_to_server(test);
-}
 
-void initialize_structures(){
-
+     //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
+     pthread_join(server_thread, NULL);
 }
 
 void read_config_options() {
@@ -51,7 +66,14 @@ void read_config_options() {
     config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
     config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
     config.puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
+    config.ip_team = config_get_string_value(config_file, "IP_TEAM");
+    config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
+}
+
+//TODO: implementar
+void initialize_structures(){
+    //Creo las estructuras de los entrenadores, pokemones y listas, etc
 }
 
 void start_log() {
@@ -90,6 +112,9 @@ void* attempt_connection_thread(void* arg) {
     subscribe_to_mq();
 }
 
+void* server_function(void* arg) {
+    //TODO: agregar servidor de Rodri
+}
 
 void send_to_server(MessageType mensaje){
 

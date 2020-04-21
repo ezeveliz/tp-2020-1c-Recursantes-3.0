@@ -8,8 +8,9 @@
 #include <commons/config.h>
 #include <commons/log.h>
 #include "structures.h"
-#include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 

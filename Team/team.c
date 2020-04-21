@@ -28,22 +28,14 @@ int main() {
 
     }
 
-    // ESTO QUE ESTA ACA ABAJO ES CACA FEA, BUSCAR ALGO MEJOR
-    //Itero la lista de entrenadores, y creo un hilo por cada un
+    //Itero la lista de entrenadores, y creo un hilo por cada uno
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
-        if(coordenada[0] == '[') {
-            log_info(logger, "entrenador: %d", pos);
-            pos++;
-        }
+        log_info(logger, "entrenador: %d", pos);
+        pos++;
     }
-    /**
-        for (entrenador as entrenador) {
-            crear hilo de entrenador();
-        }
-     */
      config_destroy(config_file);
 
      //Esta linea esta solo de prueba

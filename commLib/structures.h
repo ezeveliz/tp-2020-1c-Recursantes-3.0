@@ -11,7 +11,9 @@
 typedef enum _MessageType {
     // Enum de prueba
 	ABC,
-
+	SUB-APPEARED,
+	SUB-LOCALIZED,
+	SUB-CAUGHT
 } MessageType;
 
 /**

@@ -161,7 +161,13 @@ void send_to_server(MessageType mensaje){
     int broker = connect_to_broker();
     t_paquete* paquete = create_package(mensaje);
 
-    add_to_package(paquete,(void*) &mensaje, sizeof(int));
+
+    char* enviar = malloc(50);
+    strcpy(enviar, "test");
+
+    //Agrego al paquete un entero
+    add_to_package(paquete,(void*) enviar, strlen("test")+1);
+
 
     if(send_package(paquete, broker)  == -1){
         printf("No se pudo mandar");

@@ -41,8 +41,8 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
 
     t_list *cosas = receive_package(socket_server, headerStruct);
 
-    int test = *(int*) list_get(cosas,0);
+    char* test = (char*) list_get(cosas,0);
 
-    printf("recibi %d \n", test);
+    puts(test);
 
 }

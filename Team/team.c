@@ -15,13 +15,14 @@ int main() {
     // Leo archivo de configuracion
     read_config_options();
 
+    // Inicializo el log
     start_log();
-
-    //Intento conectarme una vez al broker y suscribirme a las listas
-    attempt_subscription();
 
     //Creo el servidor para que el GameBoy y el Broker me manden mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
+    
+    //Intento conectarme una vez al broker y suscribirme a las listas
+    attempt_subscription();
 
     // Si no me logre suscribir a todas las colas, levanto un hilo que lo reintente cada n segundos
     if(!subscribed_to_all_global_queues()) {

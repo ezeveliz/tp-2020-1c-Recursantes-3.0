@@ -22,31 +22,35 @@
 void read_config_options();
 
 /**
- * Inicializo las estructuras necesarias
- */
-void initialize_structures();
-
-/**
  * Inicializo el log en la ruta especificada por archivo de configuracion
  */
 void start_log();
 
 /**
- * Funcion para suscribirme a las listas del Broker, solo se llama una vez despues de haberme podido conectar
+ * Esta funcion intenta suscribirse a las 3 colas globales: appeared_pokemon, localized_pokemon y caught_pokemon, en
+ * caso de que no este conectado ya y setea 3 booleanos globales uno correspondiente a cada cola
  */
-void subscribe_to_mq();
+void attempt_subscription();
 
 /**
- * Funcion para intentar la conexion con el broker
+ * Me conecto al servidor del Broker
+ * @return -1 en caso de error o el socket del servidor
  */
-void attempt_connection();
+int connect_to_broker();
 
 /**
- * Funcion que va a reintentar la conexion cada n segundos
- * @param arg
- * @return
+ * Me desconecto del Broker
+ * @param broker_socket
  */
-void* attempt_connection_thread(void* arg);
+void disconnect_from_broker(int broker_socket);
+
+/**
+ * Intento suscribirme a la cola dada del Broker dado
+ * TODO: falta agregar el parametro del tipo de cola
+ * @param int broker
+ * @return  True si me pude subscribir a la cola indicada, False si no
+ */
+bool subscribe_to_queue(int broker);
 
 /**
  * Funcion que va a correr en el hilo del servidor para escuchar los mensajes del gameboy
@@ -54,6 +58,26 @@ void* attempt_connection_thread(void* arg);
  * @return
  */
 void* server_function(void* arg);
+
+/**
+ * Funcion que va a reintentar la subscripcion a las distintas colas de mensajes globales cada n segundos
+ * @param arg
+ * @return
+ */
+void* queues_subscription_function(void* arg);
+
+/**
+ * Inicializo las estructuras necesarias
+ */
+void initialize_structures();
+
+//----------------------------------------HELPERS
+
+/**
+ * Verifico si estoy o no suscripto a TODAS las colas globales
+ * @return True si estoy suscripto a todas, False si no estoy suscripto a todas
+ */
+bool subscribed_to_all_global_queues();
 
 /**
  * Envio un mensaje de prueba al servidor(Broker)

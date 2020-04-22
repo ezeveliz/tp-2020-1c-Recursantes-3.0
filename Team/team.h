@@ -7,6 +7,7 @@
 
 #include <commons/config.h>
 #include <commons/log.h>
+#include <commons/collections/list.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 
@@ -46,11 +47,11 @@ void disconnect_from_broker(int broker_socket);
 
 /**
  * Intento suscribirme a la cola dada del Broker dado
- * TODO: falta agregar el parametro del tipo de cola
  * @param int broker
- * @return  True si me pude subscribir a la cola indicada, False si no
+ * @param MessageType cola
+ * @return True si me pude subscribir a la cola indicada, False si no
  */
-bool subscribe_to_queue(int broker);
+bool subscribe_to_queue(int broker, MessageType cola);
 
 /**
  * Funcion que va a correr en el hilo del servidor para escuchar los mensajes del gameboy

@@ -74,21 +74,21 @@ void attempt_subscription() {
     // Me intento conectar al Broker y suscribirme a la cola de appeared_pokemon
     int broker = connect_to_broker();
     if (broker != -1 && !subscribed_to_appeared_pokemon) {
-        subscribed_to_appeared_pokemon = subscribe_to_queue(broker);//appeared_pokemon
+        subscribed_to_appeared_pokemon = subscribe_to_queue(broker, SUB_APPEARED);
         disconnect_from_broker(broker);
     }
 
     // Me intento conectar al Broker y suscribirme a la cola de localized_pokemon
     broker = connect_to_broker();
     if (broker != -1 && !subscribed_to_localized_pokemon) {
-        subscribed_to_localized_pokemon = subscribe_to_queue(broker);//localized_pokemon
+        subscribed_to_localized_pokemon = subscribe_to_queue(broker, SUB_LOCALIZED);
         disconnect_from_broker(broker);
     }
 
     // Me intento conectar al Broker y suscribirme a la cola de caught_pokemon
     broker = connect_to_broker();
     if (broker != -1 && !subscribed_to_caught_pokemon) {
-        subscribed_to_caught_pokemon = subscribe_to_queue(broker);//caught_pokemon
+        subscribed_to_caught_pokemon = subscribe_to_queue(broker, SUB_CAUGHT);
         disconnect_from_broker(broker);
     }
 }
@@ -111,10 +111,28 @@ void disconnect_from_broker(int broker_socket) {
     close_socket(broker_socket);
 }
 
-//FIXME implementar una vez que este definido el metodo de suscripcion
-// - a las colas del broker, falta el paramentro del tipo de cola
-bool subscribe_to_queue(int broker) {
-    //Aca iria un send y un receive, en caso de que salga tod.o bien, devolveria true
+bool subscribe_to_queue(int broker, MessageType cola) {
+
+    // Creo un paquete para la suscripcion a una cola, adjunto la ip y el puerto de mi server
+    t_paquete* paquete = create_package(cola);
+    add_to_package(paquete, (void*) config.ip_team, strlen(config.ip_team) + 1);
+    add_to_package(paquete, (void*) &config.puerto_team, sizeof(int));
+
+    // Envio el paquete, si no se puede enviar, me desconecto y retorno false
+    if(send_package(paquete, broker)  == -1){
+        disconnect_from_broker(broker);
+        return false;
+    }
+
+    // Trato de recibir el encabezado de la respuesta
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(broker, buffer_header) <= 0) {
+        disconnect_from_broker(broker);
+        return false;
+    }
+
+    t_list* rta = receive_package(broker, buffer_header);
+    disconnect_from_broker(broker);
     return true;
 }
 

@@ -13,16 +13,16 @@ typedef enum _MessageType {
 	ABC,
 	// PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
 	// Suscripcion a colas globales Team-Broker
-	SUB-APPEARED,
-	SUB-LOCALIZED,
-	SUB-CAUGHT,
+	SUB_APPEARED,
+	SUB_LOCALIZED,
+	SUB_CAUGHT,
 	// Mensajes Team-Broker
-	GET-POK,
-	CATCH-POK,
+	GET_POK,
+	CATCH_POK,
 	// Mensajes Broker-Team
-	APPEARED-POK, // Tambien aplica a GameBoy-Team
-	LOCALIZED-POK,
-	CAUGHT-POK,
+	APPEARED_POK, // Tambien aplica a GameBoy-Team
+	LOCALIZED_POK,
+	CAUGHT_POK,
 } MessageType;
 
 /**

@@ -35,10 +35,6 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
 
     t_list *cosas = receive_package(socket_server, headerStruct);
 
-//    char* test = (char*) list_get(cosas,0);
-//
-//    puts(test);
-
     switch(headerStruct -> type){
 
         case SUB_APPEARED:
@@ -86,6 +82,4 @@ void initialize_server(){
     }
 
     server_initialize = true;
-
-
 }

@@ -72,6 +72,41 @@ void* queues_subscription_function(void* arg);
  */
 void initialize_structures();
 
+/**
+ * Inicializo el log del servidor para pruebas
+ */
+void start_log_server();
+/**
+ * Inicializo el servidor. Creo el socket y hago el bind correspondiente
+ */
+int initialize_server();
+/**
+ * Cada vez que el servidor detecte que se inicio una nueva conexion va a llamar a esta
+ * funcion
+ * @param socket_server
+ * @param ip
+ * @param port
+ */
+void new(int socket_server, char * ip, int port);
+
+/**
+ * Cada vez que el servidor detecte que se perdio una conexion va a llamar a esta
+ * funcion
+ * @param socket_server
+ * @param ip
+ * @param port
+ */
+void lost(int socket_server, char * ip, int port);
+
+/**
+ * Cada vez que llegue una nueva conexion al servidor va a llamar a esta funcion
+ * @param socket_server
+ * @param ip
+ * @param port
+ * @param headerStruct
+ */
+void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruct);
+
 //----------------------------------------HELPERS
 
 /**

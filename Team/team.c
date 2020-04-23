@@ -2,9 +2,11 @@
 
 TEAMConfig config;
 t_log* logger;
+t_log* logger_server;
 bool subscribed_to_appeared_pokemon = false;
 bool subscribed_to_localized_pokemon = false;
 bool subscribed_to_caught_pokemon = false;
+bool server_initialize = false;
 t_config *config_file;
 
 int main() {
@@ -32,7 +34,7 @@ int main() {
 
     }
 
-    initialize_structures();
+     initialize_structures();
 
      //Esta linea esta solo de prueba
      send_to_server(test);
@@ -95,16 +97,16 @@ void attempt_subscription() {
 
 int connect_to_broker(){
 
-    int server_socket;
-    if((server_socket = create_socket()) == -1) {
+    int client_socket;
+    if((client_socket = create_socket()) == -1) {
         log_error(logger, "Error al crear el socket de cliente");
         return -1;
     }
-    if(connect_socket(server_socket, config.ip_broker, config.puerto_broker) == -1){
+    if(connect_socket(client_socket, config.ip_broker, config.puerto_broker) == -1){
         log_error(logger, "Error al conectarse al Broker");
         return -1;
     }
-    return server_socket;
+    return client_socket;
 }
 
 void disconnect_from_broker(int broker_socket) {
@@ -139,6 +141,13 @@ bool subscribe_to_queue(int broker, MessageType cola) {
 //TODO: agregar servidor de Rodri
 void* server_function(void* arg) {
 
+
+    start_log_server();
+
+    int server_socket = initialize_server();
+
+    start_server(server_socket, &new, &lost, &incoming);
+
 }
 
 void* queues_subscription_function(void* arg) {
@@ -168,11 +177,87 @@ void initialize_structures(){
     }
 }
 
+void start_log_server() {
+
+    //Cambiar 1 por 0?
+    logger_server=log_create("../servidor.log", "servidor", 1, LOG_LEVEL_TRACE);
+}
+
+int initialize_server(){
+
+    int server_socket;
+    //TODO: Que puerto se pone en este caso para la escucha del GameBoy? Pendiente modificar
+    int port = 5002;
+
+    if((server_socket = create_socket()) == -1) {
+        log_error(logger_server, "Error creating socket");
+        return;
+    }
+    if((bind_socket(server_socket, port)) == -1) {
+        log_error(logger_server, "Error binding socket");
+        return;
+    }
+
+    server_initialize = true;
+    return server_socket;
+}
+
+
+void new(int server_socket, char * ip, int port){
+    log_info(logger_server,"Nueva conexion: Socket %d, Puerto: %d", server_socket, port);
+}
+
+void lost(int server_socket, char * ip, int port){
+    log_error(logger_server, "Conexion perdida");
+}
+
+
+void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
+
+    t_list* paquete_recibido = receive_package(server_socket, headerStruct);
+
+    void* mensaje = list_get(paquete_recibido,0);
+
+    switch(headerStruct -> type){
+
+        case SUB_APPEARED:
+            printf("APPEARD_POKEMON");
+            break;
+        case SUB_LOCALIZED:
+            printf("LOCALIZED_POKEMON");
+            break;
+        case SUB_CAUGHT:
+            printf("SUB_CAUGHT");
+            break;
+        case GET_POK:
+            printf("GET_POKEMON");
+            break;
+        case CATCH_POK:
+            printf("CATCH_POKEMON");
+            break;
+        case APPEARED_POK:
+            printf("APPEARED_POKEMON");
+            break;
+        case LOCALIZED_POK:
+            printf("LOCALIZED_POKEMON");
+            break;
+        case CAUGHT_POK:
+            printf("CAUGHT_POKEMON");
+            break;
+        default:
+            printf("la estas cagando compa");
+            break;
+    }
+
+}
+
 //----------------------------------------HELPERS----------------------------------------
 
 bool subscribed_to_all_global_queues() {
     return subscribed_to_appeared_pokemon && subscribed_to_localized_pokemon && subscribed_to_caught_pokemon;
 }
+
+
 
 //Funcion de prueba
 void send_to_server(MessageType mensaje){
@@ -183,7 +268,6 @@ void send_to_server(MessageType mensaje){
     char* enviar = malloc(50);
     strcpy(enviar, "test");
 
-    //Agrego al paquete un entero
     add_to_package(paquete,(void*) enviar, strlen("test")+1);
 
 

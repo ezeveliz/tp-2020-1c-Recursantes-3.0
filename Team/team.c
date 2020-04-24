@@ -124,15 +124,24 @@ bool subscribe_to_queue(int broker, MessageType cola) {
         return false;
     }
 
+    // Limpieza
+    free_package(paquete);
+
     // Trato de recibir el encabezado de la respuesta
     MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
     if(receive_header(broker, buffer_header) <= 0) {
         return false;
     }
 
-    //TODO: ver que hacer aca
-    t_list* rta = receive_package(broker, buffer_header);
-    return true;
+    // Recibo la confirmacion
+    t_list* rta_list = receive_package(broker, buffer_header);
+    int rta = *(int*) list_get(rta_list, 0);
+
+    // Limpieza
+    free(buffer_header);
+    //TODO: verificar si hay que destruir la lista
+
+    return rta == 1;
 }
 
 //TODO: agregar servidor de Rodri

@@ -144,7 +144,6 @@ bool subscribe_to_queue(int broker, MessageType cola) {
     return rta == 1;
 }
 
-//TODO: agregar servidor de Rodri
 void* server_function(void* arg) {
 
 

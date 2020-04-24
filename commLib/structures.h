@@ -9,13 +9,24 @@
  *  servidores, cada vez que se agregue un nuevo enum, se debera volver a compilar y reinstalar la biblioteca
  */
 typedef enum _MessageType {
-	NEW_POKEMON,
-	APPEARED_POKEMON,
-	CATCH_POKEMON,
-	CAUGHT_POKEMON,
-	GET_POKEMON,
-	LOCALIZED_POKEMON
-
+    // Enum de prueba
+	ABC,
+	// PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
+	// Suscripcion a colas globales Team-Broker
+	SUB_APPEARED,
+	SUB_LOCALIZED,
+	SUB_CAUGHT,
+	SUB_NEW,
+	SUB_CATCH,
+	SUB_GET,
+	// Mensajes Team-Broker
+	GET_POK,
+	CATCH_POK,
+	// Mensajes Broker-Team
+	APPEARED_POK, // Tambien aplica a GameBoy-Team
+	LOCALIZED_POK,
+	CAUGHT_POK,
+	NEW_POK //Gameboy_Broker
 } MessageType;
 
 /**

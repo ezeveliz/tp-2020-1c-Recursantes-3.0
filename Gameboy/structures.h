@@ -13,24 +13,35 @@ enum PROCESO{
     SUSCRIPTOR
 };
 
+enum mensajes{
+        NEW_POKEMON,
+        APPEARED_POKEMON,
+        CATCH_POKEMON,
+        CAUGHT_POKEMON,
+        GET_POKEMON,
+        LOCALIZED_POKEMON
+};
+
 const static struct {
     u_int32_t    val;
     const char *str;
 } conversionProces [] = {
-        {1, "BROKER"},
-        {2, "TEAM"},
-        {3, "GAMECARD"},
-        {4, "SUSCRIPTOR"}
+        {0, "BROKER"},
+        {1, "TEAM"},
+        {2, "GAMECARD"},
+        {3, "SUSCRIPTOR"}
 };
 
 const static struct {
     u_int32_t      val;
     const char *str;
 } conversionMsj [] = {
-        {1, "NEW_POKEMON"},
-        {2, "APPEARED_POKEMON"},
-        {3, "CATCH_POKEMON"},
-        {4, "CAUGHT_POKEMON"},
-        {5, "GET_POKEMON"},
-        {6, "LOCALIZED_POKEMON"}
+        {0, "NEW_POKEMON"},
+        {1, "APPEARED_POKEMON"},
+        {2, "CATCH_POKEMON"},
+        {3, "CAUGHT_POKEMON"},
+        {4, "GET_POKEMON"},
+        {5, "LOCALIZED_POKEMON"}
 };
+
+

@@ -6,7 +6,6 @@ t_log* logger_server;
 bool subscribed_to_appeared_pokemon = false;
 bool subscribed_to_localized_pokemon = false;
 bool subscribed_to_caught_pokemon = false;
-bool server_initialize = false;
 t_config *config_file;
 
 int main() {
@@ -34,16 +33,16 @@ int main() {
 
     }
 
-     initialize_structures();
+    initialize_structures();
 
-     //Esta linea esta solo de prueba
-     send_to_server(test);
+    //Esta linea esta solo de prueba
+    send_to_server(test);
 
-     //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
-     pthread_join(server_thread, NULL);
+    //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
+    pthread_join(server_thread, NULL);
 
-     config_destroy(config_file);
-     log_destroy(logger);
+    config_destroy(config_file);
+    log_destroy(logger);
 }
 
 void read_config_options() {
@@ -120,21 +119,19 @@ bool subscribe_to_queue(int broker, MessageType cola) {
     add_to_package(paquete, (void*) config.ip_team, strlen(config.ip_team) + 1);
     add_to_package(paquete, (void*) &config.puerto_team, sizeof(int));
 
-    // Envio el paquete, si no se puede enviar, me desconecto y retorno false
+    // Envio el paquete, si no se puede enviar retorno false
     if(send_package(paquete, broker)  == -1){
-        disconnect_from_broker(broker);
         return false;
     }
 
     // Trato de recibir el encabezado de la respuesta
     MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
     if(receive_header(broker, buffer_header) <= 0) {
-        disconnect_from_broker(broker);
         return false;
     }
 
+    //TODO: ver que hacer aca
     t_list* rta = receive_package(broker, buffer_header);
-    disconnect_from_broker(broker);
     return true;
 }
 
@@ -144,10 +141,17 @@ void* server_function(void* arg) {
 
     start_log_server();
 
-    int server_socket = initialize_server();
+    int server_socket;
+
+    // La creacion de nuestro socket servidor puede fallar, si falla duermo y vuelvo a intentar en n segundos
+    while ((server_socket = initialize_server()) == -1) {
+
+        sleep(config.tiempo_reconexion);
+    }
 
     start_server(server_socket, &new, &lost, &incoming);
 
+    return null;
 }
 
 void* queues_subscription_function(void* arg) {
@@ -160,6 +164,8 @@ void* queues_subscription_function(void* arg) {
 
         sleep(config.tiempo_reconexion);
     }
+
+    return null;
 }
 
 //TODO: terminar de implementar
@@ -186,22 +192,19 @@ void start_log_server() {
 int initialize_server(){
 
     int server_socket;
-    //TODO: Que puerto se pone en este caso para la escucha del GameBoy? Pendiente modificar
-    int port = 5002;
+    int port = config.puerto_team;
 
     if((server_socket = create_socket()) == -1) {
         log_error(logger_server, "Error creating socket");
-        return;
+        return -1;
     }
     if((bind_socket(server_socket, port)) == -1) {
         log_error(logger_server, "Error binding socket");
-        return;
+        return -1;
     }
 
-    server_initialize = true;
     return server_socket;
 }
-
 
 void new(int server_socket, char * ip, int port){
     log_info(logger_server,"Nueva conexion: Socket %d, Puerto: %d", server_socket, port);
@@ -210,7 +213,6 @@ void new(int server_socket, char * ip, int port){
 void lost(int server_socket, char * ip, int port){
     log_error(logger_server, "Conexion perdida");
 }
-
 
 void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
 
@@ -256,8 +258,6 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 bool subscribed_to_all_global_queues() {
     return subscribed_to_appeared_pokemon && subscribed_to_localized_pokemon && subscribed_to_caught_pokemon;
 }
-
-
 
 //Funcion de prueba
 void send_to_server(MessageType mensaje){

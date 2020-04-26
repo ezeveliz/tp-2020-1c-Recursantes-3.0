@@ -230,34 +230,39 @@ void initialize_structures(){
 
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {
 
-    int necesidad_actual;
     // Itero la lista de pokemones objetivo de un entrenador dado
     for (char* pokemon = *objetivos_entrenador; pokemon ; pokemon = *++objetivos_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le sumo uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) + 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            //Por alguna razon que no pude descifrar, no funcionaba el put
+            *(int*)dictionary_get(objetivo_global, pokemon) += 1;
+
         // Si no existia la necesidad la creo
         } else {
-            necesidad_actual = 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
         }
     }
 
+    // Si la necesidad de un pokemon es 0, deberia borrarla?
     // Itero la lista de pokemones que posee un entrenador dado, para restarle al objetivo global
     for (char* pokemon = *pokemon_entrenador; pokemon ; pokemon = *++pokemon_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) - 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
 
         //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
         // Si no existia la necesidad la creo(con valor de -1)
         } else {
-            necesidad_actual = -1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
         }
     }
 }

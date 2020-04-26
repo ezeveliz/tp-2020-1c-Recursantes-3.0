@@ -16,6 +16,8 @@ typedef enum _MessageType {
 	SUB_APPEARED,
 	SUB_LOCALIZED,
 	SUB_CAUGHT,
+        SUB_GET,
+        SUB_CATCH,
 	// Mensajes Team-Broker
 	GET_POK,
 	CATCH_POK,

@@ -24,7 +24,7 @@ int main(int argc, char *argv[]){
                 gamecard_distribuidor(argc,argv);
                 break;
             case SUSCRIPTOR:
-                if(argc < 4){
+                if(argc < PARAMETROS_SUSCRIPCION){
                     msj_error();
                     break;
                 }
@@ -80,11 +80,12 @@ void broker_distribuidor(int argc, char* argv[]){
     char* puerto = config_get_string_value(archConfig, "PUERTO_BROKER");
     t_paquete* paquete;
     void* mensaje_serializado;
+    int id;
 
     switch (str2Msj(argv[2])){
         case NEW_POKEMON:
 
-            if(argc < 7){
+            if(argc < PARAMETROS_BROKER_NEW){
                 msj_error();
                 break;
             }
@@ -101,13 +102,15 @@ void broker_distribuidor(int argc, char* argv[]){
 
         case APPEARED_POKEMON:
 
-            if(argc < 6){//TODO Cambiar esto por 7 cuando este solucionado el tema del id
+            if(argc < PARAMETROS_BROKER_APPEARED){
                 msj_error();
                 break;
             }
             paquete = create_package(APPEARED_POK);
-            t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon( argv[3],atoi(argv[4]),atoi(argv[5]) ); //TODO ver tema id
+            t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon( argv[3],atoi(argv[4]),atoi(argv[5]) );
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
+            id = atoi(argv[6]);
+            add_to_package( paquete, (void*) &id, sizeof(uint32_t));
             add_to_package( paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
 
             mensaje_proceso(BROKER, paquete);
@@ -117,7 +120,7 @@ void broker_distribuidor(int argc, char* argv[]){
             break;
 
         case CATCH_POKEMON:
-            if(argc < 6){
+            if(argc < PARAMETROS_BROKER_CATCH){
                 msj_error();
                 break;
             }
@@ -133,13 +136,15 @@ void broker_distribuidor(int argc, char* argv[]){
             break;
 
         case CAUGHT_POKEMON:
-            if(argc < 5) {
+            if(argc < PARAMETROS_BROKER_CAUGHT) {
                 msj_error();
                 break;
             }
             paquete = create_package(CAUGHT_POK);
-            t_caught_pokemon* caught_pokemon = create_caught_pokemon( okFailToInt(argv[4]) );// TODO ver tema del id
+            t_caught_pokemon* caught_pokemon = create_caught_pokemon( okFailToInt(argv[4]) );
             mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
+            id = atoi(argv[3]);
+            add_to_package( paquete, (void*) &id, sizeof(uint32_t));
             add_to_package( paquete, mensaje_serializado, size_t_caught_pokemon(caught_pokemon));
 
             mensaje_proceso(BROKER, paquete);
@@ -148,7 +153,7 @@ void broker_distribuidor(int argc, char* argv[]){
             break;
 
         case GET_POKEMON:
-            if(argc < 4){
+            if(argc < PARAMETROS_BROKER_GET){
                 msj_error();
                 break;
             }
@@ -177,7 +182,7 @@ void team_distribuidor(int argc, char* argv[]){
 
     switch (str2Msj(argv[2])){
         case APPEARED_POKEMON:
-            if(argc < 6){
+            if(argc < PARAMETROS_TEAM_APPEARED){
                 msj_error();
                 break;
             }
@@ -202,17 +207,20 @@ void gamecard_distribuidor(int argc, char* argv[]){
     char* puerto = config_get_string_value(archConfig, "PUERTO_GAMECARD");
     t_paquete* paquete;
     void* mensaje_serializado;
-
+    int id;
     switch (str2Msj(argv[2])){
         case NEW_POKEMON:
-            if(argc < 7){
+            if( argc < PARAMETROS_GAMECARD_NEW ){
                 msj_error();
                 break;
             }
             paquete = create_package(NEW_POK);
             t_new_pokemon* new_pokemon = create_new_pokemon( argv[3],atoi(argv[4]),atoi(argv[5]),atoi(argv[6]) );
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
+            id = atoi(argv[7]);
+            add_to_package( paquete, (void*) &id, sizeof(uint32_t));
             add_to_package( paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
+
 
             mensaje_proceso(GAMECARD, paquete);
             free(new_pokemon);
@@ -220,7 +228,7 @@ void gamecard_distribuidor(int argc, char* argv[]){
             break;
 
         case CATCH_POKEMON:
-            if(argc < 6){
+            if( argc < PARAMETROS_GAMECARD_CATCH ){
                 msj_error();
                 break;
             }
@@ -228,6 +236,8 @@ void gamecard_distribuidor(int argc, char* argv[]){
             paquete = create_package(CATCH_POK);
             t_catch_pokemon* catch_pokemon = create_catch_pokemon( argv[3],atoi(argv[4]),atoi(argv[5]) );
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
+            id = atoi(argv[6]);
+            add_to_package( paquete, (void*) &id, sizeof(uint32_t));
             add_to_package( paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
 
             mensaje_proceso(GAMECARD, paquete);
@@ -236,7 +246,7 @@ void gamecard_distribuidor(int argc, char* argv[]){
             break;
 
         case GET_POKEMON:
-            if(argc < 4){
+            if( argc < PARAMETROS_GAMECARD_GET ){
                 msj_error();
                 break;
             }
@@ -265,11 +275,48 @@ void gamecard_distribuidor(int argc, char* argv[]){
 void suscribir(char* cola_mensaje,char* tiempo){
     char* ip = config_get_string_value(archConfig, "IP_BROKER");
     char* puerto = config_get_string_value(archConfig, "PUERTO_BROKER");
+    suscripcion_timer(atoi(tiempo));
 
-    printf("Te queres suscribir a %s durante %s",cola_mensaje, tiempo);
+
 
     free(ip);
     free(puerto);
+}
+
+/*
+ * Funciones para manejar el tiempo de ejecucion
+ * de suscribir
+ */
+
+/*
+ * Inicia el Timer para parar la ejecucion y
+ * setea todos los parametros necesarios
+ * @param tiempo de ejecucion
+ */
+void suscripcion_timer(int tiempo){
+    struct sigaction sa;
+    memset (&sa, 0, sizeof (sa));
+    sa.sa_handler = &timer_handler;
+    sigaction (SIGALRM, &sa, 0);
+
+    struct itimerval timer;
+    timer.it_value.tv_sec = tiempo;
+    timer.it_value.tv_usec = 0;
+    timer.it_interval.tv_sec = 0;
+    timer.it_interval.tv_usec = 0;
+
+
+    setitimer (ITIMER_REAL, &timer, 0);
+}
+
+/*
+ * Sirve para atrapar la senial de alarma
+ * @params la señal
+ */
+void timer_handler (int signum)
+{
+    printf ("Termino el tiempo!\n");
+    exit(-1);
 }
 
 

@@ -8,14 +8,27 @@
 #include <string.h>
 #include <commons/config.h>
 #include <commons/log.h>
-#include "structures.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
+#include <sys/time.h>
+#include <signal.h>
 
+#include "structures.h"
 #endif //TEAM_GAMEBOY_H
 
+
+#define PARAMETROS_BROKER_NEW 7
+#define PARAMETROS_BROKER_APPEARED 7
+#define PARAMETROS_BROKER_CATCH 6
+#define PARAMETROS_BROKER_CAUGHT 5
+#define PARAMETROS_BROKER_GET 4
+#define PARAMETROS_TEAM_APPEARED 6
+#define PARAMETROS_GAMECARD_NEW 8
+#define PARAMETROS_GAMECARD_CATCH 7
+#define PARAMETROS_GAMECARD_GET 4
+#define PARAMETROS_SUSCRIPCION 3
 
 /*
  * Funciones de funcionamiento
@@ -56,3 +69,7 @@ int size_t_catch_pokemon(t_catch_pokemon*);
 int size_t_caught_pokemon(t_caught_pokemon*);
 
 int size_t_get_pokemon(t_get_pokemon*);
+
+void timer_handler (int);
+
+void suscripcion_timer(int);

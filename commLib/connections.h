@@ -298,4 +298,9 @@ void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon);
  */
 t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
 
+/**
+ * @return timestamp
+ * */
+unsigned long unix_epoch();
+
 #endif

@@ -55,3 +55,4 @@ dkms.conf
 *.log
 /Team/Servidor_simulacion/cmake-build-debug/
 /.clang-format
+/Team/log_team1.txt

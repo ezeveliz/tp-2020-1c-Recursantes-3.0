@@ -8,6 +8,7 @@
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
+#include <commons/collections/dictionary.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 
@@ -73,6 +74,13 @@ void* queues_subscription_function(void* arg);
  * Inicializo las estructuras necesarias TODO: detallar
  */
 void initialize_structures();
+
+/**
+ * Agrego objetivos a los objetivos globales
+ * @param objetivos_entrenador, los objetivos de un entrenador dado, se agregan a los ya existentes
+ * @param pokemon_entrenador, pokemones que poseen los entrenadores actualmente, restan a los objetivos globales
+ */
+void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador);
 
 /**
  * Inicializo el log del servidor para pruebas

@@ -6,7 +6,11 @@ t_log* logger_server;
 bool subscribed_to_appeared_pokemon = false;
 bool subscribed_to_localized_pokemon = false;
 bool subscribed_to_caught_pokemon = false;
+bool subscribed_to_get_pokemon = false;
+bool subscribed_to_catch_pokemon = false;
 t_config *config_file;
+// Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
+t_dictionary* objetivo_global;
 
 int main() {
     MessageType test = ABC;
@@ -105,6 +109,20 @@ void attempt_subscription() {
         subscribed_to_caught_pokemon = subscribe_to_queue(broker, SUB_CAUGHT);
         disconnect_from_broker(broker);
     }
+
+    // Me intento conectar al Broker y suscribirme a la cola de get_pokemon
+    broker = connect_to_broker();
+    if (broker != -1 && !subscribed_to_caught_pokemon) {
+        subscribed_to_get_pokemon = subscribe_to_queue(broker, SUB_GET);
+        disconnect_from_broker(broker);
+    }
+
+    // Me intento conectar al Broker y suscribirme a la cola de catch_pokemon
+    broker = connect_to_broker();
+    if (broker != -1 && !subscribed_to_caught_pokemon) {
+        subscribed_to_catch_pokemon = subscribe_to_queue(broker, SUB_CATCH);
+        disconnect_from_broker(broker);
+    }
 }
 
 int connect_to_broker(){
@@ -159,7 +177,6 @@ bool subscribe_to_queue(int broker, MessageType cola) {
 
 void* server_function(void* arg) {
 
-
     start_log_server();
 
     int server_socket;
@@ -195,12 +212,53 @@ void initialize_structures(){
     //Itero la lista de entrenadores, y creo un hilo por cada uno
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
+    objetivo_global = dictionary_create();
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
         // TODO: crear un array de pthreads para los entrenadores
         // Definir si el array de entrenadores tendria que ser global o si no importa
         log_info(logger, "entrenador: %d", pos);
+
+        // Obtengo los objetivos y los pokemones que posee el entrenador actual
+        char** objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
+        char** pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
+
+        add_global_objectives(objetivos_entrenador, pokemon_entrenador);
         pos++;
+    }
+}
+
+void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {
+
+    int necesidad_actual;
+    // Itero la lista de pokemones objetivo de un entrenador dado
+    for (char* pokemon = *objetivos_entrenador; pokemon ; pokemon = *++objetivos_entrenador) {
+
+        // Verifico si ya existia la necesidad de este pokemon, si existe le sumo uno
+        if (dictionary_has_key(objetivo_global, pokemon)) {
+            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) + 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+        // Si no existia la necesidad la creo
+        } else {
+            necesidad_actual = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+        }
+    }
+
+    // Itero la lista de pokemones que posee un entrenador dado, para restarle al objetivo global
+    for (char* pokemon = *pokemon_entrenador; pokemon ; pokemon = *++pokemon_entrenador) {
+
+        // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno
+        if (dictionary_has_key(objetivo_global, pokemon)) {
+            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) - 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+        //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
+        // Si no existia la necesidad la creo(con valor de -1)
+        } else {
+            necesidad_actual = -1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+        }
     }
 }
 
@@ -277,7 +335,8 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 //----------------------------------------HELPERS----------------------------------------
 
 bool subscribed_to_all_global_queues() {
-    return subscribed_to_appeared_pokemon && subscribed_to_localized_pokemon && subscribed_to_caught_pokemon;
+    return subscribed_to_appeared_pokemon && subscribed_to_localized_pokemon && subscribed_to_caught_pokemon
+           && subscribed_to_get_pokemon && subscribed_to_catch_pokemon;
 }
 
 //Funcion de prueba

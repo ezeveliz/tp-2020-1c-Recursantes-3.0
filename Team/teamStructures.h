@@ -8,7 +8,7 @@
 /**
  * Estructura encargada de almacenar las configuraciones que se pasan por archivo
  */
-typedef struct _TEAMConfig {
+typedef struct {
     char** posiciones_entrenadores;
     char** pokemon_entrenadores;
     char** objetivos_entrenadores;
@@ -23,6 +23,5 @@ typedef struct _TEAMConfig {
     int puerto_team;
     char* log_file;
 } TEAMConfig;
-
 
 #endif //TEAM_TEAMSTRUCTURES_H

@@ -68,7 +68,7 @@ void* server_function(void* arg);
 void* queues_subscription_function(void* arg);
 
 /**
- * Inicializo las estructuras necesarias
+ * Inicializo las estructuras necesarias TODO: detallar
  */
 void initialize_structures();
 
@@ -76,10 +76,12 @@ void initialize_structures();
  * Inicializo el log del servidor para pruebas
  */
 void start_log_server();
+
 /**
  * Inicializo el servidor. Creo el socket y hago el bind correspondiente
  */
 int initialize_server();
+
 /**
  * Cada vez que el servidor detecte que se inicio una nueva conexion va a llamar a esta
  * funcion
@@ -107,7 +109,7 @@ void lost(int socket_server, char * ip, int port);
  */
 void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruct);
 
-//----------------------------------------HELPERS
+//----------------------------------------HELPERS----------------------------------------//
 
 /**
  * Verifico si estoy o no suscripto a TODAS las colas globales

@@ -10,29 +10,29 @@
  */
 typedef enum _MessageType {
     // Enum de prueba
-	ABC,
-	// PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
-	// Suscripcion a colas globales Team-Broker
-	SUB_APPEARED,
-	SUB_LOCALIZED,
-	SUB_CAUGHT,
-        SUB_GET,
-        SUB_CATCH,
-	// Mensajes Team-Broker
-	GET_POK,
-	CATCH_POK,
-	// Mensajes Broker-Team
-	APPEARED_POK, // Tambien aplica a GameBoy-Team
-	LOCALIZED_POK,
-	CAUGHT_POK,
+    ABC,
+    // PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
+    // Suscripcion a colas globales Team-Broker
+    SUB_APPEARED,
+    SUB_LOCALIZED,
+    SUB_CAUGHT,
+    SUB_GET,
+    SUB_CATCH,
+    // Mensajes Team-Broker
+    GET_POK,
+    CATCH_POK,
+    // Mensajes Broker-Team
+    APPEARED_POK, // Tambien aplica a GameBoy-Team
+    LOCALIZED_POK,
+    CAUGHT_POK,
 } MessageType;
 
 /**
  *  Estructura que contiene el nombre del header de la comunicación y el tamaño del paquete en sí
  */
 typedef struct _MessageHeader {
-	MessageType type;
-	int data_size;
+    MessageType type;
+    int data_size;
 } MessageHeader;
 
 /**
@@ -41,8 +41,8 @@ typedef struct _MessageHeader {
  */
  //TODO revisar si no se puede colocar todo directo en el paquete en vez de usar 2 estructuras
 typedef struct {
-	MessageHeader *header;
-	void* stream;
+    MessageHeader *header;
+    void* stream;
 } t_paquete;
 
 /**

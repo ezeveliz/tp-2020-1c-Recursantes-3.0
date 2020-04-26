@@ -6,14 +6,14 @@
 #define TP_2020_1C_RECURSANTES_3_0_STRUCTURES_H
 #endif //TP_2020_1C_RECURSANTES_3_0_STRUCTURES_H
 
-enum PROCESO{
+enum Proceso{
     BROKER,
     TEAM,
     GAMECARD,
     SUSCRIPTOR
 };
 
-enum mensajes{
+enum Mensaje{
         NEW_POKEMON,
         APPEARED_POKEMON,
         CATCH_POKEMON,
@@ -32,6 +32,7 @@ const static struct {
         {3, "SUSCRIPTOR"}
 };
 
+//TODO modificar esto con el enum de la libreria de comunicacion
 const static struct {
     u_int32_t      val;
     const char *str;

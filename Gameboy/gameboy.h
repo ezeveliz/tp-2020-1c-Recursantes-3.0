@@ -70,6 +70,18 @@ int size_t_caught_pokemon(t_caught_pokemon*);
 
 int size_t_get_pokemon(t_get_pokemon*);
 
+/*
+ * Funciones de tiempo
+ */
+
 void timer_handler (int);
 
-void suscripcion_timer(int);
+void timer(int);
+
+/*
+ * Funciones para suscribirme
+ */
+
+int subscribe_to_queue(MessageType);
+
+void serverFunction();

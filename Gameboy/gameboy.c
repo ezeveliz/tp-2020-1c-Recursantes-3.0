@@ -272,15 +272,16 @@ void gamecard_distribuidor(int argc, char* argv[]){
  * @params el tiempo por el que te queres suscribir
  */
 
-void suscribir(char* cola_mensaje,char* tiempo){
-    char* ip = config_get_string_value(archConfig, "IP_BROKER");
-    char* puerto = config_get_string_value(archConfig, "PUERTO_BROKER");
-    suscripcion_timer(atoi(tiempo));
-
-
-
-    free(ip);
-    free(puerto);
+void suscribir(char* cola_mensaje, char* tiempo){
+    //Enviar mensaje de suscripcion
+    if(subscribe_to_queue(str2Msj(cola_mensaje)) != -1){
+        log_info(logger,"Te suscribiste a la cola: %s", cola_mensaje);
+        timer(atoi(tiempo));
+        //crear servidor
+        serverFunction();
+    }else{
+        printf("Error al intentar Suscribir");
+    }
 }
 
 /*
@@ -293,7 +294,8 @@ void suscribir(char* cola_mensaje,char* tiempo){
  * setea todos los parametros necesarios
  * @param tiempo de ejecucion
  */
-void suscripcion_timer(int tiempo){
+
+void timer(int tiempo){
     struct sigaction sa;
     memset (&sa, 0, sizeof (sa));
     sa.sa_handler = &timer_handler;
@@ -315,10 +317,128 @@ void suscripcion_timer(int tiempo){
  */
 void timer_handler (int signum)
 {
-    printf ("Termino el tiempo!\n");
+    printf ("\nTermino el tiempo!\n");
     exit(-1);
 }
 
+/*
+ * Esta funcion fue robada al señor Eze
+ * Esta funcion esta escrita en spanglish
+ */
+
+int subscribe_to_queue(MessageType cola) {
+
+    // Creo un paquete para la suscripcion a una cola, adjunto la ip y el puerto de mi server
+    t_paquete* paquete = create_package(cola);
+    char* mi_ip = config_get_string_value(archConfig, "IP_GAMEBOY");
+    int mi_puerto = config_get_int_value(archConfig, "PUERTO_BROKER");
+    add_to_package(paquete, (void*) mi_ip, strlen(mi_puerto) + 1);//Mi ip
+    add_to_package(paquete, (void*) &mi_puerto, sizeof(int));//Mi puerto
+
+    // Envio el paquete, si no se puede enviar retorno false
+
+    if(mensaje_proceso(BROKER, paquete)  == -1){
+        return -1;
+    }
+
+    // Limpieza
+    free(mi_ip);
+    free_package(paquete);
+
+    // Trato de recibir el encabezado de la respuesta
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(broker, buffer_header) <= 0) {
+        return false;
+    }
+
+    // Recibo la confirmacion
+    t_list* rta_list = receive_package(broker, buffer_header);
+    int rta = *(int*) list_get(rta_list, 0);
+
+    // Limpieza
+    free(buffer_header);
+    list_destroy(rta_list);
+
+    return (rta == 1)? -1 : 1;
+}
+
+void serverFunction(){
+
+    int socket;
+    int port = config_get_int_value(archConfig, "PUERTO_SUSCRIPCION");
+
+    if((socket = create_socket()) == -1) {
+        printf("Error al crear el socket");
+        return;
+    }
+    if((bind_socket(socket, PORT)) == -1) {
+        printf("Error al bindear el socket");
+        return;
+    }
+    void new(int fd, char * ip, int port){
+        printf("Cliente conectado, IP:%s, PORT:%d\n", ip, port);
+    }
+
+    void lost(int fd, char * ip, int port){}
+    void incoming(int fd, char * ip, int port, MessageHeader * headerStruct){
+
+        t_list *cosas = receive_package(fd, headerStruct);
+        void* mensaje = list_get(cosas, 0);
+
+        switch (headerStruct->type){
+            case NEW_POK:
+                t_new_pokemon* newPokemon = void_a_new_pokemon(mensaje);
+                log_info(logger,"NEW_POKEMON Nombre Pokemon: %s \nCantidad: %d \nPosicion: (%d,%d)\n", newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,newPokemon->pos_y);
+                free(newPokemon->nombre_pokemon);
+                free(newPokemon);
+                break;
+
+            case APPEARED_POK:
+                t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(mensaje);
+                log_info(logger,"APEPEARED_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", appearedPokemon->nombre_pokemon,appearedPokemon->pos_x,appearedPokemon->pos_y);
+                free(appearedPokemon->nombre_pokemon);
+                free(appearedPokemon);
+                break;
+
+            case CATCH_POK:
+                t_catch_pokemon* catchPokemon = void_a_catch_pokemon(mensaje);
+                log_info(logger,"CATCH_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", catchPokemon->nombre_pokemon, catchPokemon->pos_x,catchPokemon->pos_y);
+                free(catchPokemon->nombre_pokemon);
+                free(catchPokemon);
+                break;
+
+            case CAUGHT_POK:
+                t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(mensaje);
+                log_info(logger,"CAUGHT_POKEMON Fue atrapado: %d\n", caughtPokemon->atrapado);
+                free(caughtPokemon);
+                break;
+
+            case GET_POK:
+                t_get_pokemon* getPokemon = void_a_get_pokemon(mensaje);
+                log_info(logger,"GET_POKEMON Nombre; %s\n", getPokemon->nombre_pokemon);
+                free(getPokemon->nombre_pokemon);
+                free(getPokemon);
+                break;
+
+            case LOCALIZED_POK:
+                t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(mensaje);
+                log_info(logger,"GET_POKEMON Nombre; %s Cantidad de coordenadas: %d\n", localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
+                free(localizedPokemon->nombre_pokemon);
+                free(localizedPokemon);
+                break;
+
+            default:
+                printf("Operacion desconocida. No quieras meter la pata\n")
+
+                break;
+
+        }
+        list_destroy(cosas);
+        free(mensaje);
+
+    }
+    start_server(socket, &new, &lost, &incoming);
+}
 
 /*
  * Funciones de envio de mensajes
@@ -351,8 +471,7 @@ int envio_mensaje(t_paquete* paquete, char* ip, uint32_t puerto){
 
 }
 
-
-void mensaje_proceso(int proceso, t_paquete* paquete){
+int mensaje_proceso(int proceso, t_paquete* paquete){
     int resultado = 0;
 
     switch (proceso){
@@ -367,9 +486,10 @@ void mensaje_proceso(int proceso, t_paquete* paquete){
             break;
     }
 
-    resultado < 0 ? printf("error") : printf("exito");
+    return resultado;
 
 }
+
 
 /*
  * Funciones para calcular tamanio de los pokemon
@@ -403,3 +523,4 @@ int okFailToInt(char* resultado){
         return (strcmp("FAIL",resultado)== 0) ? 0 : -1;
     }
 }
+

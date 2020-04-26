@@ -54,3 +54,4 @@ dkms.conf
 /.idea/
 *.log
 /Team/Servidor_simulacion/cmake-build-debug/
+/.clang-format

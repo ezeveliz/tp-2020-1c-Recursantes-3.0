@@ -24,4 +24,11 @@ typedef struct {
     char* log_file;
 } TEAMConfig;
 
+typedef struct {
+    int pos_x;
+    int pos_y;
+    t_dictionary objetivos_particular;
+    t_dictionary stock_pokemons;
+}Entrenador;
+
 #endif //TEAM_TEAMSTRUCTURES_H

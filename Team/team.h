@@ -19,13 +19,15 @@
 
 /**
  * Leo archivo de configuracion
+ * @return si no se encontro el archivo de configuracion retorno el cod de error -1, 1 si se pudo leer archivo
  */
-void read_config_options();
+int read_config_options();
 
 /**
  * Inicializo el log en la ruta especificada por archivo de configuracion
+ * @return Si no pude crear el archivo de configuracion en la ruta especificada retorno -1, sino 1;
  */
-void start_log();
+int start_log();
 
 /**
  * Esta funcion intenta suscribirse a las 3 colas globales: appeared_pokemon, localized_pokemon y caught_pokemon, en

@@ -13,11 +13,17 @@ int main() {
     pthread_t queues_subscription_thread;
     pthread_t server_thread;
 
-    // Leo archivo de configuracion
-    read_config_options();
+    // Leo archivo de configuracion, si no lo encuentro salgo del proceso
+    if (read_config_options() == -1) {
+        printf("No se encontro archivo de configuracion, saliendo.");
+        return -1;
+    }
 
-    // Inicializo el log
-    start_log();
+    // Inicializo el log, si no pude salgo del proceso
+    if (start_log() == -1) {
+        printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
+        return -1;
+    }
 
     //Creo el servidor para que el GameBoy y el Broker me manden mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
@@ -45,10 +51,12 @@ int main() {
     log_destroy(logger);
 }
 
-void read_config_options() {
+int read_config_options() {
 
-    //TODO: verificar que el archivo exista y salir del proceso si no
     config_file = config_create("../team.config");
+    if (!config_file) {
+        return -1;
+    }
     config.posiciones_entrenadores = config_get_array_value(config_file, "POSICIONES_ENTRENADORES");
     config.pokemon_entrenadores = config_get_array_value(config_file, "POKEMON_ENTRENADORES");
     config.objetivos_entrenadores = config_get_array_value(config_file, "OBJETIVOS_ENTRENADORES");
@@ -62,12 +70,17 @@ void read_config_options() {
     config.ip_team = config_get_string_value(config_file, "IP_TEAM");
     config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
+    return 1;
 }
 
 //TODO: cambiar el 1 por un 0 para la entrega
-void start_log() {
+int start_log() {
 
     logger = log_create(config.log_file, "team", 1, LOG_LEVEL_TRACE);
+    if (!logger) {
+        return -1;
+    }
+    return 1;
 }
 
 void attempt_subscription() {

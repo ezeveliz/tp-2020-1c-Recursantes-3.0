@@ -213,6 +213,7 @@ void initialize_structures(){
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
     objetivo_global = dictionary_create();
+    // Creo lista de entrenadores
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
         // TODO: crear un array de pthreads para los entrenadores
@@ -224,8 +225,14 @@ void initialize_structures(){
         char** pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
 
         add_global_objectives(objetivos_entrenador, pokemon_entrenador);
+
+        // Crear estructura de entrenador
+        // Inicializar nuevo_hilo(pthread_t server_thread;)
+        // pthread_create(nuevo_hilo, entrenador, (void*)&estructura_entrenador)
+        // Agregar hilo a una lista
         pos++;
     }
+    // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 }
 
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {

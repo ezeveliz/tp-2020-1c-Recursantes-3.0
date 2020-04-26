@@ -56,8 +56,9 @@ typedef struct t_thread_client {
     void (*incoming_message)(int, char*, int, MessageHeader*);
 }t_thread_client;
 
-
-
+/**
+ * Estructura utilizada para informar? aparicion de pokemon
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -66,11 +67,17 @@ typedef struct {
     uint32_t cantidad;
 } t_new_pokemon;
 
+/**
+ * Estructura utlizada para solicitar? un pokemon con GET_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
 } t_get_pokemon;
 
+/**
+ * Estructura utilizada para responder al mensaje GET_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -78,10 +85,16 @@ typedef struct {
     uint32_t* coordenadas;
 } t_localized_pokemon;
 
+/**
+ * Estructura utilizada para responder al mensaje CATCH_POK
+ */
 typedef struct {
     uint32_t atrapado;
 } t_caught_pokemon;
 
+/**
+ * Estructura utilizada para solicitar el atrapado de un pokemon con CATCH_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -89,6 +102,9 @@ typedef struct {
     uint32_t pos_y;
 } t_catch_pokemon;
 
+/**
+ * Estuctura utilizada para informar? la aparicion de un nuevo pokemon
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;

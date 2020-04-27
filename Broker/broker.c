@@ -19,6 +19,17 @@ int main(int argc, char **argv) {
     pthread_t server_thread;
     pthread_create(&server_thread, NULL, server_function, NULL);
 
+    // Inicializo
+    IDENTIFICADOR_MENSAJE = 1;
+
+    // Inicializamos las colas
+    list_new_pokemon = list_create();
+    list_appeared_pokemon = list_create();
+    list_get_pokemon = list_create();
+    list_localized_pokemon = list_create();
+    list_catch_pokemon = list_create();
+    list_caught_pokemon = list_create();
+
     tests_broker();
 
     pthread_join(server_thread, NULL);
@@ -87,10 +98,27 @@ void *server_function(void *arg) {
         t_list *cosas = receive_package(fd, headerStruct);
 
         switch (headerStruct->type) {
-            case ABC:;
-                {
+
+//            case SUB_NEW:;
+//                {
 //                    chat_mensaje* mensaje = void_a_mensaje(list_get(cosas, 0));
 //                    mostrar_mensaje(mensaje);
+//                    break;
+//                }
+//
+            case NEW_POK:;
+                {
+                    //TODO: ver si sacar el id
+                    uint32_t mensaje_id = *((uint32_t *) list_get(cosas, 0));
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 1));
+                    t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,2));
+
+                    mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
+
+                    //falta responder con el id
+                    create_package(NEW_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
                     break;
                 }
 
@@ -116,4 +144,39 @@ void tests_broker(){
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
+}
+
+
+mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam){
+    mensaje* nuevo_mensaje = malloc(sizeof(mensaje));
+
+    if(id == 0){
+        id = IDENTIFICADOR_MENSAJE;
+        IDENTIFICADOR_MENSAJE++;
+    }
+
+    nuevo_mensaje->id = id;
+    nuevo_mensaje->id_correlacional = id_correlacional;
+    nuevo_mensaje->tipo = tipo;
+    nuevo_mensaje->enviados = list_create();
+    nuevo_mensaje->confirmados = list_create();
+    nuevo_mensaje->tam = tam;
+    nuevo_mensaje->puntero_a_memoria = asignar_puntero_a_memoria();
+    nuevo_mensaje->lru = unix_epoch();
+
+    return nuevo_mensaje;
+}
+
+
+void* asignar_puntero_a_memoria(){
+    // proximamente
+    return NULL;
+}
+
+
+//TODO: Hacer los otros
+size_t sizeof_pokemon(t_new_pokemon* estructura){
+    size_t tam = sizeof(uint32_t)*4;
+    tam += estructura->nombre_pokemon_length;
+    return tam;
 }

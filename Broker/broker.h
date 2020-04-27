@@ -38,6 +38,7 @@ BrokerCFG config;
 void set_config();
 void *server_function(void *arg);
 
+
 /*
  * Configuration ends
  */
@@ -45,6 +46,35 @@ void *server_function(void *arg);
 
 t_log * logger;
 
+t_list* list_new_pokemon;
+t_list* list_appeared_pokemon;
+t_list* list_get_pokemon;
+t_list* list_localized_pokemon;
+t_list* list_catch_pokemon;
+t_list* list_caught_pokemon;
+
+typedef struct subscriptor {
+    int id_subs;
+    char* ip_subs;
+    int puerto_subs;
+    t_list* cola_subs;
+} subscriptor;
+
+typedef struct mensaje {
+    int id;
+    int id_correlacional;
+    MessageType tipo;
+    t_list* enviados;
+    t_list* confirmados;
+    size_t tam;
+    void* puntero_a_memoria;
+    unsigned long lru;
+} mensaje;
+
+int IDENTIFICADOR_MENSAJE;
 
 void tests_broker();
+mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
+void* asignar_puntero_a_memoria();
+size_t sizeof_pokemon(t_new_pokemon* estructura);
 #endif //TEAM_BROKER_H

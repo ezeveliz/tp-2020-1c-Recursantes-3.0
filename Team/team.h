@@ -83,6 +83,13 @@ void initialize_structures();
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador);
 
 /**
+ * Funcion en la que van a ir los hilos inicializados de los entrenadores
+ * @param arg
+ * @return
+ */
+void* scheduling(void* arg);
+
+/**
  * Inicializo el log del servidor para pruebas
  */
 void start_log_server();

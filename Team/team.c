@@ -210,10 +210,16 @@ void* queues_subscription_function(void* arg) {
 void initialize_structures(){
     //Itero la lista de entrenadores, y creo un hilo por cada uno
     Entrenador entrenador;
+
+    //Inicializo el nuevo hilo
+    pthread_t trainer_thread;
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
     objetivo_global = dictionary_create();
     t_list* entrenadores = list_create();
+    //La lista de hilos deberia ser una variable global?
+    t_list* hilos = list_create();
+
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
         // TODO: crear un array de pthreads para los entrenadores
@@ -233,10 +239,11 @@ void initialize_structures(){
         sscanf(posiciones[1], "%d", &entrenador.pos_y);
         list_add(entrenadores, (void*) &entrenador);
         pos++;
-        // Crear estructura de entrenador
-        // Inicializar nuevo_hilo(pthread_t server_thread;)
-        // pthread_create(nuevo_hilo, entrenador, (void*)&estructura_entrenador)
-        // Agregar hilo a una lista
+
+        //TODO: Verificar si la lista de hilos funciona correctamente
+        pthread_create(&trainer_thread, NULL, scheduling, NULL);
+        // Agregar hilo a la lista lista
+        list_add(hilos, (void*) trainer_thread);
     }
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 
@@ -274,6 +281,10 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
             dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
         }
     }
+}
+
+void* scheduling(void* arg){
+
 }
 
 void start_log_server() {

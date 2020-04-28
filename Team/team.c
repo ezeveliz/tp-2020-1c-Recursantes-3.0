@@ -208,12 +208,12 @@ void* queues_subscription_function(void* arg) {
 
 //TODO: terminar de implementar
 void initialize_structures(){
-
     //Itero la lista de entrenadores, y creo un hilo por cada uno
+    Entrenador entrenador;
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
     objetivo_global = dictionary_create();
-    // Creo lista de entrenadores
+    t_list* entrenadores = list_create();
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
         // TODO: crear un array de pthreads para los entrenadores
@@ -223,53 +223,55 @@ void initialize_structures(){
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char** objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
         char** pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
-
+        char** posiciones = string_split(coordenada, "|");
         add_global_objectives(objetivos_entrenador, pokemon_entrenador);
 
+        //Instancio la estructura entrenador con los datos recogidos del archivo de configuracion
+        entrenador.objetivos_particular = *objetivos_entrenador;
+        entrenador.stock_pokemons = *pokemon_entrenador;
+        sscanf(posiciones[0], "%d", &entrenador.pos_x);
+        sscanf(posiciones[1], "%d", &entrenador.pos_y);
+        list_add(entrenadores, (void*) &entrenador);
+        pos++;
         // Crear estructura de entrenador
         // Inicializar nuevo_hilo(pthread_t server_thread;)
         // pthread_create(nuevo_hilo, entrenador, (void*)&estructura_entrenador)
         // Agregar hilo a una lista
-        pos++;
     }
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
+
 }
 
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {
 
+    int necesidad_actual;
     // Itero la lista de pokemones objetivo de un entrenador dado
     for (char* pokemon = *objetivos_entrenador; pokemon ; pokemon = *++objetivos_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le sumo uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-
-            //Por alguna razon que no pude descifrar, no funcionaba el put
-            *(int*)dictionary_get(objetivo_global, pokemon) += 1;
-
+            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) + 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
         // Si no existia la necesidad la creo
         } else {
-            int* necesidad = (int*)malloc(sizeof(int));
-            *necesidad = 1;
-            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
+            necesidad_actual = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
         }
     }
 
-    // Si la necesidad de un pokemon es 0, deberia borrarla?
     // Itero la lista de pokemones que posee un entrenador dado, para restarle al objetivo global
     for (char* pokemon = *pokemon_entrenador; pokemon ; pokemon = *++pokemon_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-
-            *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
+            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) - 1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
 
         //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
         // Si no existia la necesidad la creo(con valor de -1)
         } else {
-
-            int* necesidad = (int*)malloc(sizeof(int));
-            *necesidad = 1;
-            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
+            necesidad_actual = -1;
+            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
         }
     }
 }

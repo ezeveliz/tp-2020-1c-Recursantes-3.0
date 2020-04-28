@@ -257,12 +257,16 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le sumo uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) + 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            //Por alguna razon que no pude descifrar, no funcionaba el put
+            *(int*)dictionary_get(objetivo_global, pokemon) += 1;
+
         // Si no existia la necesidad la creo
         } else {
-            necesidad_actual = 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
         }
     }
 
@@ -271,14 +275,16 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno
         if (dictionary_has_key(objetivo_global, pokemon)) {
-            necesidad_actual = *(int*)dictionary_get(objetivo_global, pokemon) - 1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
 
         //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
         // Si no existia la necesidad la creo(con valor de -1)
         } else {
-            necesidad_actual = -1;
-            dictionary_put(objetivo_global, pokemon, (void*) &necesidad_actual);
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(objetivo_global, pokemon, (void*) necesidad);
         }
     }
 }
@@ -326,21 +332,6 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
     switch(headerStruct -> type){
 
-        case SUB_APPEARED:
-            printf("APPEARD_POKEMON");
-            break;
-        case SUB_LOCALIZED:
-            printf("LOCALIZED_POKEMON");
-            break;
-        case SUB_CAUGHT:
-            printf("SUB_CAUGHT");
-            break;
-        case GET_POK:
-            printf("GET_POKEMON");
-            break;
-        case CATCH_POK:
-            printf("CATCH_POKEMON");
-            break;
         case APPEARED_POK:
             printf("APPEARED_POKEMON");
             break;

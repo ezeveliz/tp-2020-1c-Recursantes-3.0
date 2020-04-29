@@ -76,10 +76,19 @@ void* queues_subscription_function(void* arg);
 void initialize_structures();
 
 /**
+ * Agrego elementos a un diccionario
+ * @param cosas_agregar
+ * @param diccionario
+ * @return diccionario con los elementos agregados
+ */
+void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario);
+
+/**
  * Agrego objetivos a los objetivos globales
  * @param objetivos_entrenador, los objetivos de un entrenador dado, se agregan a los ya existentes
  * @param pokemon_entrenador, pokemones que poseen los entrenadores actualmente, restan a los objetivos globales
  */
+
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador);
 
 /**

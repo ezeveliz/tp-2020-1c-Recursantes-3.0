@@ -206,10 +206,7 @@ void* queues_subscription_function(void* arg) {
 //TODO: terminar de implementar
 void initialize_structures(){
     //Itero la lista de entrenadores, y creo un hilo por cada uno
-    Entrenador entrenador;
 
-    //Inicializo el nuevo hilo
-    pthread_t trainer_thread;
     char** ptr = config.posiciones_entrenadores;
     int pos = 0;
     objetivo_global = dictionary_create();
@@ -219,7 +216,13 @@ void initialize_structures(){
 
     //Itero el array de posiciones de entrenadores
     for (char* coordenada = *ptr; coordenada; coordenada=*++ptr) {
-        // TODO: crear un array de pthreads para los entrenadores
+
+        Entrenador* entrenador = (Entrenador*) malloc(sizeof(Entrenador));
+        entrenador->objetivos_particular = dictionary_create();
+        entrenador->stock_pokemons = dictionary_create();
+        //Inicializo el nuevo hilo
+        //pthread_t trainer_thread = malloc(sizeof(pthread_t));
+
         // Definir si el array de entrenadores tendria que ser global o si no importa
         log_info(logger, "entrenador: %d", pos);
 
@@ -230,20 +233,42 @@ void initialize_structures(){
         add_global_objectives(objetivos_entrenador, pokemon_entrenador);
 
         //Instancio la estructura entrenador con los datos recogidos del archivo de configuracion
-        entrenador.objetivos_particular = *objetivos_entrenador;
-        entrenador.stock_pokemons = *pokemon_entrenador;
-        sscanf(posiciones[0], "%d", &entrenador.pos_x);
-        sscanf(posiciones[1], "%d", &entrenador.pos_y);
-        list_add(entrenadores, (void*) &entrenador);
+
+        add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
+        add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
+        sscanf(posiciones[0], "%d", &entrenador->pos_x);
+        sscanf(posiciones[1], "%d", &entrenador->pos_y);
+        list_add(entrenadores, (void*) entrenador);
         pos++;
 
-        //TODO: Verificar si la lista de hilos funciona correctamente
-        pthread_create(&trainer_thread, NULL, scheduling, NULL);
+        //TODO: Usar un array de hilos, pendiente ver con eze
+//        pthread_create(&trainer_thread, NULL, scheduling, NULL);
         // Agregar hilo a la lista lista
-        list_add(hilos, (void*) trainer_thread);
+//        list_add(hilos, (void*) trainer_thread);
     }
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 
+}
+
+void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
+
+    // Itero la lista de pokemones objetivo de un entrenador dado
+    for (char* pokemon = *cosas_agregar; pokemon ; pokemon = *++cosas_agregar) {
+
+        // Verifico si ya existia la necesidad de este pokemon, si existe le sumo uno
+        if (dictionary_has_key(diccionario, pokemon)) {
+
+            //Por alguna razon que no pude descifrar, no funcionaba el put
+            *(int*)dictionary_get(diccionario, pokemon) += 1;
+
+            // Si no existia la necesidad la creo
+        } else {
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(diccionario, pokemon, (void*) necesidad);
+        }
+    }
 }
 
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {
@@ -258,7 +283,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
             //Por alguna razon que no pude descifrar, no funcionaba el put
             *(int*)dictionary_get(objetivo_global, pokemon) += 1;
 
-        // Si no existia la necesidad la creo
+            // Si no existia la necesidad la creo
         } else {
 
             int* necesidad = (int*)malloc(sizeof(int));
@@ -275,8 +300,8 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
             *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
 
-        //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
-        // Si no existia la necesidad la creo(con valor de -1)
+            //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
+            // Si no existia la necesidad la creo(con valor de -1)
         } else {
 
             int* necesidad = (int*)malloc(sizeof(int));

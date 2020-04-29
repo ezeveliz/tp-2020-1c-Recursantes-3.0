@@ -28,10 +28,10 @@ typedef struct {
     int tid;
     int pos_x;
     int pos_y;
-//    t_dictionary objetivos_particular;
-//    t_dictionary stock_pokemons;
-    char* objetivos_particular;
-    char* stock_pokemons;
+    t_dictionary* objetivos_particular;
+    t_dictionary* stock_pokemons;
+//    char* objetivos_particular;
+//    char* stock_pokemons;
 }Entrenador;
 
 #endif //TEAM_TEAMSTRUCTURES_H

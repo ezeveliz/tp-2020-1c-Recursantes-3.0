@@ -93,34 +93,31 @@ void attempt_subscription() {
     int broker = connect_to_broker();
     if (broker != -1 && !subscribed_to_appeared_pokemon) {
         subscribed_to_appeared_pokemon = subscribe_to_queue(broker, SUB_APPEARED);
-        disconnect_from_broker(broker);
+        if (subscribed_to_appeared_pokemon) {
+            log_info(logger, "Subscribed to APPEARED_POK");
+        }
+        //disconnect_from_broker(broker);
     }
 
     // Me intento conectar al Broker y suscribirme a la cola de localized_pokemon
-    broker = connect_to_broker();
-    if (broker != -1 && !subscribed_to_localized_pokemon) {
-        subscribed_to_localized_pokemon = subscribe_to_queue(broker, SUB_LOCALIZED);
-        disconnect_from_broker(broker);
+    int broker2 = connect_to_broker();
+    if (broker2 != -1 && !subscribed_to_localized_pokemon) {
+        subscribed_to_localized_pokemon = subscribe_to_queue(broker2, SUB_LOCALIZED);
+        if (subscribed_to_localized_pokemon) {
+            log_info(logger, "Subscribed to LOCALIZED_POK");
+        }
+        //disconnect_from_broker(broker);
     }
+
+    subscribe_to_queue(broker, SUB_APPEARED);
 
     // Me intento conectar al Broker y suscribirme a la cola de caught_pokemon
     broker = connect_to_broker();
     if (broker != -1 && !subscribed_to_caught_pokemon) {
         subscribed_to_caught_pokemon = subscribe_to_queue(broker, SUB_CAUGHT);
-        disconnect_from_broker(broker);
-    }
-
-    // Me intento conectar al Broker y suscribirme a la cola de get_pokemon
-    broker = connect_to_broker();
-    if (broker != -1 && !subscribed_to_caught_pokemon) {
-        subscribed_to_get_pokemon = subscribe_to_queue(broker, SUB_GET);
-        disconnect_from_broker(broker);
-    }
-
-    // Me intento conectar al Broker y suscribirme a la cola de catch_pokemon
-    broker = connect_to_broker();
-    if (broker != -1 && !subscribed_to_caught_pokemon) {
-        subscribed_to_catch_pokemon = subscribe_to_queue(broker, SUB_CATCH);
+        if (subscribed_to_caught_pokemon) {
+            log_info(logger, "Subscribed to CAUGHT_POK");
+        }
         disconnect_from_broker(broker);
     }
 }
@@ -321,7 +318,7 @@ void new(int server_socket, char * ip, int port){
 }
 
 void lost(int server_socket, char * ip, int port){
-    log_error(logger_server, "Conexion perdida");
+    log_info(logger_server, "Conexion perdida");
 }
 
 void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
@@ -332,17 +329,40 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
     switch(headerStruct -> type){
 
+        case SUB_APPEARED:
+            printf("APPEARED_POKEMON\n");
+            t_paquete* paquete = create_package(SUB_APPEARED);
+            int* rta = malloc(sizeof(int));
+            *rta = 1;
+            add_to_package(paquete, (void*) rta, sizeof(int));
+
+            // Envio el paquete, si no se puede enviar retorno false
+            send_package(paquete, server_socket);
+            break;
+        case SUB_LOCALIZED:
+            printf("LOCALIZED_POKEMON\n");
+            t_paquete* paquete2 = create_package(SUB_APPEARED);
+            int* rta2 = malloc(sizeof(int));
+            *rta2 = 1;
+            add_to_package(paquete2, (void*) rta2, sizeof(int));
+
+            // Envio el paquete, si no se puede enviar retorno false
+            send_package(paquete2, server_socket);
+            break;
+        case SUB_CAUGHT:
+            printf("SUB_CAUGHT\n");
+            break;
         case APPEARED_POK:
-            printf("APPEARED_POKEMON");
+            printf("APPEARED_POKEMON\n");
             break;
         case LOCALIZED_POK:
-            printf("LOCALIZED_POKEMON");
+            printf("LOCALIZED_POKEMON\n");
             break;
         case CAUGHT_POK:
-            printf("CAUGHT_POKEMON");
+            printf("CAUGHT_POKEMON\n");
             break;
         default:
-            printf("la estas cagando compa");
+            printf("la estas cagando compa\n");
             break;
     }
 

@@ -109,6 +109,7 @@ void *server_function(void *arg) {
                     int respuesta = 1;
                     t_paquete* paquete = create_package(SUB_NEW);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 
@@ -122,6 +123,7 @@ void *server_function(void *arg) {
                     int respuesta = 1;
                     t_paquete* paquete = create_package(SUB_APPEARED);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 
@@ -135,9 +137,10 @@ void *server_function(void *arg) {
                     int respuesta = 1;
                     t_paquete* paquete = create_package(SUB_LOCALIZED);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
-                
+
             case SUB_CAUGHT:;
                 {
                     char* ip = (char*) list_get(cosas, 0);
@@ -146,8 +149,9 @@ void *server_function(void *arg) {
                     //Luego hacer algo con ip y puerto
 
                     int respuesta = 1;
-                    t_paquete* paquetCAUGHT create_package(SUB_NEW);
+                    t_paquete* paquete = create_package(SUB_CAUGHT);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 
@@ -159,8 +163,9 @@ void *server_function(void *arg) {
                     //Luego hacer algo con ip y puerto
 
                     int respuesta = 1;
-                    t_paquete* paquetGET create_package(SUB_NEW);
+                    t_paquete* paquete = create_package(SUB_GET);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 
@@ -172,8 +177,9 @@ void *server_function(void *arg) {
                     //Luego hacer algo con ip y puerto
 
                     int respuesta = 1;
-                    t_paquete* paquetCATCH create_package(SUB_NEW);
+                    t_paquete* paquete = create_package(SUB_CATCH);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 

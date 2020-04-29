@@ -57,7 +57,6 @@ typedef struct subscriptor {
     int id_subs;
     char* ip_subs;
     int puerto_subs;
-    t_list* cola_subs;
 } subscriptor;
 
 typedef struct mensaje {

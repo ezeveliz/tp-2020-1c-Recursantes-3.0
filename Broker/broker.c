@@ -99,13 +99,84 @@ void *server_function(void *arg) {
 
         switch (headerStruct->type) {
 
-//            case SUB_NEW:;
-//                {
-//                    chat_mensaje* mensaje = void_a_mensaje(list_get(cosas, 0));
-//                    mostrar_mensaje(mensaje);
-//                    break;
-//                }
-//
+            case SUB_NEW:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(SUB_NEW);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+
+            case SUB_APPEARED:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(SUB_APPEARED);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+
+            case SUB_LOCALIZED:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(SUB_LOCALIZED);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+                
+            case SUB_CAUGHT:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquetCAUGHT create_package(SUB_NEW);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+
+            case SUB_GET:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquetGET create_package(SUB_NEW);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+
+            case SUB_CATCH:;
+                {
+                    char* ip = (char*) list_get(cosas, 0);
+                    int puerto = *((int*) list_get(cosas, 1));
+
+                    //Luego hacer algo con ip y puerto
+
+                    int respuesta = 1;
+                    t_paquete* paquetCATCH create_package(SUB_NEW);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    break;
+                }
+
             case NEW_POK:;
                 {
                     //TODO: ver si sacar el id

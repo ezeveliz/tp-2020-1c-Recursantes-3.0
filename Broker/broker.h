@@ -71,9 +71,11 @@ typedef struct mensaje {
 } mensaje;
 
 int IDENTIFICADOR_MENSAJE;
+int IDENTIFICADOR_SUBSCRIPTOR;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
 void* asignar_puntero_a_memoria();
 size_t sizeof_pokemon(t_new_pokemon* estructura);
+subscriptor* subscriptor_create(int id, char* ip, int puerto);
 #endif //TEAM_BROKER_H

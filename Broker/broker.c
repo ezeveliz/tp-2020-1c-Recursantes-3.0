@@ -21,6 +21,7 @@ int main(int argc, char **argv) {
 
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
+    IDENTIFICADOR_SUBSCRIPTOR = 1;
 
     // Inicializamos las colas
     list_new_pokemon = list_create();
@@ -185,17 +186,115 @@ void *server_function(void *arg) {
 
             case NEW_POK:;
                 {
-                    //TODO: ver si sacar el id
-                    uint32_t mensaje_id = *((uint32_t *) list_get(cosas, 0));
-                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 1));
-                    t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,2));
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,1));
 
-                    mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
 
-                    //falta responder con el id
-                    create_package(NEW_POK);
+                    //create_package(NEW_POK);
 
                     //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(NEW_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
+                    break;
+                }
+
+            case APPEARED_POK:;
+                {
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_appeared_pokemon* appeared_pokemon = void_a_appeared_pokemon(list_get(cosas,1));
+
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, APPEARED_POK, sizeof_pokemon());
+
+                    //create_package(APPEARED_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(APPEARED_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
+                    break;
+                }
+
+            case LOCALIZED_POK:;
+                {
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_localized_pokemon* localized_pokemon = void_a_localized_pokemon(list_get(cosas,1));
+
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, LOCALIZED_POK, sizeof_pokemon(new_pokemon));
+
+                    //create_package(LOCALIZED_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(LOCALIZED_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
+                    break;
+                }
+
+            case CAUGHT_POK:;
+                {
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_caught_pokemon* caught_pokemon = void_a_caught_pokemon(list_get(cosas,1));
+
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, CAUGHT_POK, sizeof_pokemon(new_pokemon));
+
+                    //create_package(CAUGHT_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(CAUGHT_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
+                    break;
+                }
+
+            case GET_POK:;
+                {
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,1));
+
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, GET_POK, sizeof_pokemon(new_pokemon));
+
+                    //create_package(GET_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(GET_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
+                    break;
+                }
+
+            case CATCH_POK:;
+                {
+                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
+                    t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,1));
+
+                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, CATCH_POK, sizeof_pokemon(new_pokemon));
+
+                    //create_package(CATCH_POK);
+
+                    //cargar_mensaje(list_new_pokemon, mensaje);
+
+                    //Envio el ID de respuesta
+                    int respuesta = 1;
+                    t_paquete* paquete = create_package(CATCH_POK);
+                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+                    send_package(paquete, fd);
                     break;
                 }
 
@@ -250,6 +349,21 @@ void* asignar_puntero_a_memoria(){
     return NULL;
 }
 
+subscriptor* subscriptor_create(int id, char* ip, int puerto){
+    subscriptor* nuevo_subscriptor = malloc(sizeof(subscriptor));
+
+    if(id == 0){
+        id = IDENTIFICADOR_SUBSCRIPTOR;
+        IDENTIFICADOR_SUBSCRIPTOR++;
+    }
+
+    nuevo_subscriptor->id_subs = id;
+    nuevo_subscriptor->ip_subs = ip;
+    nuevo_subscriptor->puerto_subs = puerto;
+
+    return nuevo_subscriptor;
+
+}
 
 //TODO: Hacer los otros
 size_t sizeof_pokemon(t_new_pokemon* estructura){

@@ -186,8 +186,7 @@ void *server_function(void *arg) {
 
             case NEW_POK:;
                 {
-                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
-                    t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,1));
+                    t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
 
                     //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
 
@@ -262,8 +261,7 @@ void *server_function(void *arg) {
 
             case GET_POK:;
                 {
-                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
-                    t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,1));
+                    t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,0));
 
                     //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, GET_POK, sizeof_pokemon(new_pokemon));
 
@@ -281,8 +279,7 @@ void *server_function(void *arg) {
 
             case CATCH_POK:;
                 {
-                    uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
-                    t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,1));
+                    t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,0));
 
                     //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, CATCH_POK, sizeof_pokemon(new_pokemon));
 

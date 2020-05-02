@@ -59,17 +59,25 @@ typedef struct subscriptor {
     int puerto_subs;
     int socket;
 } subscriptor;
+t_list* SUBSCRIPTORES;
 
 typedef struct mensaje {
     int id;
     int id_correlacional;
     MessageType tipo;
-    t_list* enviados;
-    t_list* confirmados;
     size_t tam;
     void* puntero_a_memoria;
     unsigned long lru;
 } mensaje;
+t_list* MENSAJES;
+
+typedef struct mensaje_subscriptor {
+    int id_mensaje;
+    int id_subscriptor;
+    bool enviado;
+    bool ack;
+} mensaje_subscriptor;
+t_list* MENSAJE_SUBSCRIPTORE;
 
 int IDENTIFICADOR_MENSAJE;
 

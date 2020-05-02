@@ -22,6 +22,10 @@ int main(int argc, char **argv) {
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
 
+    SUBSCRIPTORES = list_create();
+    MENSAJES = list_create();
+    MENSAJE_SUBSCRIPTORE = list_create();
+
     // Inicializamos las colas
     LIST_NEW_POKEMON = list_create();
     LIST_APPEARED_POKEMON = list_create();
@@ -284,11 +288,11 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     nuevo_mensaje->id = id;
     nuevo_mensaje->id_correlacional = id_correlacional;
     nuevo_mensaje->tipo = tipo;
-    nuevo_mensaje->enviados = list_create();
-    nuevo_mensaje->confirmados = list_create();
     nuevo_mensaje->tam = tam;
     nuevo_mensaje->puntero_a_memoria = asignar_puntero_a_memoria();
     nuevo_mensaje->lru = unix_epoch();
+
+    list_add(MENSAJES, nuevo_mensaje);
 
     return nuevo_mensaje;
 }
@@ -307,6 +311,7 @@ subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
     nuevo_subscriptor->puerto_subs = puerto;
     nuevo_subscriptor->socket = socket;
 
+    list_add(SUBSCRIPTORES, nuevo_subscriptor);
 
     return nuevo_subscriptor;
 
@@ -329,8 +334,6 @@ void subscriptor_delete(int id, t_list* cola){
 
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
     int id = *((int*) list_get(cosas, 0));
-    char* ip = (char*) list_get(cosas, 1);
-    int puerto = *((int*) list_get(cosas, 2));
 
     if(existe_sub(id, una_cola)){
         subscriptor_delete(id, una_cola);

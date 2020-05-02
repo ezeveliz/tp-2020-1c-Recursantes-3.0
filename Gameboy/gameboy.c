@@ -39,7 +39,6 @@ int main(int argc, char *argv[]){
     //log_destroy(logger);
 }
 
-
 void msj_error(){
     printf("Erro en argumentos");
 }
@@ -70,12 +69,22 @@ int str2Msj (const char *str)
     return -1;
 }
 
+int str2Queue (const char*str)
+{
+    int j;
+    for (j = 0;  j < sizeof (conversionQueue) / sizeof (conversionQueue[0]);  ++j)
+        if (!strcmp (str, conversionQueue[j].str))
+            return conversionQueue[j].val;
+    return -1;
+}
+
 
 /* Estas funciones se encargan de ver que tipo de mensaje es y tratarlo
  * @params el numero de argumentos con el que invocaron al main
  * @params un vector de char* que tiene todos los argumentos que le pasaron al main
  */
-void broker_distribuidor(int argc, char* argv[]){
+void broker_distribuidor(int argc, char* argv[])
+{
     char* ip = config_get_string_value(archConfig, "IP_BROKER");
     char* puerto = config_get_string_value(archConfig, "PUERTO_BROKER");
     t_paquete* paquete;
@@ -174,7 +183,8 @@ void broker_distribuidor(int argc, char* argv[]){
     free_package(paquete);
 }
 
-void team_distribuidor(int argc, char* argv[]){
+void team_distribuidor(int argc, char* argv[])
+{
     char* ip = config_get_string_value(archConfig, "IP_TEAM");
     char* puerto = config_get_string_value(archConfig, "PUERTO_TEAM");
     t_paquete* paquete;
@@ -202,7 +212,8 @@ void team_distribuidor(int argc, char* argv[]){
     free(puerto);
 }
 
-void gamecard_distribuidor(int argc, char* argv[]){
+void gamecard_distribuidor(int argc, char* argv[])
+{
     char* ip = config_get_string_value(archConfig, "IP_GAMECARD");
     char* puerto = config_get_string_value(archConfig, "PUERTO_GAMECARD");
     t_paquete* paquete;
@@ -272,14 +283,39 @@ void gamecard_distribuidor(int argc, char* argv[]){
  * @params el tiempo por el que te queres suscribir
  */
 
-void suscribir(char* cola_mensaje, char* tiempo){
-    //Enviar mensaje de suscripcion
-    if(subscribe_to_queue(str2Msj(cola_mensaje)) != -1){
+void suscribir(char* cola_mensaje, char* tiempo)
+{
+    //Genera el socket para enviar al broker
+    int broker = create_socket();
+
+    char* ip_broker = config_get_string_value(archConfig, "IP_BROKER");
+    int puerto_broker = config_get_string_value(archConfig, "PUERTO_BROKER");
+
+    if (broker == -1) {
+        printf("Error al crear el socket\n");
+        return;
+    }
+
+    if (connect_socket(broker, ip_broker, puerto_broker) == -1) {
+        log_error(logger, "Conexion fallida ip:%s, puerto:%d", ip_broker, puerto_broker);
+        close_socket(broker);
+        return;
+    }
+
+    log_info(logger,"Se logro conexion con ip: %s, puerto: %d\n", ip_broker, puerto_broker);
+
+        //Se suscribe a la cola
+    if(subscribe_to_queue(broker,str2Msj(cola_mensaje)) != -1){
+        close_socket(broker);
         log_info(logger,"Te suscribiste a la cola: %s", cola_mensaje);
+
+        //Se configura un timer
         timer(atoi(tiempo));
+
         //crear servidor
         serverFunction();
     }else{
+        close_socket(broker);
         printf("Error al intentar Suscribir");
     }
 }
@@ -295,7 +331,8 @@ void suscribir(char* cola_mensaje, char* tiempo){
  * @param tiempo de ejecucion
  */
 
-void timer(int tiempo){
+void timer(int tiempo)
+{
     struct sigaction sa;
     memset (&sa, 0, sizeof (sa));
     sa.sa_handler = &timer_handler;
@@ -326,23 +363,24 @@ void timer_handler (int signum)
  * Esta funcion esta escrita en spanglish
  */
 
-int subscribe_to_queue(MessageType cola) {
-
+int subscribe_to_queue(int broker, MessageType cola)
+{
     // Creo un paquete para la suscripcion a una cola, adjunto la ip y el puerto de mi server
     t_paquete* paquete = create_package(cola);
     char* mi_ip = config_get_string_value(archConfig, "IP_GAMEBOY");
-    int mi_puerto = config_get_int_value(archConfig, "PUERTO_BROKER");
+    int mi_puerto = config_get_int_value(archConfig, "PUERTO_GAMEBOY");
     add_to_package(paquete, (void*) mi_ip, strlen(mi_puerto) + 1);//Mi ip
     add_to_package(paquete, (void*) &mi_puerto, sizeof(int));//Mi puerto
 
-    // Envio el paquete, si no se puede enviar retorno false
+    //Limpieza
+    free(mi_ip);
 
-    if(mensaje_proceso(BROKER, paquete)  == -1){
-        return -1;
+    // Envio el paquete, si no se puede enviar retorno false
+    if(send_package(paquete, broker)  == -1){
+        return false;
     }
 
     // Limpieza
-    free(mi_ip);
     free_package(paquete);
 
     // Trato de recibir el encabezado de la respuesta
@@ -359,84 +397,94 @@ int subscribe_to_queue(MessageType cola) {
     free(buffer_header);
     list_destroy(rta_list);
 
-    return (rta == 1)? -1 : 1;
+    return rta == 1;
 }
 
 void serverFunction(){
 
     int socket;
-    int port = config_get_int_value(archConfig, "PUERTO_SUSCRIPCION");
+    int port = config_get_int_value(archConfig, "PUERTO_GAMEBOY");
 
     if((socket = create_socket()) == -1) {
-        printf("Error al crear el socket");
+        log_error(logger,"Error al crear el socket");
         return;
     }
-    if((bind_socket(socket, PORT)) == -1) {
-        printf("Error al bindear el socket");
+    if((bind_socket(socket, port)) == -1) {
+        log_error(logger,"Error al bindear el socket");
         return;
-    }
-    void new(int fd, char * ip, int port){
-        printf("Cliente conectado, IP:%s, PORT:%d\n", ip, port);
     }
 
+
+    void new(int fd, char * ip, int port){}
+
     void lost(int fd, char * ip, int port){}
+
     void incoming(int fd, char * ip, int port, MessageHeader * headerStruct){
 
         t_list *cosas = receive_package(fd, headerStruct);
         void* mensaje = list_get(cosas, 0);
 
+        //Segun el mensaje que recibiste lo logea
         switch (headerStruct->type){
-            case NEW_POK:
-                t_new_pokemon* newPokemon = void_a_new_pokemon(mensaje);
-                log_info(logger,"NEW_POKEMON Nombre Pokemon: %s \nCantidad: %d \nPosicion: (%d,%d)\n", newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,newPokemon->pos_y);
+            case NEW_POK: {
+                t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
+                log_info(logger, "NEW_POKEMON Nombre Pokemon: %s \nCantidad: %d \nPosicion: (%d,%d)\n",
+                         newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x, newPokemon->pos_y);
                 free(newPokemon->nombre_pokemon);
                 free(newPokemon);
                 break;
-
-            case APPEARED_POK:
-                t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(mensaje);
-                log_info(logger,"APEPEARED_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", appearedPokemon->nombre_pokemon,appearedPokemon->pos_x,appearedPokemon->pos_y);
+            }
+            case APPEARED_POK: {
+                t_appeared_pokemon *appearedPokemon = void_a_appeared_pokemon(mensaje);
+                log_info(logger, "APEPEARED_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
+                         appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
                 free(appearedPokemon->nombre_pokemon);
                 free(appearedPokemon);
                 break;
-
-            case CATCH_POK:
-                t_catch_pokemon* catchPokemon = void_a_catch_pokemon(mensaje);
-                log_info(logger,"CATCH_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", catchPokemon->nombre_pokemon, catchPokemon->pos_x,catchPokemon->pos_y);
+            }
+            case CATCH_POK: {
+                t_catch_pokemon *catchPokemon = void_a_catch_pokemon(mensaje);
+                log_info(logger, "CATCH_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", catchPokemon->nombre_pokemon,
+                         catchPokemon->pos_x, catchPokemon->pos_y);
                 free(catchPokemon->nombre_pokemon);
                 free(catchPokemon);
                 break;
-
-            case CAUGHT_POK:
-                t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(mensaje);
-                log_info(logger,"CAUGHT_POKEMON Fue atrapado: %d\n", caughtPokemon->atrapado);
+            }
+            case CAUGHT_POK: {
+                t_caught_pokemon *caughtPokemon = void_a_caught_pokemon(mensaje);
+                log_info(logger, "CAUGHT_POKEMON Fue atrapado: %d\n", caughtPokemon->atrapado);
                 free(caughtPokemon);
                 break;
-
-            case GET_POK:
-                t_get_pokemon* getPokemon = void_a_get_pokemon(mensaje);
-                log_info(logger,"GET_POKEMON Nombre; %s\n", getPokemon->nombre_pokemon);
+            }
+            case GET_POK: {
+                t_get_pokemon *getPokemon = void_a_get_pokemon(mensaje);
+                log_info(logger, "GET_POKEMON Nombre; %s\n", getPokemon->nombre_pokemon);
                 free(getPokemon->nombre_pokemon);
                 free(getPokemon);
                 break;
-
-            case LOCALIZED_POK:
-                t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(mensaje);
-                log_info(logger,"GET_POKEMON Nombre; %s Cantidad de coordenadas: %d\n", localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
+            }
+            case LOCALIZED_POK: {
+                t_localized_pokemon *localizedPokemon = void_a_localized_pokemon(mensaje);
+                log_info(logger, "GET_POKEMON Nombre; %s Cantidad de coordenadas: %d\n",
+                         localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
                 free(localizedPokemon->nombre_pokemon);
                 free(localizedPokemon);
                 break;
-
+            }
             default:
-                printf("Operacion desconocida. No quieras meter la pata\n")
+                printf("Operacion desconocida. No quieras meter la pata\n");
 
                 break;
 
         }
+
+        //Limpieza
         list_destroy(cosas);
         free(mensaje);
 
     }
+
+    //Inicio servidor
     start_server(socket, &new, &lost, &incoming);
 }
 
@@ -471,6 +519,10 @@ int envio_mensaje(t_paquete* paquete, char* ip, uint32_t puerto){
 
 }
 
+
+/*
+ * sirve para mandar a la direccion del proceso correspondiente
+ */
 int mensaje_proceso(int proceso, t_paquete* paquete){
     int resultado = 0;
 
@@ -487,7 +539,6 @@ int mensaje_proceso(int proceso, t_paquete* paquete){
     }
 
     return resultado;
-
 }
 
 

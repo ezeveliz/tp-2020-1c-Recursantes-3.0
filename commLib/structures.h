@@ -10,31 +10,31 @@
  */
 typedef enum _MessageType {
     // Enum de prueba
-	ABC,
-	// PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
-	// Suscripcion a colas globales Team-Broker
-	SUB_APPEARED,
-	SUB_LOCALIZED,
-	SUB_CAUGHT,
-	SUB_NEW,
-	SUB_CATCH,
-	SUB_GET,
-	// Mensajes Team-Broker
-	GET_POK,
-	CATCH_POK,
-	// Mensajes Broker-Team
-	APPEARED_POK, // Tambien aplica a GameBoy-Team
-	LOCALIZED_POK,
-	CAUGHT_POK,
-	NEW_POK //Gameboy_Broker
+    ABC,
+    // PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
+    // Suscripcion a colas globales Team-Broker
+    SUB_NEW,
+    SUB_APPEARED,
+    SUB_LOCALIZED,
+    SUB_CAUGHT,
+    SUB_GET,
+    SUB_CATCH,
+    // Mensajes Team-Broker
+    GET_POK,
+    CATCH_POK,
+    // Mensajes Broker-Team
+    APPEARED_POK, // Tambien aplica a GameBoy-Team
+    LOCALIZED_POK,
+    CAUGHT_POK,
+    NEW_POK
 } MessageType;
 
 /**
  *  Estructura que contiene el nombre del header de la comunicación y el tamaño del paquete en sí
  */
 typedef struct _MessageHeader {
-	MessageType type;
-	int data_size;
+    MessageType type;
+    int data_size;
 } MessageHeader;
 
 /**
@@ -43,8 +43,8 @@ typedef struct _MessageHeader {
  */
  //TODO revisar si no se puede colocar todo directo en el paquete en vez de usar 2 estructuras
 typedef struct {
-	MessageHeader *header;
-	void* stream;
+    MessageHeader *header;
+    void* stream;
 } t_paquete;
 
 /**
@@ -58,8 +58,9 @@ typedef struct t_thread_client {
     void (*incoming_message)(int, char*, int, MessageHeader*);
 }t_thread_client;
 
-
-
+/**
+ * Estructura utilizada para informar? aparicion de pokemon
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -68,11 +69,17 @@ typedef struct {
     uint32_t cantidad;
 } t_new_pokemon;
 
+/**
+ * Estructura utlizada para solicitar? un pokemon con GET_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
 } t_get_pokemon;
 
+/**
+ * Estructura utilizada para responder al mensaje GET_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -80,10 +87,16 @@ typedef struct {
     uint32_t* coordenadas;
 } t_localized_pokemon;
 
+/**
+ * Estructura utilizada para responder al mensaje CATCH_POK
+ */
 typedef struct {
     uint32_t atrapado;
 } t_caught_pokemon;
 
+/**
+ * Estructura utilizada para solicitar el atrapado de un pokemon con CATCH_POK
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;
@@ -91,6 +104,9 @@ typedef struct {
     uint32_t pos_y;
 } t_catch_pokemon;
 
+/**
+ * Estuctura utilizada para informar? la aparicion de un nuevo pokemon
+ */
 typedef struct {
     uint32_t nombre_pokemon_length;
     char* nombre_pokemon;

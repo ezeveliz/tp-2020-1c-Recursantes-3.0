@@ -46,3 +46,14 @@ const static struct {
 };
 
 
+const static struct {
+    u_int32_t      val;
+    const char *str;
+} conversionQueue [] = {
+        {SUB_NEW, "NEW_POKEMON"},
+        {SUB_APPEARED, "APPEARED_POKEMON"},
+        {SUB_CATCH, "CATCH_POKEMON"},
+        {SUB_CAUGHT, "CAUGHT_POKEMON"},
+        {SUB_GET, "GET_POKEMON"},
+        {SUB_LOCALIZED, "LOCALIZED_POKEMON"}
+};

@@ -21,15 +21,14 @@ int main(int argc, char **argv) {
 
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
-    IDENTIFICADOR_SUBSCRIPTOR = 1;
 
     // Inicializamos las colas
-    list_new_pokemon = list_create();
-    list_appeared_pokemon = list_create();
-    list_get_pokemon = list_create();
-    list_localized_pokemon = list_create();
-    list_catch_pokemon = list_create();
-    list_caught_pokemon = list_create();
+    LIST_NEW_POKEMON = list_create();
+    LIST_APPEARED_POKEMON = list_create();
+    LIST_GET_POKEMON = list_create();
+    LIST_LOCALIZED_POKEMON = list_create();
+    LIST_CATCH_POKEMON = list_create();
+    LIST_CAUGHT_POKEMON = list_create();
 
     tests_broker();
 
@@ -102,96 +101,50 @@ void *server_function(void *arg) {
 
             case SUB_NEW:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_NEW);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
                     break;
                 }
 
             case SUB_APPEARED:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_APPEARED);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
                     break;
                 }
 
             case SUB_LOCALIZED:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_LOCALIZED);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
                     break;
                 }
 
             case SUB_CAUGHT:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_CAUGHT);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
                     break;
                 }
 
             case SUB_GET:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_GET);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
                     break;
                 }
 
             case SUB_CATCH:;
                 {
-                    char* ip = (char*) list_get(cosas, 0);
-                    int puerto = *((int*) list_get(cosas, 1));
-
-                    //Luego hacer algo con ip y puerto
-
-                    int respuesta = 1;
-                    t_paquete* paquete = create_package(SUB_CATCH);
-                    add_to_package(paquete, (void*) &respuesta, sizeof(int));
-                    send_package(paquete, fd);
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
                     break;
                 }
 
             case NEW_POK:;
                 {
+                    // Le llega un mensaje
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
 
+                    // Cargamos el mensaje en nuestro sistema
                     //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
 
-                    //create_package(NEW_POK);
 
+                    // Cargamos el mensaje a la lista de New_pokemon
                     //cargar_mensaje(list_new_pokemon, mensaje);
 
                     //Envio el ID de respuesta
@@ -346,17 +299,14 @@ void* asignar_puntero_a_memoria(){
     return NULL;
 }
 
-subscriptor* subscriptor_create(int id, char* ip, int puerto){
+subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
     subscriptor* nuevo_subscriptor = malloc(sizeof(subscriptor));
-
-    if(id == 0){
-        id = IDENTIFICADOR_SUBSCRIPTOR;
-        IDENTIFICADOR_SUBSCRIPTOR++;
-    }
 
     nuevo_subscriptor->id_subs = id;
     nuevo_subscriptor->ip_subs = ip;
     nuevo_subscriptor->puerto_subs = puerto;
+    nuevo_subscriptor->socket = socket;
+
 
     return nuevo_subscriptor;
 
@@ -368,3 +318,43 @@ size_t sizeof_pokemon(t_new_pokemon* estructura){
     tam += estructura->nombre_pokemon_length;
     return tam;
 }
+
+bool existe_sub(int id, t_list* cola){
+    return true;
+}
+
+void subscriptor_delete(int id, t_list* cola){
+    return;
+}
+
+void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
+    int id = *((int*) list_get(cosas, 0));
+    char* ip = (char*) list_get(cosas, 1);
+    int puerto = *((int*) list_get(cosas, 2));
+
+    if(existe_sub(id, una_cola)){
+        subscriptor_delete(id, una_cola);
+    }
+
+    subscriptor* nuevo_subscriptor = subscriptor_create(id, ip, puerto, fd);
+
+    list_add(una_cola, nuevo_subscriptor);
+
+    int respuesta = 1;
+    t_paquete* paquete = create_package(tipo);
+    add_to_package(paquete, (void*) &respuesta, sizeof(int));
+    send_package(paquete, fd);
+}
+
+//void cargar_mensaje(t_list* una_cola,mensaje* un_mensaje){
+//    int cantidad_subs = list_size(una_cola);
+//    for (int i = 0; i < cantidad_subs; ++i) {
+//        subscriptor* un_subscriptor = list_get(una_cola, i);
+//        mandar_mensaje_thread(un_subscriptor, un_mensaje);
+//        // como concha hacemos ?
+//         se me ocurre que podemos solamente cargar el mensaje a una lista de mensajes
+//         y despues que haya algun bicho que ande recorriendo esa cola viendo que mensaje se mandó y cual no
+//         porque de cada struct mensaje podemos saber su id, su contenido, a que cola va, etc
+//         entonces agarraría un mensaje y veo, tiene el ACK en uno ? si lo tiene lo borro
+//    }
+//}

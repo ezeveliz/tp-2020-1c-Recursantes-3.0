@@ -46,17 +46,18 @@ void *server_function(void *arg);
 
 t_log * logger;
 
-t_list* list_new_pokemon;
-t_list* list_appeared_pokemon;
-t_list* list_get_pokemon;
-t_list* list_localized_pokemon;
-t_list* list_catch_pokemon;
-t_list* list_caught_pokemon;
+t_list* LIST_NEW_POKEMON;
+t_list* LIST_APPEARED_POKEMON;
+t_list* LIST_GET_POKEMON;
+t_list* LIST_LOCALIZED_POKEMON;
+t_list* LIST_CATCH_POKEMON;
+t_list* LIST_CAUGHT_POKEMON;
 
 typedef struct subscriptor {
     int id_subs;
     char* ip_subs;
     int puerto_subs;
+    int socket;
 } subscriptor;
 
 typedef struct mensaje {
@@ -71,11 +72,13 @@ typedef struct mensaje {
 } mensaje;
 
 int IDENTIFICADOR_MENSAJE;
-int IDENTIFICADOR_SUBSCRIPTOR;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
 void* asignar_puntero_a_memoria();
 size_t sizeof_pokemon(t_new_pokemon* estructura);
-subscriptor* subscriptor_create(int id, char* ip, int puerto);
+subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket);
+bool existe_sub(int id, t_list* cola);
+void subscriptor_delete(int id, t_list* cola);
+void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo);
 #endif //TEAM_BROKER_H

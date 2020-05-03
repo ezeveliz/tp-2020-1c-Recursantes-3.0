@@ -87,3 +87,7 @@ void timer(int);
 int subscribe_to_queue( int, MessageType);
 
 void serverFunction();
+
+//Prueba
+void logear_mensaje( MessageHeader*, t_list* );
+

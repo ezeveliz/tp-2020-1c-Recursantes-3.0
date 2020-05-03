@@ -22,6 +22,7 @@ typedef struct {
     char* ip_team;
     int puerto_team;
     char* log_file;
+    int team_id;
 } TEAMConfig;
 
 typedef struct {

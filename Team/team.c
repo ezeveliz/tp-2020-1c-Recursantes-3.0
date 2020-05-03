@@ -3,18 +3,15 @@
 TEAMConfig config;
 t_log* logger;
 t_log* logger_server;
-bool subscribed_to_appeared_pokemon = false;
-bool subscribed_to_localized_pokemon = false;
-bool subscribed_to_caught_pokemon = false;
-bool subscribed_to_get_pokemon = false;
-bool subscribed_to_catch_pokemon = false;
+pthread_t appeared_thread;
+pthread_t localized_thread;
+pthread_t caught_thread;
 t_config *config_file;
 // Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
 t_dictionary* objetivo_global;
 
 int main() {
     MessageType test = ABC;
-    pthread_t queues_subscription_thread;
     pthread_t server_thread;
 
     // Leo archivo de configuracion, si no lo encuentro salgo del proceso
@@ -29,19 +26,11 @@ int main() {
         return -1;
     }
 
-    //Creo el servidor para que el GameBoy y el Broker me manden mensajes
+    //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
     
-    //Intento conectarme una vez al broker y suscribirme a las listas
-    attempt_subscription();
-
-    // Si no me logre suscribir a todas las colas, levanto un hilo que lo reintente cada n segundos
-    if(!subscribed_to_all_global_queues()) {
-
-        pthread_create(&queues_subscription_thread, NULL, queues_subscription_function, NULL);
-        pthread_detach(queues_subscription_thread);
-
-    }
+    //Creo 3 hilos para suscribirme a las colas globales
+    subscribe_to_queues();
 
     initialize_structures();
 
@@ -74,6 +63,7 @@ int read_config_options() {
     config.ip_team = config_get_string_value(config_file, "IP_TEAM");
     config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
+    config.team_id = config_get_int_value(config_file, "TEAM_ID");
     return 1;
 }
 
@@ -87,39 +77,26 @@ int start_log() {
     return 1;
 }
 
-void attempt_subscription() {
+void subscribe_to_queues() {
 
-    // Me intento conectar al Broker y suscribirme a la cola de appeared_pokemon
-    int broker = connect_to_broker();
-    if (broker != -1 && !subscribed_to_appeared_pokemon) {
-        subscribed_to_appeared_pokemon = subscribe_to_queue(broker, SUB_APPEARED);
-        if (subscribed_to_appeared_pokemon) {
-            log_info(logger, "Subscribed to APPEARED_POK");
-        }
-        //disconnect_from_broker(broker);
-    }
+    // Levanto 3 hilos y en cada uno realizo una conexion al broker para cada una de las colas
+    MessageType* appeared = malloc(sizeof(MessageType));
+    *appeared = SUB_APPEARED;
+    pthread_create(&appeared_thread, NULL, &subscribe_to_queue_thread, (void*)appeared);
+    pthread_detach(appeared_thread);
+    free(appeared);
 
-    // Me intento conectar al Broker y suscribirme a la cola de localized_pokemon
-    int broker2 = connect_to_broker();
-    if (broker2 != -1 && !subscribed_to_localized_pokemon) {
-        subscribed_to_localized_pokemon = subscribe_to_queue(broker2, SUB_LOCALIZED);
-        if (subscribed_to_localized_pokemon) {
-            log_info(logger, "Subscribed to LOCALIZED_POK");
-        }
-        //disconnect_from_broker(broker);
-    }
+    MessageType* localized = malloc(sizeof(MessageType));
+    *localized = SUB_LOCALIZED;
+    pthread_create(&localized_thread, NULL, &subscribe_to_queue_thread, (void*)localized);
+    pthread_detach(localized_thread);
+    free(localized);
 
-    subscribe_to_queue(broker, SUB_APPEARED);
-
-    // Me intento conectar al Broker y suscribirme a la cola de caught_pokemon
-    broker = connect_to_broker();
-    if (broker != -1 && !subscribed_to_caught_pokemon) {
-        subscribed_to_caught_pokemon = subscribe_to_queue(broker, SUB_CAUGHT);
-        if (subscribed_to_caught_pokemon) {
-            log_info(logger, "Subscribed to CAUGHT_POK");
-        }
-        disconnect_from_broker(broker);
-    }
+    MessageType* caught = malloc(sizeof(MessageType));
+    *caught = SUB_CAUGHT;
+    pthread_create(&caught_thread, NULL, &subscribe_to_queue_thread, (void*)caught);
+    pthread_detach(caught_thread);
+    free(caught);
 }
 
 int connect_to_broker(){
@@ -140,12 +117,72 @@ void disconnect_from_broker(int broker_socket) {
     close_socket(broker_socket);
 }
 
+void* subscribe_to_queue_thread(void* arg) {
+    MessageType cola = *(MessageType*)arg;
+    free(arg);
+
+    // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre
+    int broker = connect_and_subscribe(cola);
+
+    //TODO: PROBAR ESTO
+    // Me quedo en un loop infinito esperando a recibir cosas
+    while (true) {
+
+        MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+        if(receive_header(broker, buffer_header) > 0) {
+
+            // Recibo la confirmacion
+            t_list* rta_list = receive_package(broker, buffer_header);
+            int rta = *(int*) list_get(rta_list, 0);
+
+            // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
+            // TODO: confirmar la recepcion con un send que mande un 1 o un ACK o algo de eso
+
+            // Limpieza
+            free(buffer_header);
+            //TODO: eliminar la lista
+
+        // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
+        } else {
+            broker = connect_and_subscribe(cola);
+        }
+    }
+
+    return null;
+}
+
+int connect_and_subscribe(MessageType cola) {
+    int broker;
+    bool connected = false;
+    //Mientras que no este conectado itero
+    while (!connected) {
+
+        // Me conecto al Broker
+        broker = connect_to_broker();
+
+        // Si me pude conectar al Broker
+        if (broker != -1) {
+
+            // Me intento suscribir a la cola pasada por parametro
+            connected = subscribe_to_queue(broker, cola);
+
+            // Si no me pude conectar al Broker, me duermo y vuelvo a intentar en unos segundos
+        } else {
+            sleep(config.tiempo_reconexion);
+        }
+    }
+
+    return broker;
+}
+
 bool subscribe_to_queue(int broker, MessageType cola) {
 
-    // Creo un paquete para la suscripcion a una cola, adjunto la ip y el puerto de mi server
+    // Creo un paquete para la suscripcion a una cola
     t_paquete* paquete = create_package(cola);
-    add_to_package(paquete, (void*) config.ip_team, strlen(config.ip_team) + 1);
-    add_to_package(paquete, (void*) &config.puerto_team, sizeof(int));
+    int* id = malloc(sizeof(int));
+    *id = config.team_id;
+    // TODO:Chequear que este bien lo del tamaño del id
+    add_to_package(paquete, (void*) id, sizeof(int));
 
     // Envio el paquete, si no se puede enviar retorno false
     if(send_package(paquete, broker)  == -1){
@@ -153,6 +190,7 @@ bool subscribe_to_queue(int broker, MessageType cola) {
     }
 
     // Limpieza
+    free(id);
     free_package(paquete);
 
     // Trato de recibir el encabezado de la respuesta
@@ -167,7 +205,7 @@ bool subscribe_to_queue(int broker, MessageType cola) {
 
     // Limpieza
     free(buffer_header);
-    //TODO: verificar si hay que destruir la lista
+    //TODO: destruir la lista
 
     return rta == 1;
 }
@@ -185,20 +223,6 @@ void* server_function(void* arg) {
     }
 
     start_server(server_socket, &new, &lost, &incoming);
-
-    return null;
-}
-
-void* queues_subscription_function(void* arg) {
-
-    //Mientras que no este suscripto a todas las colas globales, sigo reintentando
-    // indefinidamente cada n segundos
-    while(!subscribed_to_all_global_queues()) {
-
-        attempt_subscription();
-
-        sleep(config.tiempo_reconexion);
-    }
 
     return null;
 }
@@ -311,8 +335,9 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
     }
 }
 
+// Donde se usaria esto?
 void* scheduling(void* arg){
-
+    return null;
 }
 
 void start_log_server() {
@@ -394,11 +419,6 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 }
 
 //----------------------------------------HELPERS----------------------------------------
-
-bool subscribed_to_all_global_queues() {
-    return subscribed_to_appeared_pokemon && subscribed_to_localized_pokemon && subscribed_to_caught_pokemon
-           && subscribed_to_get_pokemon && subscribed_to_catch_pokemon;
-}
 
 //Funcion de prueba
 void send_to_server(MessageType mensaje){

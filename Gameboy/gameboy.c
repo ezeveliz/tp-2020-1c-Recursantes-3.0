@@ -378,7 +378,7 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     int resultado_suscripcion = suscribir_broker( broker , cola_mensaje );
 
 
-    //t_paquete* ack;
+    //t_paquete* ack; TODO
 
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
     t_list *rta_list;

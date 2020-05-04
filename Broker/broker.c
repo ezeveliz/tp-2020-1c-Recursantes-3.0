@@ -315,7 +315,7 @@ subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
 
 }
 
-//TODO: Hacer los otros
+
 size_t sizeof_new_pokemon(t_new_pokemon* estructura){
     size_t tam = sizeof(uint32_t)*4;
     tam += estructura->nombre_pokemon_length;
@@ -356,8 +356,20 @@ bool existe_sub(int id, t_list* cola){
 }
 
 void subscriptor_delete(int id, t_list* cola){
-    return;
+    bool id_search(void* un_sub){
+        subscriptor* sub = (subscriptor*) un_sub;
+        return sub->id_subs == id;
+    };
+    list_remove_by_condition(cola, id_search);
 }
+
+//void printSubList(t_list* cola){
+//    int size = list_size(cola);
+//    for(int i=0; i<size; i++){
+//        subscriptor* s = list_get(SUBSCRIPTORES, i);
+//        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
+//    }
+//}
 
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
     int id = *((int*) list_get(cosas, 0));

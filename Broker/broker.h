@@ -83,6 +83,7 @@ int IDENTIFICADOR_MENSAJE;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
+mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub);
 void* asignar_puntero_a_memoria();
 size_t sizeof_new_pokemon(t_new_pokemon* estructura);
 size_t sizeof_appeared_pokemon(t_appeared_pokemon* estructura);
@@ -94,4 +95,5 @@ subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket);
 bool existe_sub(int id, t_list* cola);
 void subscriptor_delete(int id, t_list* cola);
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo);
+void mensaje_subscriptor_delete(int id_mensaje, int id_subscriptor);
 #endif //TEAM_BROKER_H

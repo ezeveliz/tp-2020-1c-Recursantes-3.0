@@ -363,14 +363,43 @@ void subscriptor_delete(int id, t_list* cola){
     list_remove_by_condition(cola, id_search);
 }
 
-//void printSubList(t_list* cola){
-//    int size = list_size(cola);
-//    for(int i=0; i<size; i++){
-//        subscriptor* s = list_get(SUBSCRIPTORES, i);
-//        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
-//    }
-//}
+/*void printSubList(){
+    int size = list_size(SUBSCRIPTORES);
+    for(int i=0; i<size; i++){
+        subscriptor* s = list_get(SUBSCRIPTORES, i);
+        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
+    }
+}
+void printMenSubList(){
+    int size = list_size(MENSAJE_SUBSCRIPTORE);
+    for(int i=0; i<size; i++){
+        mensaje_subscriptor* s = list_get(MENSAJE_SUBSCRIPTORE, i);
+        printf("id_mensaje: %d, id_sub: %d, enviado: %s, ack: %s \n", s->id_mensaje, s->id_subscriptor, s->enviado ? "true" : "false", s->ack ? "true" : "false");
+    }
+}*/
 
+mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
+    mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
+
+    nuevo_mensaje_subscriptor->id_mensaje = id_mensaje;
+    nuevo_mensaje_subscriptor->id_subscriptor = id_sub;
+    nuevo_mensaje_subscriptor->enviado = false;
+    nuevo_mensaje_subscriptor->ack = false;
+
+    list_add(MENSAJE_SUBSCRIPTORE, nuevo_mensaje_subscriptor);
+
+    return nuevo_mensaje_subscriptor;
+
+}
+
+void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
+    bool multiple_id_search(void* un_men_sub){
+        mensaje_subscriptor* men_sub = (subscriptor*) un_men_sub;
+        return men_sub->id_mensaje == id_mensaje && men_sub->id_subscriptor == id_sub;
+    };
+    list_remove_by_condition(MENSAJE_SUBSCRIPTORE, multiple_id_search);
+
+}
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
     int id = *((int*) list_get(cosas, 0));
 

@@ -380,6 +380,7 @@ void suscribir(char *cola_mensaje, char *tiempo) {
 
     //t_paquete* ack;
 
+
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
     t_list *rta_list;
 

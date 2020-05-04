@@ -378,7 +378,7 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     int resultado_suscripcion = suscribir_broker( broker , cola_mensaje );
 
 
-    //t_paquete* ack; TODO
+    //t_paquete* ack;
 
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
     t_list *rta_list;
@@ -391,10 +391,12 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             rta_list = receive_package(broker, buffer_header);
             logear_mensaje(buffer_header, rta_list);
             list_destroy_and_destroy_elements(rta_list, &free);
-            /*ack = create_package(ACK);
-            send_package(paquete, broker);
-            free(ack);*/
 
+            /*ack = create_package(ACK);
+            send_package(ack, broker);
+
+            free(ack);
+*/
         }
     }
 

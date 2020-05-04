@@ -348,7 +348,11 @@ size_t sizeof_caught_pokemon(t_caught_pokemon* estructura){
 
 
 bool existe_sub(int id, t_list* cola){
-    return true;
+   bool id_search(void* un_sub){
+       subscriptor* sub = (subscriptor*) un_sub;
+       return sub->id_subs == id;
+   }
+   return (subscriptor*)list_find(cola, id_search) != NULL;
 }
 
 void subscriptor_delete(int id, t_list* cola){

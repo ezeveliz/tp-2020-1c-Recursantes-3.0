@@ -84,10 +84,8 @@ void timer(int);
  * Funciones para suscribirme
  */
 
-int subscribe_to_queue( int, MessageType);
-
-void serverFunction();
-
-//Prueba
 void logear_mensaje( MessageHeader*, t_list* );
 
+int crear_broker_socket();
+
+int suscribir_broker(int ,char *);

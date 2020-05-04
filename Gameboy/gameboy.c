@@ -44,6 +44,11 @@ void msj_error() {
     printf("Erro en argumentos");
 }
 
+
+/**********************************
+ * Funciones de convercion
+ **********************************/
+
 /*Busca en un key-value con los nombres del proceso para pasarlo a un valor numerico de enum
  * @param Un string con el nombre del proceso
  * @return el int que corresponde al proceso
@@ -68,6 +73,11 @@ int str2Msj(const char *str) {
     return -1;
 }
 
+/*
+ * Busca en un key-value con los nombres de la cola para pasarlo a un valor numerico de enum
+ * @param Un string con el nombre de la cola
+ * @return el int que corresponde al mensaje
+ */
 int str2Queue(const char *str) {
     int j;
     for (j = 0; j < sizeof(conversionQueue) / sizeof(conversionQueue[0]); ++j)
@@ -76,8 +86,23 @@ int str2Queue(const char *str) {
     return -1;
 }
 
+/*
+ * Funcion para convertir un string ok/fail a int
+ */
+int okFailToInt(char *resultado) {
+    if (strcmp("OK", resultado) == 0) {
+        return 1;
+    } else {
+        return (strcmp("FAIL", resultado) == 0) ? 0 : -1;
+    }
+}
 
-/* Estas funciones se encargan de ver que tipo de mensaje es y tratarlo
+/*************************************************************************
+ * Funciones para la distribucion de mensajes por las distintas funciones
+ *************************************************************************/
+
+/*
+ * Estas funciones se encargan de ver que tipo de mensaje es y tratarlo
  * @params el numero de argumentos con el que invocaron al main
  * @params un vector de char* que tiene todos los argumentos que le pasaron al main
  */
@@ -208,6 +233,7 @@ void team_distribuidor(int argc, char *argv[]) {
     }
     free(ip);
     free(puerto);
+    free_package(paquete);
 }
 
 void gamecard_distribuidor(int argc, char *argv[]) {
@@ -273,15 +299,114 @@ void gamecard_distribuidor(int argc, char *argv[]) {
     }
     free(ip);
     free(puerto);
+    free_package(paquete);
+}
+
+/*
+ * sirve para mandar a la direccion del proceso correspondiente
+ */
+int mensaje_proceso(int proceso, t_paquete *paquete) {
+    int resultado = 0;
+
+    switch (proceso) {
+        case BROKER:
+            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_BROKER"),
+                                      config_get_int_value(archConfig, "PUERTO_BROKER"));
+            break;
+        case TEAM:
+            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_TEAM"),
+                                      config_get_int_value(archConfig, "PUERTO_TEAM"));
+            break;
+        case GAMECARD:
+            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_GAMECARD"),
+                                      config_get_int_value(archConfig, "PUERTO_GAMECARD"));
+            break;
+    }
+
+    return resultado;
+}
+
+/*
+ * Funciones de envio de mensajes
+ */
+
+int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
+    int server_socket = create_socket();
+
+    if (server_socket == -1) {
+        printf("Error al crear el socket\n");
+        return -1;
+    }
+
+    if (connect_socket(server_socket, ip, puerto) == -1) {
+        log_error(logger, "Conexion fallida ip:%s, puerto:%d", ip, puerto);
+        close_socket(server_socket);
+        return -1;
+    }
+    log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip, puerto);
+
+    if (send_package(paquete, server_socket) == -1) {
+        log_error(logger, "Error al enviar paquete ip:%s, puerto:%d", ip, puerto);
+        close_socket(server_socket);
+        return -1;
+    }
+
+    log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
+    close_socket(server_socket);
+    return 1;
+
 }
 
 
-/* Esta funcion es para suscribirte a una cola de mensajes del broker
- * @params el nombre de la cola a la que te queres suscribir
- * @params el tiempo por el que te queres suscribir
+/*****************************************************
+ * Estas funciones se usan en la suscripcion de colas
+ *****************************************************/
+
+/*
+ * Funcion principal de suscripcion
+ * @params: string del nombre de la cola
+ * @params: el tiempo en formato string
+ */
+void suscribir(char *cola_mensaje, char *tiempo) {
+    //Genera el socket para enviar al broker
+    int broker = crear_broker_socket();
+
+    if (broker == -1) {
+        printf("Error al crear el socket\n");
+        return;
+    }
+    int resultado_suscripcion = suscribir_broker( broker , cola_mensaje );
+
+
+    //t_paquete* ack;
+
+    MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
+    t_list *rta_list;
+
+    if ( resultado_suscripcion == 1 ) {
+
+        timer(atoi(tiempo));
+        while (1) {
+            int datos_recividos = receive_header(broker, buffer_header);
+            rta_list = receive_package(broker, buffer_header);
+            logear_mensaje(buffer_header, rta_list);
+            list_destroy_and_destroy_elements(rta_list, &free);
+            /*ack = create_package(ACK);
+            send_package(paquete, broker);
+            free(ack);*/
+
+        }
+    }
+
+
+}
+
+/*
+ * Funcion para crear el socket que conecta con el
+ * Broker
  */
 
-void suscribir(char *cola_mensaje, char *tiempo) {
+int crear_broker_socket(){
     //Genera el socket para enviar al broker
     int broker = create_socket();
 
@@ -291,20 +416,32 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     //Reviso si el socket se creo
     if (broker == -1) {
         printf("Error al crear el socket\n");
-        return;
+        return -1;
     }
 
     //Lo conecto con el broker
     if (connect_socket(broker, ip_broker, puerto_broker) == -1) {
         log_error(logger, "Conexion fallida ip:%s, puerto:%d", ip_broker, puerto_broker);
         close_socket(broker);
-        return;
+        return -1;
     }
 
     log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip_broker, puerto_broker);
 
     //Libero la ip del broker- no la necesito mas
     free(ip_broker);
+
+    return broker;
+}
+
+/*
+ * Funcion para el envio de mensaje de mensaje con el broker
+ * y recepcion de la respuesta
+ * @param: socket conectado con el broker
+ * @param: string con el nombre de la cola
+ */
+
+int suscribir_broker(int broker_socket,char *cola_mensaje){
 
     //Creo un paquete para suscribirme a la cola pedida
     t_paquete *paquete = create_package(str2Queue(cola_mensaje));
@@ -313,39 +450,36 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     add_to_package(paquete,(void*) &mac, sizeof(int));//Mi Identificador
 
     //Mando el mensaje de suscripcion al broker
-    if (send_package(paquete, broker) == -1) {
-        log_error(logger, "Envio fallido ip:%s, puerto:%d", ip_broker, puerto_broker);
-        return false;
+    if (send_package(paquete, broker_socket) == -1) {
+        printf("Envio fallido");
+        return -1;
     }
 
     // Limpieza
     free_package(paquete);
 
-
     //Recibo la respuesta
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
-    if (receive_header(broker, buffer_header) <= 0) {
-        return false;
+    if (receive_header(broker_socket, buffer_header) <= 0) {
+        return -1;
     }
 
     // Recibo la confirmacion
-    t_list *rta_list = receive_package(broker, buffer_header);
+    t_list *rta_list = receive_package(broker_socket, buffer_header);
     int rta = *(int *) list_get(rta_list, 0);
 
-    if (rta == 1) {
-        timer(atoi(tiempo));
-        int n_mensaje = 1;
-        while (1) {
-            int datos_recividos = receive_header(broker, buffer_header);
-            t_list *rta_list = receive_package(broker, buffer_header);
-            logear_mensaje(buffer_header, rta_list);
-            printf("Mensaje_recivido Numero:%d\n",n_mensaje);
-            n_mensaje++;
-        }
-    }
+    list_destroy_and_destroy_elements(rta_list, &free);
+    free(buffer_header);
 
-
+    return (rta == 1)? 1 : -1;
 }
+
+/*
+ * Funcion para el logeo de los distintos mensajaes que se
+ * reciben del broker
+ * @param: El header del mensaje para saber el tipo de mensaje
+ * @param: La lista que obtenes al recivir los distintos mensajes
+ */
 
 void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     int id_correlativo = *(int *) list_get(rta_list, 0);
@@ -407,67 +541,6 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             break;
     }
 }
-//Esto es de suscribir pero se ve que no sirve mas
-/*//Se suscribe a la cola
-    if(subscribe_to_queue(broker,) != -1){
-        close_socket(broker);
-        log_info(logger,"Te suscribiste a la cola: %s", cola_mensaje);
-
-        //Se configura un timer
-        timer(atoi(tiempo));
-
-        //crear servidor
-        serverFunction();
-    }else{
-        close_socket(broker);
-        printf("Error al intentar Suscribir");
-    }*/
-
-/*
- * Esta funcion fue robada al señor Eze
- * Esta funcion esta escrita en spanglish
- */
-/*
-
-int subscribe_to_queue(int broker, MessageType cola) {
-    // Creo un paquete para la suscripcion a una cola, adjunto la ip y el puerto de mi server
-
-
-
-    //Limpieza
-    free(mi_ip);
-
-    // Envio el paquete, si no se puede enviar retorno false
-    if (send_package(paquete, broker) == -1) {
-        return false;
-    }
-
-    // Limpieza
-    free_package(paquete);
-
-    // Trato de recibir el encabezado de la respuesta
-    MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
-    if (receive_header(broker, buffer_header) <= 0) {
-        return false;
-    }
-
-    // Recibo la confirmacion
-    t_list *rta_list = receive_package(broker, buffer_header);
-    int rta = *(int *) list_get(rta_list, 0);
-
-    // Limpieza
-    free(buffer_header);
-    list_destroy(rta_list);
-
-    return rta == 1;
-}
-*/
-
-
-/*
- * Funciones para manejar el tiempo de ejecucion
- * de suscribir
- */
 
 /*
  * Inicia el Timer para parar la ejecucion y
@@ -495,160 +568,17 @@ void timer(int tiempo) {
  * Sirve para atrapar la senial de alarma
  * @params la señal
  */
+
 void timer_handler(int signum) {
     printf("\nTermino el tiempo!\n");
     exit(-1);
 }
 
-void serverFunction() {
 
-    int socket;
-    int port = config_get_int_value(archConfig, "PUERTO_GAMEBOY");
-
-    if ((socket = create_socket()) == -1) {
-        log_error(logger, "Error al crear el socket");
-        return;
-    }
-    if ((bind_socket(socket, port)) == -1) {
-        log_error(logger, "Error al bindear el socket");
-        return;
-    }
-
-
-    void new(int fd, char *ip, int port) {}
-
-    void lost(int fd, char *ip, int port) {}
-
-    void incoming(int fd, char *ip, int port, MessageHeader *headerStruct) {
-
-        t_list *cosas = receive_package(fd, headerStruct);
-        void *mensaje = list_get(cosas, 0);
-
-        //Segun el mensaje que recibiste lo logea
-        switch (headerStruct->type) {
-            case NEW_POK: {
-                t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
-                log_info(logger, "NEW_POKEMON Nombre Pokemon: %s \nCantidad: %d \nPosicion: (%d,%d)\n",
-                         newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x, newPokemon->pos_y);
-                free(newPokemon->nombre_pokemon);
-                free(newPokemon);
-                break;
-            }
-            case APPEARED_POK: {
-                t_appeared_pokemon *appearedPokemon = void_a_appeared_pokemon(mensaje);
-                log_info(logger, "APEPEARED_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
-                         appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
-                free(appearedPokemon->nombre_pokemon);
-                free(appearedPokemon);
-                break;
-            }
-            case CATCH_POK: {
-                t_catch_pokemon *catchPokemon = void_a_catch_pokemon(mensaje);
-                log_info(logger, "CATCH_POKEMON Nombre Pokemon: %s \nPosicion: (%d,%d)\n", catchPokemon->nombre_pokemon,
-                         catchPokemon->pos_x, catchPokemon->pos_y);
-                free(catchPokemon->nombre_pokemon);
-                free(catchPokemon);
-                break;
-            }
-            case CAUGHT_POK: {
-                t_caught_pokemon *caughtPokemon = void_a_caught_pokemon(mensaje);
-                log_info(logger, "CAUGHT_POKEMON Fue atrapado: %d\n", caughtPokemon->atrapado);
-                free(caughtPokemon);
-                break;
-            }
-            case GET_POK: {
-                t_get_pokemon *getPokemon = void_a_get_pokemon(mensaje);
-                log_info(logger, "GET_POKEMON Nombre; %s\n", getPokemon->nombre_pokemon);
-                free(getPokemon->nombre_pokemon);
-                free(getPokemon);
-                break;
-            }
-            case LOCALIZED_POK: {
-                t_localized_pokemon *localizedPokemon = void_a_localized_pokemon(mensaje);
-                log_info(logger, "GET_POKEMON Nombre; %s Cantidad de coordenadas: %d\n",
-                         localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
-                free(localizedPokemon->nombre_pokemon);
-                free(localizedPokemon);
-                break;
-            }
-            default:
-                printf("Operacion desconocida. No quieras meter la pata\n");
-
-                break;
-
-        }
-
-        //Limpieza
-        list_destroy(cosas);
-        free(mensaje);
-
-    }
-
-    //Inicio servidor
-    start_server(socket, &new, &lost, &incoming);
-}
-
-/*
- * Funciones de envio de mensajes
- */
-
-int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
-    int server_socket = create_socket();
-
-    if (server_socket == -1) {
-        printf("Error al crear el socket\n");
-        return -1;
-    }
-
-    if (connect_socket(server_socket, ip, puerto) == -1) {
-        log_error(logger, "Conexion fallida ip:%s, puerto:%d", ip, puerto);
-        close_socket(server_socket);
-        return -1;
-    }
-    log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip, puerto);
-
-    if (send_package(paquete, server_socket) == -1) {
-        log_error(logger, "Error al enviar paquete ip:%s, puerto:%d", ip, puerto);
-        close_socket(server_socket);
-        return -1;
-    }
-
-    log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
-    close_socket(server_socket);
-    return 1;
-
-}
-
-
-/*
- * sirve para mandar a la direccion del proceso correspondiente
- */
-int mensaje_proceso(int proceso, t_paquete *paquete) {
-    int resultado = 0;
-
-    switch (proceso) {
-        case BROKER:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_BROKER"),
-                                      config_get_int_value(archConfig, "PUERTO_BROKER"));
-            break;
-        case TEAM:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_TEAM"),
-                                      config_get_int_value(archConfig, "PUERTO_TEAM"));
-            break;
-        case GAMECARD:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_GAMECARD"),
-                                      config_get_int_value(archConfig, "PUERTO_GAMECARD"));
-            break;
-    }
-
-    return resultado;
-}
-
-
-/*
+/********************************************************************************
  * Funciones para calcular tamanio de los pokemon
  * Todas las funciones estan armadas como sumas de los atributos de los mensajes
- */
+ ********************************************************************************/
 
 int size_t_new_pokemon(t_new_pokemon *new_pokemon) {
     return sizeof(uint32_t) + new_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t) +
@@ -671,11 +601,4 @@ int size_t_get_pokemon(t_get_pokemon *get_pokemon) {
     return sizeof(uint32_t) + get_pokemon->nombre_pokemon_length;
 }
 
-int okFailToInt(char *resultado) {
-    if (strcmp("OK", resultado) == 0) {
-        return 1;
-    } else {
-        return (strcmp("FAIL", resultado) == 0) ? 0 : -1;
-    }
-}
 

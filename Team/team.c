@@ -10,6 +10,7 @@ t_config *config_file;
 // Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
 t_dictionary* objetivo_global;
 pthread_t* threads_trainer;
+t_list* entrenadores;
 
 int main() {
     MessageType test = ABC;
@@ -235,11 +236,9 @@ void initialize_structures() {
     //Itero la lista de entrenadores, y creo un hilo por cada uno
 
     char **ptr = config.posiciones_entrenadores;
-    int pos = 0, count = 0, tamanio_entrenadores = 0;
+    int pos = 0, tamanio_entrenadores = 0;
     objetivo_global = dictionary_create();
-    t_list *entrenadores = list_create();
-    //La lista de hilos deberia ser una variable global?
-    //t_list* hilos = list_create();
+    entrenadores = list_create();
 
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
@@ -247,8 +246,6 @@ void initialize_structures() {
         Entrenador *entrenador = (Entrenador *) malloc(sizeof(Entrenador));
         entrenador->objetivos_particular = dictionary_create();
         entrenador->stock_pokemons = dictionary_create();
-        //Inicializo el nuevo hilo
-        //pthread_t trainer_thread = malloc(sizeof(pthread_t));
 
         // Definir si el array de entrenadores tendria que ser global o si no importa
         log_info(logger, "entrenador: %d", pos);
@@ -267,37 +264,20 @@ void initialize_structures() {
         sscanf(posiciones[1], "%d", &entrenador->pos_y);
         list_add(entrenadores, (void *) entrenador);
         pos++;
-//        pthread_create(&trainer_thread, NULL, scheduling, NULL);
-        // Agregar hilo a la lista lista
-//        list_add(hilos, (void*) trainer_thread);
     }
-    threads_trainer = (pthread_t *) malloc(sizeof(pthread_t) * HILOSXENTRENADOR);
 
-    //Me fijo si me alcanza el tamano del array que tengo con los entrenadores que hay
+    //Obtengo la cantidad de entrenadores
     tamanio_entrenadores = list_size(entrenadores);
 
-    if (tamanio_entrenadores <= HILOSXENTRENADOR) {
-        //Me alcanza con el array que tengo
-        for (count; count < tamanio_entrenadores; count++) {
-            pthread_create(&threads_trainer[count], NULL, (void *) scheduling, NULL);
-        }
-    } else {
-        //No me alcanzo el array, tengo que reallocar la memoria
-        pthread_t *nuevo_array = (pthread_t *) realloc(threads_trainer, tamanio_entrenadores * sizeof(pthread_t));
-        if (nuevo_array) {
-            //Se pudo realocar correctamente
-            threads_trainer = nuevo_array;
-            for (count; count < tamanio_entrenadores; count++) {
-                pthread_create(&threads_trainer[count], NULL, (void *) scheduling, NULL);
-            }
-        } else {
-            //TODO: verificar que hacer cuando hay error en el realloc
-        }
-
-        // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
+    // Creo un array de tantos hilos como entrenadores haya
+    threads_trainer = (pthread_t *) malloc(tamanio_entrenadores * sizeof(pthread_t));
+    for (int count = 0; count < tamanio_entrenadores; count++) {
+        pthread_create(&threads_trainer[count], NULL, (void *) scheduling, NULL);
     }
-}
 
+    // TODO: agregar el tid de los hilos a la estructura de entrenador correspondiente
+    // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
+}
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
 
@@ -360,7 +340,6 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
     }
 }
 
-// Donde se usaria esto?
 void* scheduling(void* arg){
 
     while(true){

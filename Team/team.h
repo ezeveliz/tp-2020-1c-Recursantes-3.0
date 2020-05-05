@@ -4,7 +4,6 @@
 
 #ifndef TEAM_TEAM_H
 #define TEAM_TEAM_H
-#define HILOSXENTRENADOR 2
 
 #include <commons/config.h>
 #include <commons/log.h>
@@ -20,7 +19,7 @@
 #include "teamStructures.h"
 
 /**
- * Leo archivo de configuracion
+ * Leo archivo de configuracion y cargo los datos en nuestra estructura
  * @return si no se encontro el archivo de configuracion retorno el cod de error -1, 1 si se pudo leer archivo
  */
 int read_config_options();

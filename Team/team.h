@@ -4,6 +4,7 @@
 
 #ifndef TEAM_TEAM_H
 #define TEAM_TEAM_H
+#define HILOSXENTRENADOR 2
 
 #include <commons/config.h>
 #include <commons/log.h>

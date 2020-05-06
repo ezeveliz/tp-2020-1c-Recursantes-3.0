@@ -96,4 +96,8 @@ bool existe_sub(int id, t_list* cola);
 void subscriptor_delete(int id, t_list* cola);
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo);
 void mensaje_subscriptor_delete(int id_mensaje, int id_subscriptor);
+mensaje* find_mensaje(int id);
+subscriptor* find_subscriptor(int id);
+void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje);
+void recursar_operativos();
 #endif //TEAM_BROKER_H

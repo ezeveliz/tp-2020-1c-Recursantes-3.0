@@ -139,18 +139,21 @@ void *server_function(void *arg) {
 
             case NEW_POK:;
                 {
-                    // Le llega un mensaje
+                    // Le llega un un_mensaje
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
 
-                    // Cargamos el mensaje en nuestro sistema
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, NEW_POK, sizeof_pokemon(new_pokemon));
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, 0, NEW_POK, sizeof_new_pokemon(new_pokemon));
+                    un_mensaje->puntero_a_memoria = new_pokemon_a_void(new_pokemon);
 
+                    // Cargamos el un_mensaje a la lista de New_pokemon
+                    cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
 
-                    // Cargamos el mensaje a la lista de New_pokemon
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(NEW_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -162,7 +165,7 @@ void *server_function(void *arg) {
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_appeared_pokemon* appeared_pokemon = void_a_appeared_pokemon(list_get(cosas,1));
 
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, APPEARED_POK, sizeof_pokemon());
+//                    mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, APPEARED_POK, sizeof_pokemon());
 
                     //create_package(APPEARED_POK);
 
@@ -274,7 +277,6 @@ void tests_broker(){
     log_destroy(test_logger);
 }
 
-
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam){
     mensaje* nuevo_mensaje = malloc(sizeof(mensaje));
 
@@ -359,7 +361,7 @@ void subscriptor_delete(int id, t_list* cola){
     bool id_search(void* un_sub){
         subscriptor* sub = (subscriptor*) un_sub;
         return sub->id_subs == id;
-    };
+    }
     list_remove_by_condition(cola, id_search);
 }
 
@@ -396,7 +398,7 @@ void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
     bool multiple_id_search(void* un_men_sub){
         mensaje_subscriptor* men_sub = (subscriptor*) un_men_sub;
         return men_sub->id_mensaje == id_mensaje && men_sub->id_subscriptor == id_sub;
-    };
+    }
     list_remove_by_condition(MENSAJE_SUBSCRIPTORE, multiple_id_search);
 
 }
@@ -417,15 +419,56 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     send_package(paquete, fd);
 }
 
-//void cargar_mensaje(t_list* una_cola,mensaje* un_mensaje){
-//    int cantidad_subs = list_size(una_cola);
-//    for (int i = 0; i < cantidad_subs; ++i) {
-//        subscriptor* un_subscriptor = list_get(una_cola, i);
+void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
+    int cantidad_subs = list_size(una_cola);
+    for (int i = 0; i < cantidad_subs; ++i) {
+        subscriptor* un_subscriptor = list_get(una_cola, i);
+        mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        cantidad_subs = list_size(una_cola);
+    }
+}
+
+
+mensaje* find_mensaje(int id){
+    bool id_search(void* un_mensaje){
+        mensaje* message = (mensaje*) un_mensaje;
+        return message->id == id;
+    }
+    mensaje* encontrado = list_find(MENSAJES, id_search);
+    return encontrado;
+}
+
+subscriptor* find_subscriptor(int id){
+    bool id_search(void* un_sub){
+        subscriptor* sub = (subscriptor*) un_sub;
+        return sub->id_subs == id;
+    }
+
+    subscriptor* encontrado = list_find(SUBSCRIPTORES, id_search);
+    return encontrado;
+}
+
+
+// Esta funcion recorre la lista MENSAJE_SUBSCRIPTORE mandando los mensajes pendientes
+void recursar_operativos(){
+    int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
+    for (int i = 0; i < cantidad_mensajes; ++i) {
+        mensaje_subscriptor* coso = list_get(MENSAJE_SUBSCRIPTORE, i);
+
+        if(!coso->enviado){
+            subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
+            mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
+
+            t_paquete* paquete = create_package(un_mensaje->tipo);
+            add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
+            if (send_package(paquete, un_subscriptor->socket) > 0){
+                coso->enviado = true;
+            }
+        }
+        // Vuelvo a actualizar el tamaño por si entró alguien en el medio
+        cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
+    }
+}
+
 //        mandar_mensaje_thread(un_subscriptor, un_mensaje);
-//        // como concha hacemos ?
-//         se me ocurre que podemos solamente cargar el mensaje a una lista de mensajes
-//         y despues que haya algun bicho que ande recorriendo esa cola viendo que mensaje se mandó y cual no
-//         porque de cada struct mensaje podemos saber su id, su contenido, a que cola va, etc
-//         entonces agarraría un mensaje y veo, tiene el ACK en uno ? si lo tiene lo borro
-//    }
-//}
+

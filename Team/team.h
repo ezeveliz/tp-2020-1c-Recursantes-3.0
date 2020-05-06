@@ -145,6 +145,13 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
 //----------------------------------------HELPERS----------------------------------------//
 
 /**
+ * Wrapper para liberar una lista, nombre mas corto
+ * @param received
+ * @param element_destroyer
+ */
+void free_list(t_list* received, void(*element_destroyer)(void*));
+
+/**
  * Envio un mensaje de prueba al servidor(Broker)
  * @param mensaje
  */

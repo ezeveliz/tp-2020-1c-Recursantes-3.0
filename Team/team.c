@@ -9,7 +9,9 @@ pthread_t caught_thread;
 t_config *config_file;
 // Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
 t_dictionary* objetivo_global;
+// Array de hilos de entrenador
 pthread_t* threads_trainer;
+// Lista de los entrenadores con sus objetivos, posicion y demas cositas
 t_list* entrenadores;
 
 int main() {
@@ -39,7 +41,7 @@ int main() {
     //initialize_structures();
 
     //Esta linea esta solo de prueba
-    send_to_server(test);
+    //send_to_server(test);
 
     //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
     pthread_join(server_thread, NULL);
@@ -88,19 +90,16 @@ void subscribe_to_queues() {
     *appeared = SUB_APPEARED;
     pthread_create(&appeared_thread, NULL, &subscribe_to_queue_thread, (void*)appeared);
     pthread_detach(appeared_thread);
-    free(appeared);
 
     MessageType* localized = malloc(sizeof(MessageType));
     *localized = SUB_LOCALIZED;
     pthread_create(&localized_thread, NULL, &subscribe_to_queue_thread, (void*)localized);
     pthread_detach(localized_thread);
-    free(localized);
 
     MessageType* caught = malloc(sizeof(MessageType));
     *caught = SUB_CAUGHT;
     pthread_create(&caught_thread, NULL, &subscribe_to_queue_thread, (void*)caught);
     pthread_detach(caught_thread);
-    free(caught);
 }
 
 int connect_to_broker(){
@@ -123,10 +122,10 @@ void disconnect_from_broker(int broker_socket) {
 
 void* subscribe_to_queue_thread(void* arg) {
     MessageType cola = *(MessageType*)arg;
-    free(arg);
 
     // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre
     int broker = connect_and_subscribe(cola);
+    log_info(logger, "Subscribed to queue\n");
 
     //TODO: PROBAR ESTO
     // Me quedo en un loop infinito esperando a recibir cosas
@@ -148,10 +147,12 @@ void* subscribe_to_queue_thread(void* arg) {
 
         // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
+            log_info(logger, "Connection to queue lost\n");
             broker = connect_and_subscribe(cola);
+            log_info(logger, "Resubscribed to queue\n");
         }
     }
-
+    // TODO: si eventualmente se sale del while, hacerle free al arg recibido por parametro
     return null;
 }
 
@@ -185,7 +186,6 @@ bool subscribe_to_queue(int broker, MessageType cola) {
     t_paquete* paquete = create_package(cola);
     int* id = malloc(sizeof(int));
     *id = config.team_id;
-    // TODO:Chequear que este bien lo del tamaño del id
     add_to_package(paquete, (void*) id, sizeof(int));
 
     // Envio el paquete, si no se puede enviar retorno false
@@ -209,7 +209,10 @@ bool subscribe_to_queue(int broker, MessageType cola) {
 
     // Limpieza
     free(buffer_header);
-    //TODO: destruir la lista
+    void element_destroyer(void* element){
+        free(element);
+    }
+    free_list(rta_list, element_destroyer);
 
     return rta == 1;
 }
@@ -246,9 +249,6 @@ void initialize_structures() {
         Entrenador *entrenador = (Entrenador *) malloc(sizeof(Entrenador));
         entrenador->objetivos_particular = dictionary_create();
         entrenador->stock_pokemons = dictionary_create();
-
-        // Definir si el array de entrenadores tendria que ser global o si no importa
-        log_info(logger, "entrenador: %d", pos);
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -388,7 +388,7 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
     switch(headerStruct -> type){
 
         case SUB_APPEARED:
-            printf("APPEARED_POKEMON\n");
+            printf("SUB_APPEARED\n");
             t_paquete* paquete = create_package(SUB_APPEARED);
             int* rta = malloc(sizeof(int));
             *rta = 1;
@@ -396,16 +396,20 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
             // Envio el paquete, si no se puede enviar retorno false
             send_package(paquete, server_socket);
+            free(rta);
+            free_package(paquete);
             break;
         case SUB_LOCALIZED:
-            printf("LOCALIZED_POKEMON\n");
-            t_paquete* paquete2 = create_package(SUB_APPEARED);
+            printf("SUB_LOCALIZED\n");
+            t_paquete* paquete2 = create_package(SUB_LOCALIZED);
             int* rta2 = malloc(sizeof(int));
             *rta2 = 1;
             add_to_package(paquete2, (void*) rta2, sizeof(int));
 
             // Envio el paquete, si no se puede enviar retorno false
             send_package(paquete2, server_socket);
+            free(rta2);
+            free_package(paquete2);
             break;
         case SUB_CAUGHT:
             printf("SUB_CAUGHT\n");
@@ -413,20 +417,22 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
         case APPEARED_POK:
             printf("APPEARED_POKEMON\n");
             break;
-        case LOCALIZED_POK:
-            printf("LOCALIZED_POKEMON\n");
-            break;
-        case CAUGHT_POK:
-            printf("CAUGHT_POKEMON\n");
-            break;
         default:
             printf("la estas cagando compa\n");
             break;
     }
-
+    void element_destroyer(void* element){
+        free(element);
+    }
+    free_list(paquete_recibido, element_destroyer);
 }
 
 //----------------------------------------HELPERS----------------------------------------
+
+void free_list(t_list* received, void(*element_destroyer)(void*)){
+    list_destroy_and_destroy_elements(received, element_destroyer);
+}
+
 
 //Funcion de prueba
 void send_to_server(MessageType mensaje){

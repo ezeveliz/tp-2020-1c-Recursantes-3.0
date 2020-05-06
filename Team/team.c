@@ -272,10 +272,10 @@ void initialize_structures() {
     // Creo un array de tantos hilos como entrenadores haya
     threads_trainer = (pthread_t *) malloc(tamanio_entrenadores * sizeof(pthread_t));
     for (int count = 0; count < tamanio_entrenadores; count++) {
-        pthread_create(&threads_trainer[count], NULL, (void *) scheduling, NULL);
+        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores, count);
+        pthread_create(&threads_trainer[count], NULL, (void *) scheduling, (void*) entrenador_actual);
     }
 
-    // TODO: agregar el tid de los hilos a la estructura de entrenador correspondiente
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 }
 

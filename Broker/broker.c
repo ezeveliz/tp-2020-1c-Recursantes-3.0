@@ -165,14 +165,18 @@ void *server_function(void *arg) {
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_appeared_pokemon* appeared_pokemon = void_a_appeared_pokemon(list_get(cosas,1));
 
-//                    mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, APPEARED_POK, sizeof_pokemon());
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, APPEARED_POK, sizeof_appeared_pokemon(appeared_pokemon));
+                    un_mensaje->puntero_a_memoria = appeared_pokemon_a_void(appeared_pokemon);
 
-                    //create_package(APPEARED_POK);
+                    // Cargamos el un_mensaje a la lista de Appeared_pokemon
+                    cargar_mensaje(LIST_APPEARED_POKEMON, un_mensaje);
 
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(APPEARED_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -184,14 +188,18 @@ void *server_function(void *arg) {
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_localized_pokemon* localized_pokemon = void_a_localized_pokemon(list_get(cosas,1));
 
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, LOCALIZED_POK, sizeof_pokemon(new_pokemon));
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, LOCALIZED_POK, sizeof_localized_pokemon(localized_pokemon));
+                    un_mensaje->puntero_a_memoria = localized_pokemon_a_void(localized_pokemon);
 
-                    //create_package(LOCALIZED_POK);
+                    // Cargamos el un_mensaje a la lista de Localized_pokemon
+                    cargar_mensaje(LIST_LOCALIZED_POKEMON, un_mensaje);
 
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(LOCALIZED_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -203,14 +211,18 @@ void *server_function(void *arg) {
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_caught_pokemon* caught_pokemon = void_a_caught_pokemon(list_get(cosas,1));
 
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, CAUGHT_POK, sizeof_pokemon(new_pokemon));
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, CAUGHT_POK, sizeof_caught_pokemon(caught_pokemon));
+                    un_mensaje->puntero_a_memoria = caught_pokemon_a_void(caught_pokemon);
 
-                    //create_package(CAUGHT_POK);
+                    // Cargamos el un_mensaje a la lista de Caught_pokemon
+                    cargar_mensaje(LIST_CAUGHT_POKEMON, un_mensaje);
 
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(CAUGHT_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -221,14 +233,18 @@ void *server_function(void *arg) {
                 {
                     t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,0));
 
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, GET_POK, sizeof_pokemon(new_pokemon));
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, 0, GET_POK, sizeof_get_pokemon(get_pokemon));
+                    un_mensaje->puntero_a_memoria = get_pokemon_a_void(get_pokemon);
 
-                    //create_package(GET_POK);
+                    // Cargamos el un_mensaje a la lista de Get_pokemon
+                    cargar_mensaje(LIST_GET_POKEMON, un_mensaje);
 
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(GET_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -239,14 +255,18 @@ void *server_function(void *arg) {
                 {
                     t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,0));
 
-                    //mensaje* mensaje = mensaje_create(mensaje_id, mensaje_co_id, CATCH_POK, sizeof_pokemon(new_pokemon));
+                    // Cargamos el un_mensaje en nuestro sistema
+                    mensaje* un_mensaje = mensaje_create(0, 0, CATCH_POK, sizeof_catch_pokemon(catch_pokemon));
+                    un_mensaje->puntero_a_memoria = catch_pokemon_a_void(catch_pokemon);
 
-                    //create_package(CATCH_POK);
+                    // Cargamos el un_mensaje a la lista de Catch_pokemon
+                    cargar_mensaje(LIST_CATCH_POKEMON, un_mensaje);
 
-                    //cargar_mensaje(list_new_pokemon, mensaje);
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
 
                     //Envio el ID de respuesta
-                    int respuesta = 1;
+                    int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(CATCH_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
@@ -471,4 +491,3 @@ void recursar_operativos(){
 }
 
 //        mandar_mensaje_thread(un_subscriptor, un_mensaje);
-

@@ -13,11 +13,13 @@ typedef enum _MessageType {
     ABC,
     // PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
     // Suscripcion a colas globales Team-Broker
+    SUB_NEW,
     SUB_APPEARED,
     SUB_LOCALIZED,
     SUB_CAUGHT,
     SUB_GET,
     SUB_CATCH,
+    NEW_POK,
     // Mensajes Team-Broker
     GET_POK,
     CATCH_POK,

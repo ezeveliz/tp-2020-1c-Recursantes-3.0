@@ -19,6 +19,7 @@ typedef enum _MessageType {
     SUB_CAUGHT,
     SUB_GET,
     SUB_CATCH,
+    NEW_POK,
     // Mensajes Team-Broker
     GET_POK,
     CATCH_POK,
@@ -26,7 +27,6 @@ typedef enum _MessageType {
     APPEARED_POK, // Tambien aplica a GameBoy-Team
     LOCALIZED_POK,
     CAUGHT_POK,
-    NEW_POK
 } MessageType;
 
 /**

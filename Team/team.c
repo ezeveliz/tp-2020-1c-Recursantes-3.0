@@ -277,6 +277,10 @@ void initialize_structures() {
         pthread_create(&threads_trainer[count], NULL, (void *) scheduling, (void*) entrenador_actual);
     }
 
+    /**
+     * TODO: Inicializar tiempos de llegada (timespec) en estructura entrenador
+     */
+
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 }
 
@@ -343,6 +347,12 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
 void* scheduling(void* arg){
 
+    /**
+     * FIXME:
+     *  1. Iterar lista de objetivos de pokemons dentro de la estructura entrenador y
+     *  hacer un get por cada uno.
+     *
+     */
 
     while(true){
 

@@ -44,4 +44,15 @@ typedef struct {
     struct timespec* tiempo_llegada;
 }Entrenador;
 
+/**
+ * Estrucura encargada de representar una respuesta al cliente
+ * Esta formada por el socket cliente al cual responder, un int que va a representar la respuesta y el cliente
+ * se encargara de interpretar y un Header de respuesta
+ */
+typedef struct _t_new_response{
+    int fd;
+    int response;
+    MessageType header;
+} t_new_response;
+
 #endif //TEAM_TEAMSTRUCTURES_H

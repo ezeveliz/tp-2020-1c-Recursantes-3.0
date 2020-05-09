@@ -483,6 +483,41 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
     }
 }
 
+//TODO: Pendiente adaptar a nuestro proyecto
+
+void create_response_thread(int fd, int response, MessageType header){
+    void* response_package = create_response_package(fd, response, header);
+
+    pthread_t response_thread;
+    pthread_create(&response_thread, NULL, response_function, response_package);
+    pthread_detach(response_thread);
+}
+
+void* create_response_package(int fd, int response, MessageType header){
+    t_new_response* response_package = malloc(sizeof(t_new_response));
+    response_package->fd = fd;
+    response_package->response = response;
+    response_package->header = header;
+
+    return (void*)response_package;
+}
+
+void* response_function(void* response_package){
+    t_new_response* new_response_package = (t_new_response*)response_package;
+    int fd = new_response_package->fd;
+    int response = new_response_package->response;
+    MessageType header = new_response_package->header;
+
+    t_paquete *package = create_package(header);
+    void* confirmation = malloc(sizeof(int));
+    *((int*)confirmation) = response;
+    add_to_package(package, confirmation, sizeof(int));
+    send_package(package, fd);
+    free(confirmation);
+    free_package(package);
+    free(new_response_package);
+}
+
 //Funcion de prueba
 void send_to_server(MessageType mensaje){
     int broker = connect_to_broker();

@@ -179,6 +179,31 @@ long timespec_to_us(struct timespec* timespec);
 void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff);
 
 /**
+ * Creo un hilo para responderle al cliente
+ * @param fd
+ * @param response
+ * @param header
+ */
+void create_response_thread(int fd, int response, MessageType header);
+
+/**
+ * Creo un paquete de respuesta con los datos dados(para enviar al cliente)
+ * @param fd
+ * @param response
+ * @param header
+ * @return
+ */
+void* create_response_package(int fd, int response, MessageType header);
+
+/**
+ * Función encargada de enviar la respuesta al cliente
+ * @param response_package
+ * @return
+ */
+void* response_function(void* response_package);
+
+
+/**
  * Envio un mensaje de prueba al servidor(Broker)
  * @param mensaje
  */

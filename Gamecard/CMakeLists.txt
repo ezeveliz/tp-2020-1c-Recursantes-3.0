@@ -3,8 +3,8 @@ project(gamecard C)
 
 set(CMAKE_C_STANDARD 99)
 
-include_directories("/usr/include/commons")
+include_directories("/usr/include/commLib" "/usr/include/commons")
 
-add_executable(gamecard gamecard.c gamecard.h)
+add_executable(gamecard gamecard.c gamecard.h structures.h)
 
-target_link_libraries(gamecard "/usr/lib/libcommons.so" pthread)
+target_link_libraries(gamecard  "/usr/lib/libcommLib.so" "/usr/lib/libcommons.so" pthread)

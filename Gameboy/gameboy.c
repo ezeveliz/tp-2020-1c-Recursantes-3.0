@@ -383,17 +383,20 @@ void suscribir(char *cola_mensaje, char *tiempo) {
 
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
     t_list *rta_list;
-
+    int datos_recividos;
+    int id_correlativo;
     if ( resultado_suscripcion == 1 ) {
 
         timer(atoi(tiempo));
         while (1) {
-            int datos_recividos = receive_header(broker, buffer_header);
+            datos_recividos = receive_header(broker, buffer_header);
             rta_list = receive_package(broker, buffer_header);
             logear_mensaje(buffer_header, rta_list);
             list_destroy_and_destroy_elements(rta_list, &free);
 
             /*ack = create_package(ACK);
+            id_correlativo = *(int*)list_get(rta_list,0);
+            add_to_package(ack,(void *)&id, sizeof(int));
             send_package(ack, broker);
 
             free(ack);

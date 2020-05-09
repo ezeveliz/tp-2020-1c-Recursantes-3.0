@@ -11,7 +11,7 @@
 #include <commons/collections/dictionary.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
-
+#include <time.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
@@ -150,6 +150,33 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
  * @param element_destroyer
  */
 void free_list(t_list* received, void(*element_destroyer)(void*));
+
+/**
+ * Retorno una estructura que representa al tiempo en segundos y microsegundos
+ * @return
+ */
+struct timespec get_time();
+
+/**
+ * Creo un nuevo intervalo con su memoria ya alocada
+ * @return interval* interval
+ */
+t_interval* new_interval();
+
+/**
+ * Conversion de un timespec a microsegundos;
+ * @param timespec
+ * @return
+ */
+long timespec_to_us(struct timespec* timespec);
+
+/**
+ * Hallo la diferencia de tiempo entre dos timespec
+ * @param start, timespec en el que inicio la medición
+ * @param end, timespec en el que termino la medición
+ * @param diff, timespec en el que se almacena la diferencia entre ambos
+ */
+void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff);
 
 /**
  * Envio un mensaje de prueba al servidor(Broker)

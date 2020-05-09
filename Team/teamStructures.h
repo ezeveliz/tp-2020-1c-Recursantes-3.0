@@ -25,14 +25,23 @@ typedef struct {
     int team_id;
 } TEAMConfig;
 
+/**
+ * Estructura encargada de representar un intervalo de tiempo
+ * Esta formada a su vez por otras dos estructuras timespec, las cuales almacenan timestamps y con las cuales se puede
+ * operar para obtener la diferencia entre ambas
+ */
+typedef struct _t_interval{
+    struct timespec* start_time;
+    struct timespec* end_time;
+} t_interval;
+
 typedef struct {
     int tid;
     int pos_x;
     int pos_y;
     t_dictionary* objetivos_particular;
     t_dictionary* stock_pokemons;
-//    char* objetivos_particular;
-//    char* stock_pokemons;
+    struct timespec* tiempo_llegada;
 }Entrenador;
 
 #endif //TEAM_TEAMSTRUCTURES_H

@@ -262,6 +262,7 @@ void initialize_structures() {
         add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
         sscanf(posiciones[0], "%d", &entrenador->pos_x);
         sscanf(posiciones[1], "%d", &entrenador->pos_y);
+        entrenador->tid = pos;
         list_add(entrenadores, (void *) entrenador);
         pos++;
     }
@@ -341,6 +342,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 }
 
 void* scheduling(void* arg){
+
 
     while(true){
 
@@ -433,6 +435,53 @@ void free_list(t_list* received, void(*element_destroyer)(void*)){
     list_destroy_and_destroy_elements(received, element_destroyer);
 }
 
+struct timespec get_time(){
+    struct timespec start;
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+    return start;
+}
+
+t_interval* new_interval(){
+    t_interval* iteration = malloc(sizeof(t_interval));
+    iteration->start_time = malloc(sizeof(struct timespec));
+    iteration->end_time = malloc(sizeof(struct timespec));
+    return iteration;
+}
+
+long timespec_to_us(struct timespec* timespec){
+    return (timespec->tv_sec * 1000000) + (timespec->tv_nsec / 1000);
+}
+
+void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff){
+
+    //Verifico si la resta entre final y principio da negativa
+    if ((end->tv_nsec - start->tv_nsec) < 0)
+    {
+        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
+        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec + 1000000000)) > 999999999){
+
+            diff->tv_sec += (end->tv_sec - start->tv_sec);
+            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
+        } else {
+
+            diff->tv_sec += (end->tv_sec - start->tv_sec - 1);
+            diff->tv_nsec += (end->tv_nsec - start->tv_nsec + 1000000000);
+        }
+    }
+    else
+    {
+        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
+        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec)) > 999999999){
+
+            diff->tv_sec += (end->tv_sec - start->tv_sec + 1);
+            diff->tv_nsec += (end->tv_nsec - start->tv_nsec - 1000000000);
+        } else {
+
+            diff->tv_sec += (end->tv_sec - start->tv_sec);
+            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
+        }
+    }
+}
 
 //Funcion de prueba
 void send_to_server(MessageType mensaje){

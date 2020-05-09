@@ -51,7 +51,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 */cmake-build-debug/
-/.idea/
+.idea/
 *.log
 /Team/Servidor_simulacion/cmake-build-debug/
 /.clang-format

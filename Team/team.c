@@ -263,6 +263,9 @@ void initialize_structures() {
         sscanf(posiciones[0], "%d", &entrenador->pos_x);
         sscanf(posiciones[1], "%d", &entrenador->pos_y);
         entrenador->tid = pos;
+
+        entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
+        *(entrenador->tiempo_llegada) = get_time();
         list_add(entrenadores, (void *) entrenador);
         pos++;
     }
@@ -277,9 +280,11 @@ void initialize_structures() {
         pthread_create(&threads_trainer[count], NULL, (void *) scheduling, (void*) entrenador_actual);
     }
 
-    /**
-     * TODO: Inicializar tiempos de llegada (timespec) en estructura entrenador
-     */
+    void iterador_pokemons(char* clave, void* contenido){
+        int broker = connect_to_broker();
+        create_response_thread(broker, (void*) clave, GET_POK);
+    }
+    dictionary_iterator(objetivo_global, iterador_pokemons);
 
     // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 }
@@ -346,13 +351,14 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 }
 
 void* scheduling(void* arg){
-
+    Entrenador* entrenador = (Entrenador*) arg;
     /**
      * FIXME:
      *  1. Iterar lista de objetivos de pokemons dentro de la estructura entrenador y
      *  hacer un get por cada uno.
-     *
      */
+
+
 
     while(true){
 
@@ -495,7 +501,7 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
 
 //TODO: Pendiente adaptar a nuestro proyecto
 
-void create_response_thread(int fd, int response, MessageType header){
+void create_response_thread(int fd, void* response, MessageType header){
     void* response_package = create_response_package(fd, response, header);
 
     pthread_t response_thread;
@@ -503,7 +509,7 @@ void create_response_thread(int fd, int response, MessageType header){
     pthread_detach(response_thread);
 }
 
-void* create_response_package(int fd, int response, MessageType header){
+void* create_response_package(int fd, void* response, MessageType header){
     t_new_response* response_package = malloc(sizeof(t_new_response));
     response_package->fd = fd;
     response_package->response = response;

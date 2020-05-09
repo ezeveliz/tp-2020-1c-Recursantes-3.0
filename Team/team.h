@@ -11,7 +11,7 @@
 #include <commons/collections/dictionary.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
-#include <time.h>
+#include <sys/time.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
@@ -184,7 +184,7 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
  * @param response
  * @param header
  */
-void create_response_thread(int fd, int response, MessageType header);
+void create_response_thread(int fd, void* response, MessageType header);
 
 /**
  * Creo un paquete de respuesta con los datos dados(para enviar al cliente)
@@ -193,7 +193,7 @@ void create_response_thread(int fd, int response, MessageType header);
  * @param header
  * @return
  */
-void* create_response_package(int fd, int response, MessageType header);
+void* create_response_package(int fd, void* response, MessageType header);
 
 /**
  * Función encargada de enviar la respuesta al cliente

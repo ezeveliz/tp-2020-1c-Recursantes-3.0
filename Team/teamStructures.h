@@ -51,7 +51,7 @@ typedef struct {
  */
 typedef struct _t_new_response{
     int fd;
-    int response;
+    void* response;
     MessageType header;
 } t_new_response;
 

@@ -47,7 +47,7 @@ void set_config(){
 
     if (!cfg_file) {
         log_error(logger, "No se encontró el archivo de configuración");
-        return;
+        exit(EXIT_FAILURE);
     }
 
     config.mem_size = config_get_int_value(cfg_file, "TAMANO_MEMORIA");

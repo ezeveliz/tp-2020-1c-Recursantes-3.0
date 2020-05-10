@@ -24,7 +24,7 @@ typedef struct BrokerCFG {
     char* mem_algorithm;
     char* mem_swap_algorithm;
     char* free_partition_algorithm;
-    int broker_ip;
+    char* broker_ip;
     int broker_port;
     int compactation_freq;
     char* log_file;

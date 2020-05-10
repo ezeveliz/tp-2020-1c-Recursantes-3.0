@@ -491,3 +491,17 @@ void recursar_operativos(){
 }
 
 //        mandar_mensaje_thread(un_subscriptor, un_mensaje);
+
+/* TODO
+ * Cuando los subscriptores reciban todos los mensajes borrar el mensaje de la memoria (hay que borrarlo tambien de la estrutura ?)
+ 
+ * Ver lo de kill -SIGUSR1 [proceso]
+
+    El kill se envía desde consola. Ustedes deben implementar la función que maneje esa señal en el código.
+    Estamos en tratativas de armar un vídeo explicando señales. 
+    De base pueden usar esta presentación vieja que se entiende bastante el funcionamiento de la función.
+    http://faq.utnso.com.ar/signals
+
+ * Copiar y pegar funciones de la memoria principal de tps pasados
+ */
+

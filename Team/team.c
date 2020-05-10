@@ -125,7 +125,7 @@ void* subscribe_to_queue_thread(void* arg) {
 
     // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre
     int broker = connect_and_subscribe(cola);
-    log_info(logger, "Subscribed to queue\n");
+    log_info(logger, "Subscribed to queue");
 
     //TODO: PROBAR ESTO
     // Me quedo en un loop infinito esperando a recibir cosas
@@ -229,6 +229,7 @@ void* server_function(void* arg) {
         sleep(config.tiempo_reconexion);
     }
 
+    log_info(logger_server, "Server initiated");
     start_server(server_socket, &new, &lost, &incoming);
 
     return null;
@@ -280,9 +281,10 @@ void initialize_structures() {
         pthread_create(&threads_trainer[count], NULL, (void *) scheduling, (void*) entrenador_actual);
     }
 
+    // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
-        int broker = connect_to_broker();
-        create_response_thread(broker, (void*) clave, GET_POK);
+        //send_message_thread(); TODO: Completar esta funcion
+        //create_response_thread(broker, (void*) clave, GET_POK); TODO: Borrar esta
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
@@ -312,7 +314,6 @@ void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
 
 void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador) {
 
-    int necesidad_actual;
     // Itero la lista de pokemones objetivo de un entrenador dado
     for (char* pokemon = *objetivos_entrenador; pokemon ; pokemon = *++objetivos_entrenador) {
 
@@ -344,7 +345,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
         } else {
 
             int* necesidad = (int*)malloc(sizeof(int));
-            *necesidad = 1;
+            *necesidad = -1;
             dictionary_put(objetivo_global, pokemon, (void*) necesidad);
         }
     }
@@ -352,13 +353,6 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
 void* scheduling(void* arg){
     Entrenador* entrenador = (Entrenador*) arg;
-    /**
-     * FIXME:
-     *  1. Iterar lista de objetivos de pokemons dentro de la estructura entrenador y
-     *  hacer un get por cada uno.
-     */
-
-
 
     while(true){
 
@@ -378,11 +372,11 @@ int initialize_server(){
     int port = config.puerto_team;
 
     if((server_socket = create_socket()) == -1) {
-        log_error(logger_server, "Error creating socket");
+        log_error(logger_server, "Error creating server socket");
         return -1;
     }
     if((bind_socket(server_socket, port)) == -1) {
-        log_error(logger_server, "Error binding socket");
+        log_error(logger_server, "Error binding server socket");
         return -1;
     }
 
@@ -405,33 +399,6 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
     switch(headerStruct -> type){
 
-        case SUB_APPEARED:
-            printf("SUB_APPEARED\n");
-            t_paquete* paquete = create_package(SUB_APPEARED);
-            int* rta = malloc(sizeof(int));
-            *rta = 1;
-            add_to_package(paquete, (void*) rta, sizeof(int));
-
-            // Envio el paquete, si no se puede enviar retorno false
-            send_package(paquete, server_socket);
-            free(rta);
-            free_package(paquete);
-            break;
-        case SUB_LOCALIZED:
-            printf("SUB_LOCALIZED\n");
-            t_paquete* paquete2 = create_package(SUB_LOCALIZED);
-            int* rta2 = malloc(sizeof(int));
-            *rta2 = 1;
-            add_to_package(paquete2, (void*) rta2, sizeof(int));
-
-            // Envio el paquete, si no se puede enviar retorno false
-            send_package(paquete2, server_socket);
-            free(rta2);
-            free_package(paquete2);
-            break;
-        case SUB_CAUGHT:
-            printf("SUB_CAUGHT\n");
-            break;
         case APPEARED_POK:
             printf("APPEARED_POKEMON\n");
             break;
@@ -499,39 +466,91 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
     }
 }
 
-//TODO: Pendiente adaptar a nuestro proyecto
+void send_message_thread(void* message, int size, MessageType header) {
 
-void create_response_thread(int fd, void* response, MessageType header){
-    void* response_package = create_response_package(fd, response, header);
+    // Creo un paquete con el mensaje, su tamaño y el header para poderselo pasar al thread
+    void* message_package = create_message_package(message, size, header);
 
-    pthread_t response_thread;
-    pthread_create(&response_thread, NULL, response_function, response_package);
-    pthread_detach(response_thread);
+    // Levanto un hilo detacheable para poder enviar el mensaje
+    pthread_t message_thread;
+    pthread_create(&message_thread, NULL, message_function, message_package);
+    pthread_detach(message_thread);
 }
 
-void* create_response_package(int fd, void* response, MessageType header){
-    t_new_response* response_package = malloc(sizeof(t_new_response));
-    response_package->fd = fd;
-    response_package->response = response;
-    response_package->header = header;
+void* create_message_package(void* message, int size, MessageType header) {
+    t_new_message* message_package = malloc(sizeof(t_new_message));
+    message_package->message = message;
+    message_package->size = size;
+    message_package->header = header;
 
-    return (void*)response_package;
+    return (void*)message_package;
 }
 
-void* response_function(void* response_package){
-    t_new_response* new_response_package = (t_new_response*)response_package;
-    int fd = new_response_package->fd;
-    int response = new_response_package->response;
-    MessageType header = new_response_package->header;
+void* message_function(void* message_package){
 
-    t_paquete *package = create_package(header);
-    void* confirmation = malloc(sizeof(int));
-    *((int*)confirmation) = response;
-    add_to_package(package, confirmation, sizeof(int));
-    send_package(package, fd);
-    free(confirmation);
-    free_package(package);
-    free(new_response_package);
+    // Desarmo la estructura que me pasaron
+    t_new_message* new_message_package = (t_new_message*)message_package;
+    void* message = new_message_package->message;
+    int size = new_message_package->size;
+    MessageType header = new_message_package->header;
+
+    // Me conecto al Broker
+    int broker = connect_to_broker();
+
+    // Chequeo si me pude conectar al Broker
+    if (broker == -1) {
+
+        // Ejecuto accion por default
+        exec_default(header);
+        // TODO: Limpieza
+
+    } else {
+
+        // Creo y envio paquete
+        t_paquete *package = create_package(header);
+        add_to_package(package, message, size);
+
+        // Chequeo si pude enviar la solicitud
+        if (send_package(package, broker) == -1) {
+
+            // Ejecuto accion por default
+            exec_default(header);
+
+        } else {
+
+            MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+            if(receive_header(broker, buffer_header) <= 0) {
+                return false; // TODO: ver que hacer aca
+            }
+
+            // Recibo el id correlacional o lo que sea
+            t_list* rta_list = receive_package(broker, buffer_header);
+            int rta = *(int*) list_get(rta_list, 0);
+
+            // TODO: Enviar confirmacion con un ACK como header y con el id correlacional como contenido
+
+            // Limpieza de estos ultimos 2 recv y send
+        }
+
+        // TODO: Limpieza gral
+        // Me desconecto del Broker
+        disconnect_from_broker(broker);
+    }
+}
+
+// TODO: verificar si esta cosa necesitaria mas parametros o no
+void exec_default(MessageType header) {
+    switch (header) {
+        case GET_POK:
+            // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
+            break;
+        case CATCH_POK:
+            // Accion a realizar por default cuando hago un CATCH_POK y no funciona la comunicacion con el Broker
+            break;
+        default:
+            printf("Chupame la pija\n");
+            break;
+    }
 }
 
 //Funcion de prueba

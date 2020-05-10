@@ -30,7 +30,7 @@ typedef struct {
  * Esta formada a su vez por otras dos estructuras timespec, las cuales almacenan timestamps y con las cuales se puede
  * operar para obtener la diferencia entre ambas
  */
-typedef struct _t_interval{
+typedef struct {
     struct timespec* start_time;
     struct timespec* end_time;
 } t_interval;
@@ -49,10 +49,10 @@ typedef struct {
  * Esta formada por el socket cliente al cual responder, un int que va a representar la respuesta y el cliente
  * se encargara de interpretar y un Header de respuesta
  */
-typedef struct _t_new_response{
-    int fd;
-    void* response;
+typedef struct {
+    void* message;
+    int size;
     MessageType header;
-} t_new_response;
+} t_new_message;
 
 #endif //TEAM_TEAMSTRUCTURES_H

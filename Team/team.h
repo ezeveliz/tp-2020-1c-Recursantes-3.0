@@ -179,29 +179,38 @@ long timespec_to_us(struct timespec* timespec);
 void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff);
 
 /**
- * Creo un hilo para responderle al cliente
- * @param fd
- * @param response
+ * Creo un hilo para mandarle una solicitud al Broker
+ *
+ * @param message
+ * @param size, tamanio del mensaje a enviar
  * @param header
  */
-void create_response_thread(int fd, void* response, MessageType header);
+void send_message_thread(void* message, int size, MessageType header);
 
 /**
- * Creo un paquete de respuesta con los datos dados(para enviar al cliente)
- * @param fd
- * @param response
+ * Creo un paquetito para pasarle informacion al hilo que se va a encargar de mandarle una solicitud al Broker
+ *
+ * @param message
+ * @param size, tamanio del mensaje a enviar
  * @param header
  * @return
  */
-void* create_response_package(int fd, void* response, MessageType header);
+void* create_message_package(void* message, int size, MessageType header);
 
 /**
- * Función encargada de enviar la respuesta al cliente
+ * Funcion encarga de mandarle una solicitud al Broker, responderle con una confirmacion y ejecutar el caso por default en caso de que no se pueda comunicar
+ *
  * @param response_package
  * @return
  */
-void* response_function(void* response_package);
+void* message_function(void* message_package);
 
+/**
+ * Funcion por default a ejecutarse segun el tipo de mensaje enviado
+ *
+ * @param header, tipo de solicitud enviada
+ */
+void exec_default(MessageType header);
 
 /**
  * Envio un mensaje de prueba al servidor(Broker)

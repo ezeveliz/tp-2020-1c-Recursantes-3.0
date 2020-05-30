@@ -53,6 +53,7 @@ typedef struct {
     t_dictionary* stock_pokemons;
     struct timespec* tiempo_llegada;
     enum estado_entrenador estado;
+    sem_t puede_comenzar;
 }Entrenador;
 
 /**

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <string.h>
+#include <semaphore.h>
 
 #include "teamStructures.h"
 

@@ -5,18 +5,26 @@
 #ifndef TEAM_TEAMSTRUCTURES_H
 #define TEAM_TEAMSTRUCTURES_H
 
+/**
+ * Enum que representa los algoritmos de planificacion
+ */
+typedef enum planner_algorithm {
+    FIFO,
+    SJF_SD,
+    SJF_CD,
+    RR,
+} planner_algorithm;
 
 /**
  * Estructura encargada de almacenar las configuraciones que se pasan por archivo
  */
-
 typedef struct {
     char** posiciones_entrenadores;
     char** pokemon_entrenadores;
     char** objetivos_entrenadores;
     int tiempo_reconexion;
     int retardo_ciclo_cpu;
-    char* algoritmo_planificacion;
+    planner_algorithm algoritmo_planificacion;
     int quantum;
     int estimacion_inicial;
     char* ip_broker;

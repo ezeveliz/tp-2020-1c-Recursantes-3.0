@@ -12,6 +12,7 @@ t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
 sem_t* new_ready_transition;
+sem_t* ready_exec_transition;
 // Lista de los entrenadores con sus objetivos, posicion y demas cositas
 t_list* entrenadores;
 
@@ -62,7 +63,6 @@ int read_config_options() {
     config.objetivos_entrenadores = config_get_array_value(config_file, "OBJETIVOS_ENTRENADORES");
     config.tiempo_reconexion = config_get_int_value(config_file, "TIEMPO_RECONEXION");
     config.retardo_ciclo_cpu = config_get_int_value(config_file, "RETARDO_CICLO_CPU");
-    config.algoritmo_planificacion = config_get_string_value(config_file, "ALGORITMO_PLANIFICACION");
     config.quantum = config_get_int_value(config_file, "QUANTUM");
     config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
     config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
@@ -71,6 +71,20 @@ int read_config_options() {
     config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
     config.team_id = config_get_int_value(config_file, "TEAM_ID");
+
+    // Transformo el algoritmo en un enum para simplificar el manejo en un futuro
+    char* algoritmo = config_get_string_value(config_file, "ALGORITMO_PLANIFICACION");
+
+    if (string_equals_ignore_case(algoritmo, "FIFO")) {
+        config.algoritmo_planificacion = FIFO;
+    } else if (string_equals_ignore_case(algoritmo, "SJF-SD")) {
+        config.algoritmo_planificacion = SJF_SD;
+    } else if (string_equals_ignore_case(algoritmo, "SJF-CD")) {
+        config.algoritmo_planificacion = SJF_CD;
+    } else if (string_equals_ignore_case(algoritmo, "RR")) {
+        config.algoritmo_planificacion = RR;
+    }
+
     return 1;
 }
 
@@ -280,10 +294,14 @@ void initialize_structures() {
     threads_trainer = (pthread_t *) malloc(tamanio_entrenadores * sizeof(pthread_t));
     // Creo un array de semaforos para bloquear la transicion new - ready
     new_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
+    // Creo un array de semaforos para bloquear la transicion ready - exec
+    ready_exec_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
     for (int count = 0; count < tamanio_entrenadores; count++) {
 
         // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
         sem_init(&new_ready_transition[count], 0, 0);
+        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
+        sem_init(&ready_exec_transition[count], 0, 0);
         Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
@@ -367,14 +385,85 @@ void* trainer_thread(void* arg){
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
     *(entrenador->tiempo_llegada) = get_time();
 
-    // El estado del entrenador pasa a ser ready
-    entrenador->estado = READY;
     // Bloqueo y llamo al planificador para que decida quien continua?
-    while(true){
+    while(entrenador->estado != FINISH){
 
+        // El estado del entrenador pasa a ser ready
+        entrenador->estado = READY;
+
+        // Llamo al planificador
+        call_planner();
+
+        // Bloqueo esperando a que el planificador decida que ejecute
+        sem_wait( &ready_exec_transition[entrenador->tid] );
     }
     return null;
 }
+
+void call_planner() {
+
+    switch (config.algoritmo_planificacion) {
+        case (FIFO):
+            fifo_planner();
+            break;
+        case (SJF_SD):
+            sjf_sd_planner();
+            break;
+        case (SJF_CD):
+            sjf_cd_planner();
+            break;
+        case (RR):
+            rr_planner();
+            break;
+        default:
+            printf("Este no es un algoritmo valido");
+            break;
+
+    }
+}
+
+void fifo_planner() {
+
+    // Busco si no hay ningun entrenador en ejecucion
+    bool esta_en_ejecucion(void* _entrenador) {
+        Entrenador* entrenador = (Entrenador*) _entrenador;
+        return entrenador->estado == EXEC;
+    }
+    if (!list_any_satisfy(entrenadores, esta_en_ejecucion)) {
+
+        // Obtengo la lista de entrenadores en Ready
+        bool esta_en_ready(void* _entrenador) {
+            Entrenador* entrenador = (Entrenador*) _entrenador;
+            return entrenador->estado == READY;
+        }
+        t_list* entrenadores_en_ready = list_filter(entrenadores, esta_en_ready);
+
+        // Ordeno la lista de entrenadores en ready segun el tiempo de llegada
+        bool ordenar_por_llegada(void* _entrenador1, void* _entrenador2) {
+            Entrenador* entrenador1 = (Entrenador*) _entrenador1;
+            Entrenador* entrenador2 = (Entrenador*) _entrenador2;
+
+            if ((entrenador1->tiempo_llegada)->tv_sec == (entrenador2->tiempo_llegada)->tv_sec) {
+                return (entrenador1->tiempo_llegada)->tv_nsec < (entrenador2->tiempo_llegada)->tv_nsec;
+            } else {
+                return (entrenador1->tiempo_llegada)->tv_sec < (entrenador2->tiempo_llegada)->tv_sec;
+            }
+        }
+        list_sort(entrenadores_en_ready, ordenar_por_llegada);
+
+        // Obtengo el primer entrenador de la lista ordenada
+        Entrenador * entrenador_elegido = (Entrenador*)list_get(entrenadores_en_ready, 0);
+
+        sem_post( &ready_exec_transition[entrenador_elegido->tid] );
+    }
+
+}
+
+void sjf_sd_planner() {}
+
+void sjf_cd_planner() {}
+
+void rr_planner() {}
 
 void start_log_server() {
 

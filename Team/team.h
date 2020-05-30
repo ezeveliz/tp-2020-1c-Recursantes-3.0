@@ -104,7 +104,32 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
  * @param arg
  * @return
  */
-void*trainer_thread(void* arg);
+void* trainer_thread(void* arg);
+
+/**
+ * Llamo al planificador correspondiente al pasado por configuracion
+ */
+void call_planner();
+
+/**
+ * Algoritmo de planificacion FIFO
+ */
+void fifo_planner();
+
+/**
+ * Algoritmo de planificaion SJF sin desalojo
+ */
+void sjf_sd_planner();
+
+/**
+ * Algoritmo de planificaion SJF con desalojo
+ */
+void sjf_cd_planner();
+
+/**
+ * Algoritmo de planificaion RR
+ */
+void rr_planner();
 
 /**
  * Inicializo el log del servidor para pruebas

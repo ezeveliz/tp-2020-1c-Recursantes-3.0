@@ -269,8 +269,6 @@ void initialize_structures() {
         // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
-        entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
-        *(entrenador->tiempo_llegada) = get_time();
         list_add(entrenadores, (void *) entrenador);
         pos++;
     }
@@ -365,6 +363,9 @@ void* trainer_thread(void* arg){
 
     // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
     sem_wait( &new_ready_transition[entrenador->tid] );
+
+    entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
+    *(entrenador->tiempo_llegada) = get_time();
 
     // El estado del entrenador pasa a ser ready
     entrenador->estado = READY;

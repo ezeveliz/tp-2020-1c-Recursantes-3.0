@@ -104,7 +104,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
  * @param arg
  * @return
  */
-void* scheduling(void* arg);
+void*trainer_thread(void* arg);
 
 /**
  * Inicializo el log del servidor para pruebas

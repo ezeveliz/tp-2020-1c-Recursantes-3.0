@@ -37,13 +37,13 @@ typedef struct {
     struct timespec* end_time;
 } t_interval;
 
-enum estado_entrenador{
+typedef enum estado_entrenador{
+    NEW,
     READY,
     EXEC,
     BLOCK,
     FINISH,
-
-};
+} estado_entrenador;
 
 typedef struct {
     int tid;
@@ -52,8 +52,7 @@ typedef struct {
     t_dictionary* objetivos_particular;
     t_dictionary* stock_pokemons;
     struct timespec* tiempo_llegada;
-    enum estado_entrenador estado;
-    sem_t puede_comenzar;
+    estado_entrenador estado;
 }Entrenador;
 
 /**

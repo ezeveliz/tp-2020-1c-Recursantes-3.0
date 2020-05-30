@@ -11,6 +11,7 @@ t_config *config_file;
 t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
+sem_t* new_ready_transition;
 // Lista de los entrenadores con sus objetivos, posicion y demas cositas
 t_list* entrenadores;
 
@@ -248,6 +249,7 @@ void initialize_structures() {
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
 
         Entrenador *entrenador = (Entrenador *) malloc(sizeof(Entrenador));
+        entrenador->estado = NEW;
         entrenador->objetivos_particular = dictionary_create();
         entrenador->stock_pokemons = dictionary_create();
 
@@ -261,8 +263,10 @@ void initialize_structures() {
 
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
         add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
+        // Le asigno al entrenador sus coordenadas
         sscanf(posiciones[0], "%d", &entrenador->pos_x);
         sscanf(posiciones[1], "%d", &entrenador->pos_y);
+        // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
         entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
@@ -276,9 +280,14 @@ void initialize_structures() {
 
     // Creo un array de tantos hilos como entrenadores haya
     threads_trainer = (pthread_t *) malloc(tamanio_entrenadores * sizeof(pthread_t));
+    // Creo un array de semaforos para bloquear la transicion new - ready
+    new_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
     for (int count = 0; count < tamanio_entrenadores; count++) {
+
+        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
+        sem_init(&new_ready_transition[count], 0, 0);
         Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores, count);
-        pthread_create(&threads_trainer[count], NULL, (void *) scheduling, (void*) entrenador_actual);
+        pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
@@ -351,9 +360,15 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
     }
 }
 
-void* scheduling(void* arg){
+void* trainer_thread(void* arg){
     Entrenador* entrenador = (Entrenador*) arg;
 
+    // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
+    sem_wait( &new_ready_transition[entrenador->tid] );
+
+    // El estado del entrenador pasa a ser ready
+    entrenador->estado = READY;
+    // Bloqueo y llamo al planificador para que decida quien continua?
     while(true){
 
     }

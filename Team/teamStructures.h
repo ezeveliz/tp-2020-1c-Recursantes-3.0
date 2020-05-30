@@ -5,9 +5,11 @@
 #ifndef TEAM_TEAMSTRUCTURES_H
 #define TEAM_TEAMSTRUCTURES_H
 
+
 /**
  * Estructura encargada de almacenar las configuraciones que se pasan por archivo
  */
+
 typedef struct {
     char** posiciones_entrenadores;
     char** pokemon_entrenadores;
@@ -35,6 +37,14 @@ typedef struct {
     struct timespec* end_time;
 } t_interval;
 
+enum estado_entrenador{
+    READY,
+    EXEC,
+    BLOCK,
+    FINISH,
+
+};
+
 typedef struct {
     int tid;
     int pos_x;
@@ -42,6 +52,7 @@ typedef struct {
     t_dictionary* objetivos_particular;
     t_dictionary* stock_pokemons;
     struct timespec* tiempo_llegada;
+    enum estado_entrenador estado;
 }Entrenador;
 
 /**
@@ -54,5 +65,6 @@ typedef struct {
     int size;
     MessageType header;
 } t_new_message;
+
 
 #endif //TEAM_TEAMSTRUCTURES_H

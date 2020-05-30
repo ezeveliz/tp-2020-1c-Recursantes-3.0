@@ -250,6 +250,7 @@ void* server_function(void* arg) {
     return null;
 }
 
+// Rodri puto
 //TODO: terminar de implementar
 void initialize_structures() {
     //Itero la lista de entrenadores, y creo un hilo por cada uno

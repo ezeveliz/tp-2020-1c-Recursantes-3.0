@@ -456,6 +456,9 @@ void fifo_planner() {
         Entrenador * entrenador_elegido = (Entrenador*)list_get(entrenadores_en_ready, 0);
 
         sem_post( &ready_exec_transition[entrenador_elegido->tid] );
+
+        //Destruyo la lista filtrada
+        list_destroy(entrenadores_en_ready);
     }
 
 }

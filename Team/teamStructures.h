@@ -55,8 +55,10 @@ typedef enum estado_entrenador{
 
 typedef struct {
     int tid;
-    int pos_x;
-    int pos_y;
+    int pos_actual_x;
+    int pos_actual_y;
+    int pos_destino_x;
+    int pos_destino_y;
     t_dictionary* objetivos_particular;
     t_dictionary* stock_pokemons;
     struct timespec* tiempo_llegada;

@@ -279,8 +279,8 @@ void initialize_structures() {
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
         add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
         // Le asigno al entrenador sus coordenadas
-        sscanf(posiciones[0], "%d", &entrenador->pos_x);
-        sscanf(posiciones[1], "%d", &entrenador->pos_y);
+        sscanf(posiciones[0], "%d", &entrenador->pos_actual_x);
+        sscanf(posiciones[1], "%d", &entrenador->pos_actual_y);
         // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
@@ -309,8 +309,7 @@ void initialize_structures() {
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
-        //send_message_thread(); TODO: Completar esta funcion
-        //create_response_thread(broker, (void*) clave, GET_POK); TODO: Borrar esta
+        send_message_thread((void*) clave, string_length(clave), GETPOK);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
@@ -384,10 +383,12 @@ void* trainer_thread(void* arg){
     sem_wait( &new_ready_transition[entrenador->tid] );
 
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
-    *(entrenador->tiempo_llegada) = get_time();
 
     // Bloqueo y llamo al planificador para que decida quien continua?
     while(entrenador->estado != FINISH){
+
+        // Marco el momento en que el entrenador llego a Ready
+        *(entrenador->tiempo_llegada) = get_time();
 
         // El estado del entrenador pasa a ser ready
         entrenador->estado = READY;
@@ -397,7 +398,17 @@ void* trainer_thread(void* arg){
 
         // Bloqueo esperando a que el planificador decida que ejecute
         sem_wait( &ready_exec_transition[entrenador->tid] );
+
+        // Hallo la distancia hasta el destino, duermo al hilo durante x cantidad de segundos para simular ciclos de CPU
+        int distancia_a_viajar = distancia(entrenador->pos_actual_x, entrenador->pos_actual_y, entrenador->pos_destino_x, entrenador->pos_destino_y);
+        while (distancia_a_viajar > 0) {
+            sleep(config.retardo_ciclo_cpu);
+            distancia_a_viajar--;
+        }
     }
+
+    // TODO: liberar la memoria reservada:
+    //  - Tiempo de llegada
     return null;
 }
 
@@ -660,6 +671,12 @@ void exec_default(MessageType header) {
             printf("Chupame la pija\n");
             break;
     }
+}
+
+int distancia(int pos_actual_x, int pos_actual_y, int pos_destino_x, int pos_destino_y) {
+    int dist_en_x = abs(pos_actual_x - pos_destino_x);
+    int dist_en_y = abs(pos_actual_y - pos_destino_y);
+    return dist_en_x + dist_en_y;
 }
 
 //Funcion de prueba

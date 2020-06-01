@@ -385,20 +385,28 @@ void subscriptor_delete(int id, t_list* cola){
     list_remove_by_condition(cola, id_search);
 }
 
-/*void printSubList(){
-    int size = list_size(SUBSCRIPTORES);
-    for(int i=0; i<size; i++){
-        subscriptor* s = list_get(SUBSCRIPTORES, i);
-        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
-    }
-}
-void printMenSubList(){
-    int size = list_size(MENSAJE_SUBSCRIPTORE);
-    for(int i=0; i<size; i++){
-        mensaje_subscriptor* s = list_get(MENSAJE_SUBSCRIPTORE, i);
-        printf("id_mensaje: %d, id_sub: %d, enviado: %s, ack: %s \n", s->id_mensaje, s->id_subscriptor, s->enviado ? "true" : "false", s->ack ? "true" : "false");
-    }
-}*/
+//void printSubList(){
+//    int size = list_size(SUBSCRIPTORES);
+//    for(int i=0; i<size; i++){
+//        subscriptor* s = list_get(SUBSCRIPTORES, i);
+//        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
+//    }
+//}
+//void printMenSubList(){
+//    int size = list_size(MENSAJE_SUBSCRIPTORE);
+//    for(int i=0; i<size; i++){
+//        mensaje_subscriptor* s = list_get(MENSAJE_SUBSCRIPTORE, i);
+//        printf("id_mensaje: %d, id_sub: %d, enviado: %s, ack: %s \n", s->id_mensaje, s->id_subscriptor, s->enviado ? "true" : "false", s->ack ? "true" : "false");
+//    }
+//}
+//
+//void printMenList() {
+//    int size = list_size(MENSAJES);
+//    for (int i = 0; i < size; i++) {
+//        mensaje *s = list_get(MENSAJES, i);
+//        printf("id_mensaje: %d, id_co: %d \n", s->id, s->id_correlacional);
+//    }
+//}
 
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
@@ -474,21 +482,92 @@ void recursar_operativos(){
     int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     for (int i = 0; i < cantidad_mensajes; ++i) {
         mensaje_subscriptor* coso = list_get(MENSAJE_SUBSCRIPTORE, i);
+        void* cosito = mensaje_subscriptor_a_void(coso);
+
 
         if(!coso->enviado){
-            subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
-            mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
 
-            t_paquete* paquete = create_package(un_mensaje->tipo);
-            add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
-            if (send_package(paquete, un_subscriptor->socket) > 0){
-                coso->enviado = true;
-            }
+            pthread_t mensaje_thread;
+            pthread_create(&mensaje_thread, NULL, mandar_mensaje, (void*)cosito);
+            pthread_join(mensaje_thread, NULL);
+
         }
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     }
 }
+int send_message_test(t_paquete* paquete, int socket){
+    return 1;
+}
+void mandar_mensaje(void* cosito){
+    mensaje_subscriptor* coso = void_a_mensaje_subscriptor(cosito);
+    subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
+    mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
+
+    t_paquete* paquete = create_package(un_mensaje->tipo);
+    add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
+
+    if (send_message_test(paquete, un_subscriptor->socket/*send_package(paquete, un_subscriptor->socket*/) > 0){
+        flag_enviado(coso->id_subscriptor, coso->id_mensaje);
+    }
+//    printMenSubList();
+
+}
+void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub){
+    void* stream = malloc(sizeof(uint32_t)*2 + sizeof(bool)*2);
+    int offset = 0;
+
+    memcpy(stream + offset, &un_men_sub->id_mensaje, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, &un_men_sub->id_subscriptor, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    memcpy(stream + offset, &un_men_sub->enviado, sizeof(bool));
+    offset += sizeof(bool);
+
+    memcpy(stream + offset, &un_men_sub->ack, sizeof(bool));
+    offset += sizeof(bool);
+
+    return stream;
+
+}
+
+mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream){
+    mensaje_subscriptor* un_men_sub = malloc(sizeof(mensaje_subscriptor));
+
+    memcpy(&(un_men_sub->id_mensaje), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    memcpy(&(un_men_sub->id_subscriptor), stream, sizeof(uint32_t));
+    stream += sizeof(uint32_t);
+
+    memcpy(&(un_men_sub->enviado), stream, sizeof(bool));
+    stream += sizeof(bool);
+
+    memcpy(&(un_men_sub->ack), stream, sizeof(bool));
+    stream += sizeof(bool);
+
+    return un_men_sub;
+
+}
+void* flag_enviado(uint32_t id_sub, uint32_t id_men){
+    bool id_search(void* un_men_sub){
+        mensaje_subscriptor* men_sub = (mensaje_subscriptor*) un_men_sub;
+        return men_sub->id_subscriptor == id_sub && men_sub->id_mensaje == id_men;
+    }
+    if((mensaje_subscriptor*)list_find(MENSAJE_SUBSCRIPTORE, id_search) != NULL){
+        for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
+            mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
+            if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->enviado = true;}
+        }
+
+    }
+}
+
+//void recibir_ack(){
+//TODO
+//}
 
 //        mandar_mensaje_thread(un_subscriptor, un_mensaje);
 

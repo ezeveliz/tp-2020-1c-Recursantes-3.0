@@ -77,11 +77,20 @@ int crear_metadata(char* path){
     char* path_metadata = concatenar_strings(path,"/Metadata");
 
     int resultado = crear_carpeta(path_metadata, ACCESSPERMS);
+
     if(resultado==0){
-        char* path_archivo_bin = concatenar_strings(path_metadata,"/Metadata.bin");
-        FILE * archivo =fopen(path_archivo_bin,"w+");
-        //Aca escribe los datos de la metadata
-        fclose(archivo);
+        char* path_metadata_bin = concatenar_strings(path_metadata,"/Metadata.bin");
+        FILE * archivo_metadata = fopen(path_metadata_bin,"w+");
+        fprintf(archivo_metadata,"BLOCK_SIZE=%d\nBLOCKS=%d\nMAGIC_NUMBER=%s",BLOCK_SIZE, BLOCKS, MAGIC_NUMBER);
+        fclose(archivo_metadata);
+        free(path_metadata_bin);
+
+        char* path_bitmap_bin = concatenar_strings(path_metadata,"/Bitmap.bin");
+        FILE * archivo_bitmap = fopen(path_bitmap_bin,"w+");
+        t_bitarray* bitmap = create_bitmap(BLOCKS);
+        fprintf(archivo_bitmap,"%s",bitmap->bitarray);
+        fclose(archivo_bitmap);
+        free(path_bitmap_bin);
     }
 }
 
@@ -149,4 +158,12 @@ int crear_carpeta(char* path, int modo){
     if(resultado == -1){
         printf("Algo salio mal! %s\n", hstrerror(errno));
     }
+}
+
+t_bitarray* create_bitmap(int cantidad_bloques){
+
+    int bitmap_size = cantidad_bloques/8;
+    char* bitmap_string = malloc(bitmap_size);
+
+    return bitarray_create(bitmap_string, bitmap_size);
 }

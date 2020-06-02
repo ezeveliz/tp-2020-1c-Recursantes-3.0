@@ -522,34 +522,31 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
     t_list* paquete_recibido = receive_package(server_socket, headerStruct);
 
-    void* mensaje = list_get(paquete_recibido,0);
-
     switch(headerStruct -> type){
 
         case APPEARED_POK:
-            appeared_pokemon(paquete);
+            appeared_pokemon(paquete_recibido);
             break;
         default:
             printf("la estas cagando compa\n");
             break;
     }
-    void element_destroyer(void* element){
-        free(element);
-    }
-    free_list(paquete_recibido, element_destroyer);
 }
 
-void appeared_pokemon(t_list* paquete ){
+void appeared_pokemon(t_list* paquete){
 
-    //TODO: ver si se puede reutilizar cuando hago un GET
-
-    Pokemon *pokemon = (Pokemons *) malloc(sizeof(Pokemon));
+    Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
     pokemon->especie = (char*) list_get(paquete,0);
     pokemon->pos_x = *(int*) list_get(paquete,1);
     pokemon->pos_y = *(int*) list_get(paquete,2);
 
     list_add(pokemons, pokemon);
+
+    void element_destroyer(void* element){
+        free(element);
+    }
+    free_list(paquete_recibido, element_destroyer);
 }
 
 //----------------------------------------HELPERS----------------------------------------

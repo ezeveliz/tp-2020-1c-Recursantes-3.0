@@ -11,10 +11,14 @@ t_config *config_file;
 t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
+//Semaforo que bloquea al hilo hasta pasar a ready
 sem_t* new_ready_transition;
+//Semaforo que bloquea al hilo hasta pasar a execute
 sem_t* ready_exec_transition;
 // Lista de los entrenadores con sus objetivos, posicion y demas cositas
 t_list* entrenadores;
+//Lista de los pokemons con sus posiciones
+t_list* pokemons;
 
 int main() {
     MessageType test = ABC;
@@ -250,9 +254,11 @@ void* server_function(void* arg) {
     return null;
 }
 
-// Rodri puto
 //TODO: terminar de implementar
 void initialize_structures() {
+
+    //TODO: Verificar si los pokemons son una lista
+    pokemons = list_create();
     //Itero la lista de entrenadores, y creo un hilo por cada uno
 
     char **ptr = config.posiciones_entrenadores;
@@ -297,6 +303,7 @@ void initialize_structures() {
     new_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
     // Creo un array de semaforos para bloquear la transicion ready - exec
     ready_exec_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
+
     for (int count = 0; count < tamanio_entrenadores; count++) {
 
         // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
@@ -309,7 +316,7 @@ void initialize_structures() {
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
-        send_message_thread((void*) clave, string_length(clave), GETPOK);
+        send_message_thread((void*) clave, string_length(clave), GET_POK);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
@@ -520,7 +527,7 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
     switch(headerStruct -> type){
 
         case APPEARED_POK:
-            printf("APPEARED_POKEMON\n");
+            appeared_pokemon(paquete);
             break;
         default:
             printf("la estas cagando compa\n");
@@ -530,6 +537,19 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
         free(element);
     }
     free_list(paquete_recibido, element_destroyer);
+}
+
+void appeared_pokemon(t_list* paquete ){
+
+    //TODO: ver si se puede reutilizar cuando hago un GET
+
+    Pokemon *pokemon = (Pokemons *) malloc(sizeof(Pokemon));
+
+    pokemon->especie = (char*) list_get(paquete,0);
+    pokemon->pos_x = *(int*) list_get(paquete,1);
+    pokemon->pos_y = *(int*) list_get(paquete,2);
+
+    list_add(pokemons, pokemon);
 }
 
 //----------------------------------------HELPERS----------------------------------------

@@ -76,5 +76,16 @@ typedef struct {
     MessageType header;
 } t_new_message;
 
+/**
+ * Estructura de pokemon
+ */
+
+typedef struct {
+    //Verificar si manejamos la estructura de entrenador como una lista o un dictionary y si la especie deberia ser un char*
+    char* especie;
+    int pos_x;
+    int pos_y;
+}Pokemon;
+
 
 #endif //TEAM_TEAMSTRUCTURES_H

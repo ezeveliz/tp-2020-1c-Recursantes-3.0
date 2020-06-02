@@ -168,6 +168,13 @@ void lost(int socket_server, char * ip, int port);
  */
 void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruct);
 
+/**
+ * Se llama a esta funcion cuando el servidor recibe un APPEARD
+ * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
+ */
+
+void appeared_pokemon(t_list* paquete );
+
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

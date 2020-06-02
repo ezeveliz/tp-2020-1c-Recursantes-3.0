@@ -547,6 +547,12 @@ void appeared_pokemon(t_list* paquete){
         free(element);
     }
     free_list(paquete_recibido, element_destroyer);
+
+    algoritmo_de_cercania();
+}
+
+void algoritmo_de_cercania(){
+
 }
 
 //----------------------------------------HELPERS----------------------------------------

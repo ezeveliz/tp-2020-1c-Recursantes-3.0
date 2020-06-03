@@ -595,8 +595,27 @@ void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador ent
 
     }
     else{
-        //TODO: quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+        //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
 
+        //Filtro los entrenadores que estan en NEW o BLOCK
+        bool esta_bloqueado(void* _entrenador) {
+            Entrenador* entrenador = (Entrenador*) _entrenador;
+            return (entrenador->estado == BLOCK) || (entrenador->estado == NEW);
+        }
+        t_list* entrenadores_bloqueados = list_filter(entrenadores, esta_bloqueado);
+
+        int cont = 0;
+
+        while(cont < list_size(entrenadores_bloqueados)){
+
+            list_get(entrenadores_bloqueados,cont);
+
+//            void iterator_pokemon(void* _pokemon){
+//                Pokemon* pokemon = (Pokemon*) _pokemon;
+//
+//            }
+//            list_iterate(pokemons, iterator_pokemon);
+        }
     }
 
     // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,

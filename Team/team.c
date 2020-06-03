@@ -164,6 +164,7 @@ void* subscribe_to_queue_thread(void* arg) {
             switch (cola) {
                 case (LOCALIZED_POK):;
                     int cant = *(int*) list_get(rta_list, 1);
+                    int cantidad_a_desbloquear = *(int*) list_get(rta_list, 1);
                     while(cant > 0) {
                         Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
@@ -177,7 +178,7 @@ void* subscribe_to_queue_thread(void* arg) {
                         cant --;
                     }
 
-                    algoritmo_de_cercania();
+                    algoritmo_de_cercania(cantidad_a_desbloquear,NULL);
                     break;
                 case (CAUGHT_POK):
                     break;
@@ -503,7 +504,7 @@ void fifo_planner() {
         // Obtengo el primer entrenador de la lista ordenada
         Entrenador * entrenador_elegido = (Entrenador*)list_get(entrenadores_en_ready, 0);
 
-        sem_post( &ready_exec_transition[entrenador_elegido->tid] );
+        sem_post(&ready_exec_transition[entrenador_elegido->tid] );
 
         //Destruyo la lista filtrada
         list_destroy(entrenadores_en_ready);
@@ -565,6 +566,7 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
 void appeared_pokemon(t_list* paquete){
 
+    int cantidad_a_desbloquear = 1;
     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
     pokemon->especie = (char*) list_get(paquete,0);
@@ -574,17 +576,29 @@ void appeared_pokemon(t_list* paquete){
     pthread_mutex_lock(&mutex_pokemon);
     list_add(pokemons, pokemon);
     pthread_mutex_unlock(&mutex_pokemon);
-    // Pensandolo mejor, esto no va aca, ya que estas liberando la memoria del pokemon que recien agregaste a la lista, creo, ver bien
+
+    // TODO: Pensandolo mejor, esto no va aca, ya que estas liberando la memoria del pokemon que recien agregaste a la lista, creo, ver bien
 
     //void element_destroyer(void* element){
     //    free(element);
     //}
     //free_list(paquete_recibido, element_destroyer);
 
-    algoritmo_de_cercania();
+    algoritmo_de_cercania(cantidad_a_desbloquear, NULL);
 }
 
-void algoritmo_de_cercania(){
+void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador entrenador_exec){
+
+    //Probe esta comparacion en boludeces y funciono, pendiente probarlo aca, importante pasarselo como NULL si hay un appeared o localized porque sino no funciona
+    if(entrenador_exec.tid != NULL) {
+        //TODO: fijarme que posicion esta mas cerca de la posicion de este entrenador
+
+    }
+    else{
+        //TODO: quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+
+    }
+
     // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,
     //  cambia el estado de algun entrenador(porque se ejecuto esta misma funcion en otro hilo)
     // Habria que poner un super Mutex para evitar que cambie el estado de los entrenadores

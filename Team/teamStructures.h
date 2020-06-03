@@ -81,7 +81,6 @@ typedef struct {
  */
 
 typedef struct {
-    //Verificar si manejamos la estructura de entrenador como una lista o un dictionary y si la especie deberia ser un char*
     char* especie;
     int pos_x;
     int pos_y;

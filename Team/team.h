@@ -176,7 +176,8 @@ void appeared_pokemon(t_list* paquete );
 
 /**
  * Algoritmo que encuentra el entrenador mas cerca de un pokemon, el pokemon encontrado es bloqueado para que
- * otro entrenador no pueda acceder a el.
+ * otro entrenador no pueda acceder a el. Esta funcion es llamada cuando hay un LOCALIZED, APPEARED y cuando termina
+ * de ejecutar un entrenador.
  */
 void algoritmo_de_cercania();
 

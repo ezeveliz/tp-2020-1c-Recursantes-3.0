@@ -19,6 +19,8 @@ sem_t* ready_exec_transition;
 t_list* entrenadores;
 //Lista de los pokemons con sus posiciones
 t_list* pokemons;
+//Agrego semaforo mutex para cuando quiero agregar o sacar instancias de pokemons de la lista
+pthread_mutex_t mutex_pokemon;
 
 int main() {
     MessageType test = ABC;
@@ -54,6 +56,7 @@ int main() {
 
     config_destroy(config_file);
     log_destroy(logger);
+
 }
 
 int read_config_options() {
@@ -167,8 +170,9 @@ void* subscribe_to_queue_thread(void* arg) {
                         pokemon->pos_x = *(int*) list_get(rta_list,cant*2);// Suponiendo que la informacion viene: nombre, cant, [coordenadas], esto funciona
                         pokemon->pos_y = *(int*) list_get(rta_list,cant*2 + 1);
 
-                        // TODO: Hay que poner mutex alrededor de esta lista
+                        pthread_mutex_lock(&mutex_pokemon);
                         list_add(pokemons, pokemon);
+                        pthread_mutex_unlock(&mutex_pokemon);
                         cant --;
                     }
 
@@ -275,7 +279,10 @@ void* server_function(void* arg) {
 
 void initialize_structures() {
 
-    //TODO: Verificar si los pokemons son una lista
+    //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa
+    if(pthread_mutex_init(&mutex_pokemon, NULL) != 0){
+        //TODO: ver que pasa si no puede inicializar el mutex
+    }
     pokemons = list_create();
     //Itero la lista de entrenadores, y creo un hilo por cada uno
 
@@ -563,10 +570,11 @@ void appeared_pokemon(t_list* paquete){
     pokemon->pos_x = *(int*) list_get(paquete,1);
     pokemon->pos_y = *(int*) list_get(paquete,2);
 
-    // TODO: Hay que poner mutex alrededor de esta lista
+    pthread_mutex_lock(&mutex_pokemon);
     list_add(pokemons, pokemon);
-
+    pthread_mutex_unlock(&mutex_pokemon);
     // Pensandolo mejor, esto no va aca, ya que estas liberando la memoria del pokemon que recien agregaste a la lista, creo, ver bien
+
     //void element_destroyer(void* element){
     //    free(element);
     //}

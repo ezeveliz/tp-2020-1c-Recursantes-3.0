@@ -172,14 +172,12 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
  * Se llama a esta funcion cuando el servidor recibe un APPEARD
  * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
  */
-
 void appeared_pokemon(t_list* paquete );
 
 /**
  * Algoritmo que encuentra el entrenador mas cerca de un pokemon, el pokemon encontrado es bloqueado para que
  * otro entrenador no pueda acceder a el.
  */
-
 void algoritmo_de_cercania();
 
 //----------------------------------------HELPERS----------------------------------------//

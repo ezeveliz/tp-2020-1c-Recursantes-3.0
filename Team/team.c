@@ -11,9 +11,9 @@ t_config *config_file;
 t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
-//Semaforo que bloquea al hilo hasta pasar a ready
+// Array de semaforos que bloquean a los hilos hasta pasar a ready
 sem_t* new_ready_transition;
-//Semaforo que bloquea al hilo hasta pasar a execute
+// Array de semaforos que bloquean a los hilos hasta pasar a execute
 sem_t* ready_exec_transition;
 // Lista de los entrenadores con sus objetivos, posicion y demas cositas
 t_list* entrenadores;
@@ -153,16 +153,35 @@ void* subscribe_to_queue_thread(void* arg) {
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
         if(receive_header(broker, buffer_header) > 0) {
 
-            // Recibo la confirmacion
+            // Recibo la res
             t_list* rta_list = receive_package(broker, buffer_header);
-            int rta = *(int*) list_get(rta_list, 0);
-
+            // TODO: hay que ver de filtrar los ids de los mensajes que nosotros hayamos solicitado
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
+            switch (cola) {
+                case (LOCALIZED_POK):;
+                    int cant = *(int*) list_get(rta_list, 1);
+                    while(cant > 0) {
+                        Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+
+                        pokemon->especie = (char*) list_get(rta_list,0);
+                        pokemon->pos_x = *(int*) list_get(rta_list,cant*2);// Suponiendo que la informacion viene: nombre, cant, [coordenadas], esto funciona
+                        pokemon->pos_y = *(int*) list_get(rta_list,cant*2 + 1);
+
+                        // TODO: Hay que poner mutex alrededor de esta lista
+                        list_add(pokemons, pokemon);
+                        cant --;
+                    }
+
+                    algoritmo_de_cercania();
+                    break;
+                case (CAUGHT_POK):
+                    break;
+
+            }
             // TODO: confirmar la recepcion con un send que mande un 1 o un ACK o algo de eso
 
             // Limpieza
             free(buffer_header);
-            //TODO: eliminar la lista
 
         // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
@@ -254,7 +273,6 @@ void* server_function(void* arg) {
     return null;
 }
 
-//TODO: terminar de implementar
 void initialize_structures() {
 
     //TODO: Verificar si los pokemons son una lista
@@ -391,7 +409,6 @@ void* trainer_thread(void* arg){
 
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
 
-    // Bloqueo y llamo al planificador para que decida quien continua?
     while(entrenador->estado != FINISH){
 
         // Marco el momento en que el entrenador llego a Ready
@@ -406,12 +423,17 @@ void* trainer_thread(void* arg){
         // Bloqueo esperando a que el planificador decida que ejecute
         sem_wait( &ready_exec_transition[entrenador->tid] );
 
+        // TODO: hay que ir acumulando el tiempo ejecutado en algun lugar para los calculos del SJF y del RR
         // Hallo la distancia hasta el destino, duermo al hilo durante x cantidad de segundos para simular ciclos de CPU
         int distancia_a_viajar = distancia(entrenador->pos_actual_x, entrenador->pos_actual_y, entrenador->pos_destino_x, entrenador->pos_destino_y);
+
+        // Esto es solo valido para FIFO y SJF-SD, en RR debo suspender el ciclo despues de cumplido el Q y en SJF-CD no se
         while (distancia_a_viajar > 0) {
             sleep(config.retardo_ciclo_cpu);
             distancia_a_viajar--;
         }
+
+        // TODO: Aca habria que diferenciar si fui a capturar un pokemon o a hacer un intercambio(por lo de deadlock)
     }
 
     // TODO: liberar la memoria reservada:
@@ -541,18 +563,28 @@ void appeared_pokemon(t_list* paquete){
     pokemon->pos_x = *(int*) list_get(paquete,1);
     pokemon->pos_y = *(int*) list_get(paquete,2);
 
+    // TODO: Hay que poner mutex alrededor de esta lista
     list_add(pokemons, pokemon);
 
-    void element_destroyer(void* element){
-        free(element);
-    }
-    free_list(paquete_recibido, element_destroyer);
+    // Pensandolo mejor, esto no va aca, ya que estas liberando la memoria del pokemon que recien agregaste a la lista, creo, ver bien
+    //void element_destroyer(void* element){
+    //    free(element);
+    //}
+    //free_list(paquete_recibido, element_destroyer);
 
     algoritmo_de_cercania();
 }
 
 void algoritmo_de_cercania(){
+    // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,
+    //  cambia el estado de algun entrenador(porque se ejecuto esta misma funcion en otro hilo)
+    // Habria que poner un super Mutex para evitar que cambie el estado de los entrenadores
 
+    // TODO: Iterar la lista de Pokemones, no olvidar el mutex para proteger la lista
+    //  - Por cada Pokemon obtener la lista de Entrenadores que esten esperando un pokemon(New/Block) y que puedan agarrar uno(que no se pasen del limite)
+    //  - Si la lista posee mas de un Entrenador, ordenarla por cercania al pokemon
+    //  -   Tomar al primero, asignarle el objetivo, quitarlo de la lista? y habilitarle el semaforo
+    //  - Si la lista no posee ningun entrenador, retornar
 }
 
 //----------------------------------------HELPERS----------------------------------------

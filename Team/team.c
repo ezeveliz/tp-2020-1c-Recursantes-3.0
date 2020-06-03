@@ -54,8 +54,9 @@ int main() {
     //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
     pthread_join(server_thread, NULL);
 
-    config_destroy(config_file);
-    log_destroy(logger);
+    //Cuando termina la ejecucion de todos los hilos libero los recursos
+    free_resources();
+
 
 }
 
@@ -593,6 +594,13 @@ void algoritmo_de_cercania(){
     //  - Si la lista posee mas de un Entrenador, ordenarla por cercania al pokemon
     //  -   Tomar al primero, asignarle el objetivo, quitarlo de la lista? y habilitarle el semaforo
     //  - Si la lista no posee ningun entrenador, retornar
+}
+
+void free_resources(){
+
+    config_destroy(config_file);
+    log_destroy(logger);
+    pthread_mutex_destroy(&mutex_pokemon);
 }
 
 //----------------------------------------HELPERS----------------------------------------

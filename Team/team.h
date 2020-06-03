@@ -180,6 +180,11 @@ void appeared_pokemon(t_list* paquete );
  */
 void algoritmo_de_cercania();
 
+/**
+ * Libero los recursos cuando todos los hilos terminaron de ejecutar
+ */
+void free_resources();
+
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

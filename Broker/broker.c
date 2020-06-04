@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
     LIST_LOCALIZED_POKEMON = list_create();
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
-    tests_broker();
+    //tests_broker();
 
     pthread_join(server_thread, NULL);
 
@@ -510,6 +510,11 @@ void mandar_mensaje(void* cosito){
     if (send_message_test(paquete, un_subscriptor->socket/*send_package(paquete, un_subscriptor->socket*/) > 0){
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
     }
+
+    if (receive_package(un_subscriptor->socket, ACK)){
+        flag_ack(coso->id_subscriptor, coso->id_mensaje);
+    }
+
 //    printMenSubList();
 
 }
@@ -552,16 +557,16 @@ mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream){
 
 }
 void* flag_enviado(uint32_t id_sub, uint32_t id_men){
-    bool id_search(void* un_men_sub){
-        mensaje_subscriptor* men_sub = (mensaje_subscriptor*) un_men_sub;
-        return men_sub->id_subscriptor == id_sub && men_sub->id_mensaje == id_men;
+    for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
+        mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
+        if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->enviado = true;}
     }
-    if((mensaje_subscriptor*)list_find(MENSAJE_SUBSCRIPTORE, id_search) != NULL){
-        for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
-            mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
-            if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->enviado = true;}
-        }
+}
 
+void* flag_ack(uint32_t id_sub, uint32_t id_men){
+    for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
+        mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
+        if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->ack = true;}
     }
 }
 

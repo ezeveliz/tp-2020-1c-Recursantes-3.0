@@ -104,6 +104,7 @@ void mandar_mensaje(void* coso);
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub);
 mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream);
 void* flag_enviado(uint32_t id_sub, uint32_t id_men);
+void* flag_ack(uint32_t id_sub, uint32_t id_men);
 int send_message_test(t_paquete* paquete, int socket);
 
 #endif //TEAM_BROKER_H

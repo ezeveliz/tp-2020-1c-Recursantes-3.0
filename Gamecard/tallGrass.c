@@ -4,6 +4,7 @@
 
 #include "tallGrass.h"
 
+char* punto_montaje;
 
 int main(){
     montar("..");
@@ -28,7 +29,8 @@ int montar(char* punto_montaje){
         int resultado_met = crear_metadata( path_tall_grass);
         int resultado_blok = crear_blocks(path_tall_grass);
         int resultado_file = crear_file(path_tall_grass);
-        return (resultado_met && resultado_blok && resultado_file);
+        punto_montaje = path_tall_grass;// Seteo en una variable global
+        return (resultado_met || resultado_blok || resultado_file);
     }
 
     return 1;
@@ -58,7 +60,7 @@ void limpiar_unidades_antiguas(char* path){
 
     /* Se comprueba si es un directorio y lo elimina*/
     if (S_ISDIR(datosFichero.st_mode)) {
-        int status = remove_directory(path);
+        int status = rmdir_tall_grass(path);
 
         if(status != 0){
             printf("hubo un problema al eliminar el directorio!\n");
@@ -125,57 +127,12 @@ int crear_file(char* path){
 
     char* path_file = concatenar_strings(path,"/Files");
 
-    return crear_carpeta(path_file,ACCESSPERMS);
+    mkdir_tall_grass(path_file);
+    create_tall_grass(concatenar_strings(path_file,"/pikachu"));
+    return 0;
 }
 
-/*Sacada de lo mas profundo de starckoverflow
- * Param: direccion de la carpeta
- * Return 0 por exito
- * Return -1 por error
- */
-int remove_directory(const char *path) {
-    DIR *d = opendir(path);
-    size_t path_len = strlen(path);
-    int r = -1;
 
-    if (d) {
-        struct dirent *p;
-
-        r = 0;
-        while (!r && (p=readdir(d))) {
-            int r2 = -1;
-            char *buf;
-            size_t len;
-
-            /* Skip the names "." and ".." as we don't want to recurse on them. */
-            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
-                continue;
-
-            len = path_len + strlen(p->d_name) + 2;
-            buf = malloc(len);
-
-            if (buf) {
-                struct stat statbuf;
-
-                snprintf(buf, len, "%s/%s", path, p->d_name);
-                if (!stat(buf, &statbuf)) {
-                    if (S_ISDIR(statbuf.st_mode))
-                        r2 = remove_directory(buf);
-                    else
-                        r2 = unlink(buf);
-                }
-                free(buf);
-            }
-            r = r2;
-        }
-        closedir(d);
-    }
-
-    if (!r)
-        r = rmdir(path);
-
-    return r;
-}
 
 /* Concatena dos string y devuelve otro sin necesidad de reservar
  * memoria de antemano
@@ -281,4 +238,93 @@ void escribir_bitmap(t_bitarray* bitmap, FILE* archivo){
         //copio cada byte al archivo
         fputc(buffer[i],archivo);
     }
+}
+
+/*
+ * Operaciones del file system
+ */
+
+//Tipo 0 para directorio 1 para archivo
+int crear_ficheto(char* path, int tipo){
+    int resultado = crear_carpeta(path, ACCESSPERMS);
+
+    if(resultado == 0){
+        char* path_metadata = concatenar_strings(path, "/Metadata.bin");
+        FILE * archivo_metadata = fopen(path_metadata,"w+");
+        if(tipo == 0){
+            resultado = fprintf(archivo_metadata,"DIRECTORY=Y");
+        }else{
+            resultado = fprintf(archivo_metadata,"DIRECTORY=N\nSIZE=0\nBLOCKS=[]\nOPEN=N");
+        }
+        fclose(archivo_metadata);
+        free(path_metadata);
+        return resultado > 0 ? 0:1;
+    }
+
+    return 1;
+}
+
+int mkdir_tall_grass(char* path){
+    return crear_ficheto(path,0);
+}
+
+/*Sacada de lo mas profundo de starckoverflow
+ * Param: direccion de la carpeta
+ * Return 0 por exito
+ * Return -1 por error
+ */
+int rmdir_tall_grass(const char *path) {
+    DIR *d = opendir(path);
+    size_t path_len = strlen(path);
+    int r = -1;
+
+    if (d) {
+        struct dirent *p;
+
+        r = 0;
+        while (!r && (p=readdir(d))) {
+            int r2 = -1;
+            char *buf;
+            size_t len;
+
+            /* Skip the names "." and ".." as we don't want to recurse on them. */
+            if (!strcmp(p->d_name, ".") || !strcmp(p->d_name, ".."))
+                continue;
+
+            len = path_len + strlen(p->d_name) + 2;
+            buf = malloc(len);
+
+            if (buf) {
+                struct stat statbuf;
+
+                snprintf(buf, len, "%s/%s", path, p->d_name);
+                if (!stat(buf, &statbuf)) {
+                    if (S_ISDIR(statbuf.st_mode))
+                        r2 = rmdir_tall_grass(buf);
+                    else
+                        r2 = unlink(buf);
+                }
+                free(buf);
+            }
+            r = r2;
+        }
+        closedir(d);
+    }
+
+    if (!r)
+        r = rmdir(path);
+
+    return r;
+}
+
+bool find_tall_grass(char* nombre_archivo){
+
+}
+
+char** ls_tall_grass(){
+
+}
+
+int create_tall_grass(char* path){
+    return crear_ficheto(path,1);
 }

@@ -15,8 +15,12 @@ pthread_t* threads_trainer;
 sem_t* new_ready_transition;
 // Array de semaforos que bloquean a los hilos hasta pasar a execute
 sem_t* ready_exec_transition;
-// Lista de los entrenadores con sus objetivos, posicion y demas cositas
-t_list* entrenadores;
+// Lista de los entrenadores los distintos estados
+t_list* estado_new;
+t_list* estado_ready;
+t_list* estado_exec;
+t_list* estado_block;
+t_list* estado_finish;
 //Lista de los pokemons con sus posiciones
 t_list* pokemons;
 //Agrego semaforo mutex para cuando quiero agregar o sacar instancias de pokemons de la lista
@@ -291,7 +295,11 @@ void initialize_structures() {
     char **ptr = config.posiciones_entrenadores;
     int pos = 0, tamanio_entrenadores = 0;
     objetivo_global = dictionary_create();
-    entrenadores = list_create();
+    estado_new = list_create();
+    estado_ready = list_create();
+    estado_block = list_create();
+    estado_finish = list_create();
+    estado_exec = list_create();
 
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
@@ -317,12 +325,12 @@ void initialize_structures() {
         // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
-        list_add(entrenadores, (void *) entrenador);
+        list_add(estado_new, (void *) entrenador);
         pos++;
     }
 
-    //Obtengo la cantidad de entrenadores
-    tamanio_entrenadores = list_size(entrenadores);
+    //Obtengo la cantidad de entrenadores nuevos
+    tamanio_entrenadores = list_size(estado_new);
 
     // Creo un array de tantos hilos como entrenadores haya
     threads_trainer = (pthread_t *) malloc(tamanio_entrenadores * sizeof(pthread_t));
@@ -337,7 +345,7 @@ void initialize_structures() {
         sem_init(&new_ready_transition[count], 0, 0);
         // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
         sem_init(&ready_exec_transition[count], 0, 0);
-        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores, count);
+        Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
 
@@ -475,18 +483,7 @@ void call_planner() {
 void fifo_planner() {
 
     // Busco si no hay ningun entrenador en ejecucion
-    bool esta_en_ejecucion(void* _entrenador) {
-        Entrenador* entrenador = (Entrenador*) _entrenador;
-        return entrenador->estado == EXEC;
-    }
-    if (!list_any_satisfy(entrenadores, esta_en_ejecucion)) {
-
-        // Obtengo la lista de entrenadores en Ready
-        bool esta_en_ready(void* _entrenador) {
-            Entrenador* entrenador = (Entrenador*) _entrenador;
-            return entrenador->estado == READY;
-        }
-        t_list* entrenadores_en_ready = list_filter(entrenadores, esta_en_ready);
+    if (list_size(estado_exec) == 0) {
 
         // Ordeno la lista de entrenadores en ready segun el tiempo de llegada
         bool ordenar_por_llegada(void* _entrenador1, void* _entrenador2) {
@@ -499,15 +496,13 @@ void fifo_planner() {
                 return (entrenador1->tiempo_llegada)->tv_sec < (entrenador2->tiempo_llegada)->tv_sec;
             }
         }
-        list_sort(entrenadores_en_ready, ordenar_por_llegada);
+        list_sort(estado_ready, ordenar_por_llegada);
 
         // Obtengo el primer entrenador de la lista ordenada
-        Entrenador * entrenador_elegido = (Entrenador*)list_get(entrenadores_en_ready, 0);
+        Entrenador * entrenador_elegido = (Entrenador*)list_get(estado_ready, 0);
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
 
-        //Destruyo la lista filtrada
-        list_destroy(entrenadores_en_ready);
     }
 
 }
@@ -597,25 +592,6 @@ void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador ent
     else{
         //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
 
-        //Filtro los entrenadores que estan en NEW o BLOCK
-        bool esta_bloqueado(void* _entrenador) {
-            Entrenador* entrenador = (Entrenador*) _entrenador;
-            return (entrenador->estado == BLOCK) || (entrenador->estado == NEW);
-        }
-        t_list* entrenadores_bloqueados = list_filter(entrenadores, esta_bloqueado);
-
-        int cont = 0;
-
-        while(cont < list_size(entrenadores_bloqueados)){
-
-            list_get(entrenadores_bloqueados,cont);
-
-//            void iterator_pokemon(void* _pokemon){
-//                Pokemon* pokemon = (Pokemon*) _pokemon;
-//
-//            }
-//            list_iterate(pokemons, iterator_pokemon);
-        }
     }
 
     // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,
@@ -625,7 +601,7 @@ void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador ent
     // TODO: Iterar la lista de Pokemones, no olvidar el mutex para proteger la lista
     //  - Por cada Pokemon obtener la lista de Entrenadores que esten esperando un pokemon(New/Block) y que puedan agarrar uno(que no se pasen del limite)
     //  - Si la lista posee mas de un Entrenador, ordenarla por cercania al pokemon
-    //  -   Tomar al primero, asignarle el objetivo, quitarlo de la lista? y habilitarle el semaforo
+    //  - Tomar al primero, asignarle el objetivo, quitarlo de la lista y habilitarle el semaforo
     //  - Si la lista no posee ningun entrenador, retornar
 }
 

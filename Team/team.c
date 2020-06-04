@@ -168,7 +168,6 @@ void* subscribe_to_queue_thread(void* arg) {
             switch (cola) {
                 case (LOCALIZED_POK):;
                     int cant = *(int*) list_get(rta_list, 1);
-                    int cantidad_a_desbloquear = *(int*) list_get(rta_list, 1);
                     while(cant > 0) {
                         Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
@@ -182,7 +181,7 @@ void* subscribe_to_queue_thread(void* arg) {
                         cant --;
                     }
 
-                    algoritmo_de_cercania(cantidad_a_desbloquear,NULL);
+                    algoritmo_de_cercania(NULL);
                     break;
                 case (CAUGHT_POK):
                     break;
@@ -561,7 +560,6 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
 void appeared_pokemon(t_list* paquete){
 
-    int cantidad_a_desbloquear = 1;
     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
     pokemon->especie = (char*) list_get(paquete,0);
@@ -579,10 +577,10 @@ void appeared_pokemon(t_list* paquete){
     //}
     //free_list(paquete_recibido, element_destroyer);
 
-    algoritmo_de_cercania(cantidad_a_desbloquear, NULL);
+    algoritmo_de_cercania(NULL);
 }
 
-void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador entrenador_exec){
+void algoritmo_de_cercania(Entrenador entrenador_exec){
 
     //Probe esta comparacion en boludeces y funciono, pendiente probarlo aca, importante pasarselo como NULL si hay un appeared o localized porque sino no funciona
     if(entrenador_exec.tid != NULL) {
@@ -591,6 +589,47 @@ void algoritmo_de_cercania(int cantidad_entrenadores_desbloquear, Entrenador ent
     }
     else{
         //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+
+        //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
+        bool no_se_paso_del_limite(void* _entreador){
+            Entrenador* entrenador = (Entrenador*) _entreador;
+            return dictionary_size(entrenador->objetivos_particular) <= dictionary_size(entrenador->stock_pokemons);
+        }
+       t_list* entrenadores_con_margen = list_filter(estado_block,no_se_paso_del_limite);
+
+        //Pongo todos en una lista asi es mas facil trabajar
+        list_add_all(entrenadores_con_margen,estado_new);
+
+        int cont_pok = 0;
+        int cont_ent = 0;
+
+        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores_con_margen,cont_ent);
+        Entrenador* entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+
+        while(cont_pok < list_size(pokemons)){
+
+            Pokemon* pokemon = (Pokemon*) list_get(pokemons,cont_pok);
+
+            while(cont_ent < list_size(entrenadores_con_margen)){
+                //Si la distancia del entrenador actual es mayor al entrenador siguiente entonces el entrenador siguiente esta mas cerca que el actual
+                if(distancia(entrenador_actual->pos_actual_x,entrenador_actual->pos_actual_y,pokemon->pos_x,pokemon->pos_y) >
+                distancia(entrenador_siguiente->pos_actual_x,entrenador_siguiente->pos_actual_y,pokemon->pos_x,pokemon->pos_y)){
+
+                    //Asigno el entrenador siguiente al actual
+                    entrenador_actual = entrenador_siguiente;
+                    //Incremento el contador y asigno el proximo entrenador de la lista a la variable siguiente
+                    entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+                }
+                //Si el actual esta mas cerca entonces solo agarro el siguiente
+                entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+            }
+            //En entrenador_actual esta el entrenador mas cercano al pokemon
+            list_add(estado_ready, entrenador_actual);
+            //FIXME: La cague porque si hago un list_remove(entrenadores_con_margen, entrenador_actual) lo saco de esa lista,
+            // y no de estado_new o estado_block, aparte no se de que lista la deberia sacar porque las concatene. Puta vida.
+
+            cont_pok++;
+        }
 
     }
 
@@ -726,6 +765,7 @@ void* message_function(void* message_package){
             // Recibo el id correlacional o lo que sea
             t_list* rta_list = receive_package(broker, buffer_header);
             int rta = *(int*) list_get(rta_list, 0);
+
 
             // TODO: Enviar confirmacion con un ACK como header y con el id correlacional como contenido
 

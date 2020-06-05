@@ -8,6 +8,7 @@ char* punto_montaje;
 
 int main(){
     montar("..");
+
 }
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
@@ -35,7 +36,6 @@ int montar(char* punto_montaje){
 
     return 1;
 }
-
 
 /*Verifica si existe la carpeta tall Grass
  * return: 1 si existe
@@ -133,116 +133,19 @@ int crear_file(char* path){
 }
 
 
-
-/* Concatena dos string y devuelve otro sin necesidad de reservar
- * memoria de antemano
- * Parmas: strings a concatenar
- */
-char* concatenar_strings(char*path1, char* path2){
-    char* concatenado = malloc(strlen(path1) + strlen(path2) + 1);
-    strcpy(concatenado, path1);
-    strcat (concatenado, path2);
-
-    return concatenado;
-}
-
-/* Crea una carpeta real
- * Param: El path donde queres que se cree
- * Param: El modo en el que lo queres crear
- */
-
-int crear_carpeta(char* path, int modo){
-    int resultado = mkdir(path , modo);
-
-    if(resultado == -1){
-        printf("Algo salio mal! %s\n", hstrerror(errno));
-        return 1;
-    }
-
-    return 0;
-}
-
-/*
- * Funciones de bitmap
- */
-
-t_bitarray* create_bitmap(int cantidad_bloques){
-
-    int bitmap_size = tamanio_bitmap(cantidad_bloques);
-
-    char* bitmap_string = malloc(bitmap_size);
-    t_bitarray * bitarray = bitarray_create(bitmap_string, bitmap_size);
-
-    //Inicializo el bitmap en 0s
-    limpiar_bitmpa(bitarray);
-
-    return bitarray;
-}
-
-int tamanio_bitmap(int cantidad_bloques){
-
-    int bitmap_size = cantidad_bloques/8;
-
-    //Se fija si sobran bloques en el bitmap
-    if((cantidad_bloques%8)!=0){
-
-        //Si sobran le suma uno para agregarlo
-        bitmap_size++;
-    }
-
-    return bitmap_size;
-}
-
-void doom_bitmap(t_bitarray* bitarray){
-    //Imprimo cada bit
-    for(int i = 0; i < bitarray->size*8; i++){
-
-        //cada vez que se escriben 8bits hago un salto
-        if((i%8)==0){
-            printf("\n");
-        }
-        printf("%d", bitarray_test_bit(bitarray, i));
-    }
-    printf("\n");
-}
-
-void limpiar_bitmpa(t_bitarray* bitarray){
-
-    for(int i = 0; i < bitarray->size*8; i++){
-        bitarray_clean_bit(bitarray, i);
-    }
-}
-
-char* obtener_bitmap(FILE* archivo_bitmap){
-    //Pongo el puntero del archivo en 0
-    rewind(archivo_bitmap);
-
-    int bitmap_size = tamanio_bitmap(BLOCKS);
-    char* buffer = malloc(bitmap_size + 1);
-
-    //Copio cada byte del archivo a un buffer
-    for(int i = 0; i < bitmap_size;i++){
-        buffer[i] = fgetc(archivo_bitmap);
-    }
-
-    //Agrego el caracter de final de string
-    buffer[bitmap_size] = '\0';
-
-    return buffer;
-}
-
-void escribir_bitmap(t_bitarray* bitmap, FILE* archivo){
-
-    char* buffer = bitmap->bitarray;
-    for(int i = 0; i < bitmap->size;i++){
-        //copio cada byte al archivo
-        fputc(buffer[i],archivo);
-    }
-}
-
 /*
  * Operaciones del file system
  */
+
+char* obtener_path_file(){
+    return concatenar_strings(punto_montaje,"/Files");
+}
+char* obtener_path_blocks(){
+    return concatenar_strings(punto_montaje,"/Blocks");
+}
+char* obtener_path_metadata(){
+    return concatenar_strings(punto_montaje,"/Metadata/Metadata.bin");
+}
 
 //Tipo 0 para directorio 1 para archivo
 int crear_ficheto(char* path, int tipo){
@@ -318,13 +221,68 @@ int rmdir_tall_grass(const char *path) {
 }
 
 bool find_tall_grass(char* nombre_archivo){
+    char* files = obtener_path_file();
 
+    //Obtengo una lista con los archivos que contiene ese directorio
+    t_list* archivos = ls_tall_grass(files);
+    int numero_archivos = list_size(archivos);
+    bool resultado = false;
+
+    //Recorro la lista buscando coincidencia con el nombre que busco
+    for(int i = 0; i < numero_archivos; i++){
+        if(strcmp(nombre_archivo, list_get(archivos,i)) == 0){
+
+            //Ante coincidencia pongo el resultado en true y rompo el ciclo
+            resultado = true;
+            break;
+        }
+    }
+
+    list_clean_and_destroy_elements(archivos,free);
+    return resultado;
 }
 
-char** ls_tall_grass(){
+t_list* ls_tall_grass(char* path){
 
+    DIR *dp;
+    struct dirent *ep;
+
+    dp = opendir (path);
+    if (dp != NULL)
+    {
+        t_list * respuesta = list_create();
+        while (ep = readdir (dp)){
+            char* elemento = malloc(strlen(ep->d_name));
+            list_add(respuesta,elemento);
+        }
+
+        (void) closedir (dp);
+        return respuesta;
+    }
+    else
+       return NULL;
 }
 
 int create_tall_grass(char* path){
     return crear_ficheto(path,1);
+}
+
+void open_tall_grass(){
+
+}
+
+void close_tall_grass(){
+
+}
+
+int write_tall_grass(){
+
+}
+
+int read_tall_grass(){
+
+}
+
+int rmfile_tall_grass(){
+
 }

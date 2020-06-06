@@ -35,4 +35,6 @@ t_list* ls_tall_grass(char* path);
 bool find_tall_grass(char* nombre_archivo);
 
 FILE* open_tall_grass(char* path);
-int close_tall_grass( int fd );
+int close_tall_grass( FILE* fd );
+int set_estado_archivo(FILE* archivo,char estado);
+int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion);

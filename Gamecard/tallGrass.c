@@ -9,14 +9,15 @@ char* punto_montaje;
 int main(){
     montar("..");
 
-    FILE* fd = open_tall_grass("../Tall_Grass/Metadata/Metadata.bin");
-    if(fd != NULL){
-        printf("%d\n",fd->_fileno);
-    } else{
-        printf("No anda \n");
-    }
-    close_tall_grass(fd);
-    printf("%d\n",open_tall_grass("../Tall_Grass/Metadata/Metadata.bin") == NULL? -1: 0);
+    FILE* fd = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
+    //close_tall_grass(fd);
+//    if(fd != NULL){
+//        printf("%d\n",fd->_fileno);
+//    } else{
+//        printf("No anda \n");
+//    }
+//    close_tall_grass(fd);
+//    printf("%d\n",open_tall_grass("../Tall_Grass/Metadata/Metadata.bin") == NULL? -1: 0);
 }
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
@@ -276,35 +277,69 @@ int create_tall_grass(char* path){
 }
 
 FILE* open_tall_grass(char* path){
-//    struct flock fl;
-//    memset(&fl, 0, sizeof(fl));
-//
-//    fl.l_whence = SEEK_SET;
-//    fl.l_start = 0;
-//    fl.l_len = 0;
-//    fl.l_pid = 0;
-
     //r+ lectura-escritura || w+ archivo en blanco
     FILE*  file = fopen(path,"r+");
-    //LOCK_EX es para que sea bloque exclusivo
-    //LOCK_NB es para que sea no bloqueante si esta bloqueado
-    int resultado = flock(file->_fileno, LOCK_EX | LOCK_NB);
-    if( resultado== 0){
-//        int a1,a2;
-//        char* a3;
-//        fscanf(file,"%d %d %s",a1,a2,a3);
-//        printf("BLOCK_SIZE=%d BLOCKS=%d MAGIC_NUMBER=%s",&a1,&a2,a3);
-//        return file;
+
+//    LOCK_EX es para que sea bloque exclusivo
+//    LOCK_NB es para que sea no bloqueante si esta bloqueado
+    if( flock(file->_fileno, LOCK_EX | LOCK_NB) == 0){
+        set_estado_archivo(file,'Y');
+        return file;
     }else{
         fclose(file);
         return NULL;
     }
 }
 
-int close_tall_grass( int fd ){
-    return flock(fd, LOCK_UN) ;
+int close_tall_grass( FILE* fd ){
+    if(set_estado_archivo(fd,'N') == -1){
+        return -1;
+    };
 
+    if(flock(fd->_fileno, LOCK_UN) != 0){
+        return -1;
+    }
+
+    return fclose(fd) ;
 }
+
+//Setias el estado open del archivo
+//Estados Y|N
+
+int set_estado_archivo(FILE* archivo,char estado){
+    //Pongo en 0 el puntero del archivo
+    rewind(archivo);
+    //Busco la posicion del '=' de open
+    int posicion = buscar_caracter_archivo(archivo,'=',4) + 1;//No esta bien esto pero es la forma mas facil
+
+    //Controlo posible error
+    if(posicion != -1){
+        fseek(archivo, posicion, SEEK_SET); //Posiciono el puntero del archivo ahi
+        fputc(estado,archivo);//Pongo el estado pasado por parametro en lugar del existente
+    }else{
+        return -1;
+    }
+}
+
+int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion){
+    int i =0;
+    int contador_aparicion = 0;
+    char c = fgetc(archivo);
+
+    //Compara caracter
+    while( c != EOF ){
+        //Si es igual y es el numero de aparicion que estoy buscando
+        if( c == caracter_a_buscar && ++contador_aparicion == numero_de_aparicion){
+            return i;
+        }
+        i++;
+        c = fgetc(archivo);
+    }
+    //sino devuelvo error
+    return -1;
+}
+
+
 
 int write_tall_grass(){
 

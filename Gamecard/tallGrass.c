@@ -9,6 +9,14 @@ char* punto_montaje;
 int main(){
     montar("..");
 
+    FILE* fd = open_tall_grass("../Tall_Grass/Metadata/Metadata.bin");
+    if(fd != NULL){
+        printf("%d\n",fd->_fileno);
+    } else{
+        printf("No anda \n");
+    }
+    close_tall_grass(fd);
+    printf("%d\n",open_tall_grass("../Tall_Grass/Metadata/Metadata.bin") == NULL? -1: 0);
 }
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
@@ -267,11 +275,34 @@ int create_tall_grass(char* path){
     return crear_ficheto(path,1);
 }
 
-void open_tall_grass(){
+FILE* open_tall_grass(char* path){
+//    struct flock fl;
+//    memset(&fl, 0, sizeof(fl));
+//
+//    fl.l_whence = SEEK_SET;
+//    fl.l_start = 0;
+//    fl.l_len = 0;
+//    fl.l_pid = 0;
 
+    //r+ lectura-escritura || w+ archivo en blanco
+    FILE*  file = fopen(path,"r+");
+    //LOCK_EX es para que sea bloque exclusivo
+    //LOCK_NB es para que sea no bloqueante si esta bloqueado
+    int resultado = flock(file->_fileno, LOCK_EX | LOCK_NB);
+    if( resultado== 0){
+//        int a1,a2;
+//        char* a3;
+//        fscanf(file,"%d %d %s",a1,a2,a3);
+//        printf("BLOCK_SIZE=%d BLOCKS=%d MAGIC_NUMBER=%s",&a1,&a2,a3);
+//        return file;
+    }else{
+        fclose(file);
+        return NULL;
+    }
 }
 
-void close_tall_grass(){
+int close_tall_grass( int fd ){
+    return flock(fd, LOCK_UN) ;
 
 }
 

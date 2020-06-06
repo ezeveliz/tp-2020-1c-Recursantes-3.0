@@ -12,7 +12,10 @@
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 #include <commons/collections/list.h>
+#include <string.h>
 #include "funciones_aux.h"
+#include <sys/file.h>
+
 
 #endif //GAMECARD_TALLGRASS_H
 
@@ -30,3 +33,6 @@ char* obtener_path_blocks();
 char* obtener_path_metadata();
 t_list* ls_tall_grass(char* path);
 bool find_tall_grass(char* nombre_archivo);
+
+FILE* open_tall_grass(char* path);
+int close_tall_grass( int fd );

@@ -15,6 +15,8 @@ pthread_t* threads_trainer;
 sem_t* new_ready_transition;
 // Array de semaforos que bloquean a los hilos hasta pasar a execute
 sem_t* ready_exec_transition;
+//Array de semaforos que bloquean a los hilos hasta pasar a ready
+sem_t* block_ready_transition;
 // Lista de los entrenadores los distintos estados
 t_list* estado_new;
 t_list* estado_ready;
@@ -354,6 +356,8 @@ void initialize_structures() {
     new_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
     // Creo un array de semaforos para bloquear la transicion ready - exec
     ready_exec_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
+    // Creo un array de semaforos para bloquear la transicion block - ready
+    block_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
 
     for (int count = 0; count < tamanio_entrenadores; count++) {
 
@@ -361,6 +365,8 @@ void initialize_structures() {
         sem_init(&new_ready_transition[count], 0, 0);
         // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
         sem_init(&ready_exec_transition[count], 0, 0);
+        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
+        sem_init(&block_ready_transition[count], 0, 0);
         Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
@@ -471,7 +477,18 @@ void* trainer_thread(void* arg){
             distancia_a_viajar--;
         }
 
-        // TODO: Aca habria que diferenciar si fui a capturar un pokemon o a hacer un intercambio(por lo de deadlock)
+        //FIXME: Pasos a seguir:
+        // 1. Verificar cual es la razon del movimiento (CATCH / Resolucion de deadlock)
+        // 2. Si es CATCH, enviar el mensaje correspondiente y bloquearse
+        // 2.1 Una vez que me hacen signal sobre el semaforo (CAUGHT), verificar si lo atrape o no y actualizar
+        // la lista de objetivos globales y stock de pokemons.
+        // 3. Si es resolucion de deadlock, simular 5 ciclos de CPU y realizar el intercambio entre dos entrenadores.
+        // 4. Como sabemos con que entrenador tiene que hacer el intercambio?
+        // 5. Si ya cumplimos con los objetivos, asignar el estado FINISH, nos borramos de todas las listas y llamar al
+        // algoritmo de cercania para ver si hay otro hilo que se puede liberar.
+        // 2.2 (Continuacion de 2.1) Una vez que respondieron el CAUGHT llamar al algoritmo de cercania.
+
+        sem_wait(&block_ready_transition[entrenador->tid]);
     }
 
     // TODO: liberar la memoria reservada:
@@ -584,6 +601,7 @@ void appeared_pokemon(t_list* paquete){
 
     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
+   //TODO: ver de pasar los parametro con un memcpy y despues liberar y destruir todo el paquete
     pokemon->especie = (char*) list_get(paquete,0);
     pokemon->coordenada.pos_x = *(int*) list_get(paquete,1);
     pokemon->coordenada.pos_y = *(int*) list_get(paquete,2);
@@ -592,13 +610,7 @@ void appeared_pokemon(t_list* paquete){
     list_add(pokemons, pokemon);
     pthread_mutex_unlock(&mutex_pokemon);
 
-    // TODO: Pensandolo mejor, esto no va aca, ya que estas liberando la memoria del pokemon que recien agregaste a la lista, creo, ver bien
-
-    //void element_destroyer(void* element){
-    //    free(element);
-    //}
-    //free_list(paquete_recibido, element_destroyer);
-
+    list_destroy(paquete);
     algoritmo_de_cercania(NULL);
 }
 
@@ -607,7 +619,11 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
     //Probe esta comparacion en boludeces y funciono, pendiente probarlo aca, importante pasarselo como NULL si hay un appeared o localized porque sino no funciona
     if(entrenador_exec.tid != NULL) {
         //TODO: fijarme que posicion esta mas cerca de la posicion de este entrenador
-
+        //Tengo lugar para atrapar pokemons
+        if((entrenador_exec->cant_stock < entrenador_exec->cant_objetivos) && (entrenador_exec->razon_bloqueo == ESPERANDO_POKEMON)){
+            bool mas_cercano(void* )
+            list_sort(pokemons,mas_cercano);
+        }
     }
     else{
         //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
@@ -627,7 +643,7 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
         //Pongo todos en una lista asi es mas facil trabajar
         list_add_all(entrenadores_con_margen,estado_new);
 
-        //Verifico que la lista no sea vacia
+        //Verifico que la lista de entrenadores no sea vacia
         if(list_size(entrenadores_con_margen) > 0){
             int cant_pok = list_size(pokemons);
             while(cant_pok > 0){
@@ -678,7 +694,7 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
                         list_add(estado_ready,entrenador_cercano);
                         entrenador_cercano->estado = READY;
 
-                        //TODO: Agregar semaforo de transicion de block a ready
+                        sem_post(&block_ready_transition[entrenador_cercano->tid]);
                         break;
 
                     default:
@@ -699,10 +715,6 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
     // Habria que poner un super Mutex para evitar que cambie el estado de los entrenadores
 
     // TODO: Iterar la lista de Pokemones, no olvidar el mutex para proteger la lista
-    //  - Por cada Pokemon obtener la lista de Entrenadores que esten esperando un pokemon(New/Block) y que puedan agarrar uno(que no se pasen del limite)
-    //  - Si la lista posee mas de un Entrenador, ordenarla por cercania al pokemon
-    //  - Tomar al primero, asignarle el objetivo, quitarlo de la lista y habilitarle el semaforo
-    //  - Si la lista no posee ningun entrenador, retornar
 }
 
 void free_resources(){

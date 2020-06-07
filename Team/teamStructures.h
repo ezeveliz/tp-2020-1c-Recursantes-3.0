@@ -78,7 +78,7 @@ typedef enum razon_movimiento{
     RESOLUCION_DEADLOCK
 }RazonMovimiento;
 
-typedef struct {
+typedef struct tEntrenador{
     int tid;
     Coordenada pos_actual;
     RazonMovimiento razon_movimiento;
@@ -89,8 +89,8 @@ typedef struct {
     int cant_stock;
     int cant_objetivos;
     RazonBloqueo razon_bloqueo;
-    Pokemon pokemon_objetivo;
-    struct Entrenador* entrenador_objetivo;
+    Pokemon* pokemon_objetivo;
+    struct tEntrenador* entrenador_objetivo;
 }Entrenador;
 
 /**

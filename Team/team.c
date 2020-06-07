@@ -459,7 +459,7 @@ void* trainer_thread(void* arg){
         int distancia_a_viajar = 0;
 
         if(entrenador->razon_movimiento == CATCH){
-            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo.coordenada);
+            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo->coordenada);
         }
         else{
             distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
@@ -651,13 +651,14 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
                 //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
                 list_remove(entrenadores_con_margen, 0);
 
+                bool remover(void* _entrenador){
+                    Entrenador* entrenador = (Entrenador*) _entrenador;
+                    return entrenador->tid == entrenador_cercano->tid;
+                }
                 //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
                 switch(entrenador_cercano->estado){
-                    case (NEW):
-                        bool remover(void* _entrenador){
-                            Entrenador* entrenador = (Entrenador*) _entrenador;
-                            return entrenador->tid == entrenador_cercano->tid;
-                        }
+                    case (NEW):;
+
                         list_remove_by_condition(estado_new, remover);
 
                         entrenador_cercano->pokemon_objetivo = pokemon;
@@ -668,11 +669,8 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
                         sem_post( &new_ready_transition[entrenador_cercano->tid]);
                         break;
 
-                    case (BLOCK):
-                        bool remover(void* _entrenador){
-                            Entrenador* entrenador = (Entrenador*) _entrenador;
-                            return entrenador->tid == entrenador_cercano->tid;
-                        }
+                    case (BLOCK):;
+
                         list_remove_by_condition(estado_block, remover);
 
                         entrenador_cercano->pokemon_objetivo = pokemon;
@@ -683,7 +681,7 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
                         //TODO: Agregar semaforo de transicion de block a ready
                         break;
 
-                    case default:
+                    default:
                         printf("Andate a a concha de tu hermana");
                         break;
                 }

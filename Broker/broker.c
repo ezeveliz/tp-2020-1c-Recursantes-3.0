@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        cfg_path = strdup("broker.cfg");
+        cfg_path = strdup("../broker.cfg");
     } else {
         cfg_path = strdup(argv[1]);
     }

@@ -19,6 +19,15 @@
 
 #endif //GAMECARD_TALLGRASS_H
 
+typedef struct{
+    int size;
+    char** bloques;
+}t_metadata;
+
+typedef struct{
+    char* path;
+} t_file;
+
 int montar(char* punto_montaje);
 void limpiar_unidades_antiguas(char* path);
 int crear_metadata(char* path);
@@ -35,11 +44,20 @@ char* obtener_path_bitmap();
 t_list* ls_tall_grass(char* path);
 bool find_tall_grass(char* nombre_archivo);
 
-FILE* open_tall_grass(char* path);
-int close_tall_grass( FILE* fd );
+t_file* open_tall_grass(char* path);
+int close_tall_grass( t_file * fd );
 int set_estado_archivo(FILE* archivo,char estado);
 int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion);
 
 int obtener_cantidad_bloques();
 int obtener_tamanio_bloques();
 t_list* obtener_bloques_libres(int cantidad_pedida);
+
+int calcular_espacio_libre_archivo(t_metadata* metadata);
+
+int espacio_libre_archivo();
+
+int calcular_bloques_archivo(t_metadata* metadata);
+
+t_metadata* obtener_metadata_archivo(t_file * archivo);
+void metadata_destroy(t_metadata* metadata);

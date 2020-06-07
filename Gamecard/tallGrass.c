@@ -7,15 +7,20 @@
 char* carpeta_montaje;
 
 int main(){
-    montar("..");
-    t_list* bloques = obtener_bloques_libres(32);
-    for(int i = 0; i < list_size(bloques) ; i++){
-        printf("%d\n", *(int*)list_get(bloques,i));
-    }
-    t_list* bloques1 = obtener_bloques_libres(32);
-    for(int i = 0; i < list_size(bloques1) ; i++){
-        printf("%d\n", *(int*)list_get(bloques1,i));
-    }
+   // montar("..");
+//    printf("%d\n",open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin")==NULL?-1:1);
+//    printf("%d\n",open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin")==NULL?-1:1);
+    t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
+    obtener_metadata_archivo(archivo);
+    //obtener_metadata_archivo(open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin"));
+//    t_list* bloques = obtener_bloques_libres(32);
+//    for(int i = 0; i < list_size(bloques) ; i++){
+//        printf("%d\n", *(int*)list_get(bloques,i));
+//    }
+//    t_list* bloques1 = obtener_bloques_libres(32);
+//    for(int i = 0; i < list_size(bloques1) ; i++){
+//        printf("%d\n", *(int*)list_get(bloques1,i));
+//    }
     //printf("%d",obtener_cantidad_bloques());
 //    FILE* fd = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
     //close_tall_grass(fd);
@@ -302,31 +307,37 @@ int create_tall_grass(char* path){
     return crear_ficheto(path,1);
 }
 
-FILE* open_tall_grass(char* path){
+t_file* open_tall_grass(char* path){
+    t_file * retorno = malloc(sizeof(t_file));
+    retorno->path = malloc(strlen(path)+1);
     //r+ lectura-escritura || w+ archivo en blanco
-    FILE*  file = fopen(path,"r+");
+    FILE* archivo = fopen(path,"r+");
+    memcpy(retorno->path, path,strlen(path)+1);
 
 //    LOCK_EX es para que sea bloque exclusivo
 //    LOCK_NB es para que sea no bloqueante si esta bloqueado
-    if( flock(file->_fileno, LOCK_EX | LOCK_NB) == 0){
-        set_estado_archivo(file,'Y');
-        return file;
+    if( flock(archivo->_fileno, LOCK_EX | LOCK_NB) == 0){
+        set_estado_archivo(archivo,'Y');
+        fclose(archivo);
+        return retorno;
     }else{
-        fclose(file);
+        fclose(archivo);
         return NULL;
     }
 }
 
-int close_tall_grass( FILE* fd ){
-    if(set_estado_archivo(fd,'N') == -1){
+int close_tall_grass(t_file * fd ){
+    FILE* archivo = fopen(fd->path,"r+");
+    if(set_estado_archivo(archivo,'N') == -1){
         return -1;
     };
 
-    if(flock(fd->_fileno, LOCK_UN) != 0){
+    if(flock(archivo->_fileno, LOCK_UN) != 0){
         return -1;
     }
 
-    return fclose(fd) ;
+    free(fd->path);
+    return fclose(archivo) ;
 }
 
 //Setias el estado open del archivo
@@ -401,4 +412,62 @@ t_list* obtener_bloques_libres(int cantidad_pedida){
     escribir_bitmap(bitmap, archivo_bitmap);
     fclose(archivo_bitmap);
     return bloques_libres;
+}
+
+int liberar_bloques(t_list* bloques_a_liberar){
+    char* path_bitmap = obtener_path_bitmap();
+    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
+    if(archivo_bitmap != NULL){
+        int cantidad_bloques = obtener_cantidad_bloques();
+        t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
+
+        for(int i = 0; i < list_size(bloques_a_liberar); i++){
+            bitarray_set_bit(bitmap,*(int*)list_get(bloques_a_liberar,i));
+        }
+        //Escribo el bitmap modificado en el archivo
+        escribir_bitmap(bitmap, archivo_bitmap);
+        fclose(archivo_bitmap);
+        return list_size(bloques_a_liberar);//Devuelvo los bloques que fueron liberados
+    }else{
+        return -1;
+    }
+}
+
+t_metadata* obtener_metadata_archivo(t_file * archivo){
+    t_config* nose = config_create(archivo->path);
+    t_metadata* metadata = malloc(sizeof(t_metadata));
+    metadata->size = config_get_int_value(nose,"SIZE");
+    metadata->bloques = config_get_array_value(nose,"BLOCKS");
+    config_destroy(nose);
+    return metadata;
+}
+
+int espacio_libre_archivo(t_file* archivo){
+    t_metadata* metadata = obtener_metadata_archivo(archivo);
+    int espacio_libre = (calcular_bloques_archivo(metadata) * obtener_tamanio_bloques()) - metadata->size;
+    metadata_destroy(metadata);
+    return espacio_libre;
+
+}
+
+int calcular_bloques_archivo(t_metadata* metadata){
+    int tamanio_bloque = obtener_tamanio_bloques();
+    int resultado = metadata->size / tamanio_bloque;
+
+    if(metadata->size % tamanio_bloque != 0 ){
+        resultado ++;
+    }
+
+    return resultado;
+}
+
+
+void metadata_destroy(t_metadata* metadata){
+    int i = 0;
+    while(metadata->bloques[i] != NULL){
+        free(metadata->bloques[i]);
+        i++;
+    }
+    free(metadata->bloques);
+    free(metadata);
 }

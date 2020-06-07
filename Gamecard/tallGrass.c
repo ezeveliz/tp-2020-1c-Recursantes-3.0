@@ -381,7 +381,6 @@ int rmfile_tall_grass(){
 
 //Te devuelve la lista con los que hay
 t_list* obtener_bloques_libres(int cantidad_pedida){
-
     int cantidad_bloques = obtener_cantidad_bloques();
     char* path_bitmap = obtener_path_bitmap();
     t_list* bloques_libres = list_create();

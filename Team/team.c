@@ -692,32 +692,6 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
             }
         }
 
-//        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores_con_margen,cont_ent);
-//        Entrenador* entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
-//
-//        while(cont_pok < list_size(pokemons)){
-//
-//            Pokemon* pokemon = (Pokemon*) list_get(pokemons,cont_pok);
-//
-//            while(cont_ent < list_size(entrenadores_con_margen)){
-//                //Si la distancia del entrenador actual es mayor al entrenador siguiente entonces el entrenador siguiente esta mas cerca que el actual
-//
-//                if(distancia(entrenador_actual->pos_actual_x,entrenador_actual->pos_actual_y,pokemon->pos_x,pokemon->pos_y) >
-//                distancia(entrenador_siguiente->pos_actual_x,entrenador_siguiente->pos_actual_y,pokemon->pos_x,pokemon->pos_y)){
-//
-//                    //Asigno el entrenador siguiente al actual
-//                    entrenador_actual = entrenador_siguiente;
-//                    //Incremento el contador y asigno el proximo entrenador de la lista a la variable siguiente
-//                    entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
-//                }
-//            }
-//            //En entrenador_actual esta el entrenador mas cercano al pokemon
-//            list_add(estado_ready, entrenador_actual);
-//
-//
-//            cont_pok++;
-//        }
-
     }
 
     // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,

@@ -53,16 +53,44 @@ typedef enum estado_entrenador{
     FINISH,
 } estado_entrenador;
 
+typedef enum razonBloqueo{
+    DEADLOCK,
+    ESPERANDO_CATCH,
+    ESPERANDO_POKEMON,
+}RazonBloqueo;
+
+typedef struct coordenada{
+    int pos_x;
+    int pos_y;
+}Coordenada;
+
+/**
+ * Estructura de pokemon
+ */
+
+typedef struct {
+    char* especie;
+    Coordenada coordenada;
+}Pokemon;
+
+typedef enum razon_movimiento{
+    CATCH,
+    RESOLUCION_DEADLOCK
+}RazonMovimiento;
+
 typedef struct {
     int tid;
-    int pos_actual_x;
-    int pos_actual_y;
-    int pos_destino_x;
-    int pos_destino_y;
+    Coordenada pos_actual;
+    RazonMovimiento razon_movimiento;
     t_dictionary* objetivos_particular;
     t_dictionary* stock_pokemons;
     struct timespec* tiempo_llegada;
     estado_entrenador estado;
+    int cant_stock;
+    int cant_objetivos;
+    RazonBloqueo razon_bloqueo;
+    Pokemon pokemon_objetivo;
+    struct Entrenador* entrenador_objetivo;
 }Entrenador;
 
 /**
@@ -76,15 +104,6 @@ typedef struct {
     MessageType header;
 } t_new_message;
 
-/**
- * Estructura de pokemon
- */
-
-typedef struct {
-    char* especie;
-    int pos_x;
-    int pos_y;
-}Pokemon;
 
 
 #endif //TEAM_TEAMSTRUCTURES_H

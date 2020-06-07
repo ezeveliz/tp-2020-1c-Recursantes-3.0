@@ -172,8 +172,8 @@ void* subscribe_to_queue_thread(void* arg) {
                         Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
                         pokemon->especie = (char*) list_get(rta_list,0);
-                        pokemon->pos_x = *(int*) list_get(rta_list,cant*2);// Suponiendo que la informacion viene: nombre, cant, [coordenadas], esto funciona
-                        pokemon->pos_y = *(int*) list_get(rta_list,cant*2 + 1);
+                        pokemon->coordenada.pos_x = *(int*) list_get(rta_list,cant*2);// Suponiendo que la informacion viene: nombre, cant, [coordenadas], esto funciona
+                        pokemon->coordenada.pos_y = *(int*) list_get(rta_list,cant*2 + 1);
 
                         pthread_mutex_lock(&mutex_pokemon);
                         list_add(pokemons, pokemon);
@@ -318,9 +318,26 @@ void initialize_structures() {
 
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
         add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
+
+        int contador_objetivos = 0;
+        void iterador_objetivos(char* clave, void* contenido){
+            contador_objetivos += *(int*) contenido;
+        }
+        dictionary_iterator(entrenador->objetivos_particular,iterador_objetivos);
+
+        entrenador->cant_objetivos = contador_objetivos;
+
+        int contador_stock = 0;
+        void iterador_stock(char* clave, void* contenido){
+            contador_stock += *(int*) contenido;
+        }
+        dictionary_iterator(entrenador->stock_pokemons,iterador_stock);
+
+        entrenador->cant_stock = contador_stock;
+
         // Le asigno al entrenador sus coordenadas
-        sscanf(posiciones[0], "%d", &entrenador->pos_actual_x);
-        sscanf(posiciones[1], "%d", &entrenador->pos_actual_y);
+        sscanf(posiciones[0], "%d", &entrenador->pos_actual.pos_x);
+        sscanf(posiciones[1], "%d", &entrenador->pos_actual.pos_y);
         // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
@@ -430,9 +447,6 @@ void* trainer_thread(void* arg){
         // Marco el momento en que el entrenador llego a Ready
         *(entrenador->tiempo_llegada) = get_time();
 
-        // El estado del entrenador pasa a ser ready
-        entrenador->estado = READY;
-
         // Llamo al planificador
         call_planner();
 
@@ -441,7 +455,15 @@ void* trainer_thread(void* arg){
 
         // TODO: hay que ir acumulando el tiempo ejecutado en algun lugar para los calculos del SJF y del RR
         // Hallo la distancia hasta el destino, duermo al hilo durante x cantidad de segundos para simular ciclos de CPU
-        int distancia_a_viajar = distancia(entrenador->pos_actual_x, entrenador->pos_actual_y, entrenador->pos_destino_x, entrenador->pos_destino_y);
+
+        int distancia_a_viajar = 0;
+
+        if(entrenador->razon_movimiento == CATCH){
+            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo.coordenada);
+        }
+        else{
+            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
+        }
 
         // Esto es solo valido para FIFO y SJF-SD, en RR debo suspender el ciclo despues de cumplido el Q y en SJF-CD no se
         while (distancia_a_viajar > 0) {
@@ -563,8 +585,8 @@ void appeared_pokemon(t_list* paquete){
     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
     pokemon->especie = (char*) list_get(paquete,0);
-    pokemon->pos_x = *(int*) list_get(paquete,1);
-    pokemon->pos_y = *(int*) list_get(paquete,2);
+    pokemon->coordenada.pos_x = *(int*) list_get(paquete,1);
+    pokemon->coordenada.pos_y = *(int*) list_get(paquete,2);
 
     pthread_mutex_lock(&mutex_pokemon);
     list_add(pokemons, pokemon);
@@ -589,47 +611,114 @@ void algoritmo_de_cercania(Entrenador entrenador_exec){
     }
     else{
         //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+        //TODO: list_sort en vez de while
+        //FIXME: La cague porque si hago un list_remove(entrenadores_con_margen, entrenador_actual) lo saco de esa lista,
+        // y no de estado_new o estado_block, aparte no se de que lista la deberia sacar porque las concatene. Puta vida.
+
+
 
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
-        bool no_se_paso_del_limite(void* _entreador){
+        bool puede_ir_ready(void* _entreador){
             Entrenador* entrenador = (Entrenador*) _entreador;
-            return dictionary_size(entrenador->objetivos_particular) <= dictionary_size(entrenador->stock_pokemons);
+            return (entrenador->cant_stock < entrenador->cant_objetivos) && (entrenador->razon_bloqueo == ESPERANDO_POKEMON);
         }
-       t_list* entrenadores_con_margen = list_filter(estado_block,no_se_paso_del_limite);
+        t_list* entrenadores_con_margen = list_filter(estado_block,puede_ir_ready);
 
         //Pongo todos en una lista asi es mas facil trabajar
         list_add_all(entrenadores_con_margen,estado_new);
 
-        int cont_pok = 0;
-        int cont_ent = 0;
+        //Verifico que la lista no sea vacia
+        if(list_size(entrenadores_con_margen) > 0){
+            int cant_pok = list_size(pokemons);
+            while(cant_pok > 0){
+                Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
 
-        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores_con_margen,cont_ent);
-        Entrenador* entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+                //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
+                if(list_size(entrenadores_con_margen) > 1){
 
-        while(cont_pok < list_size(pokemons)){
+                    //Ordeno a los entrenadores por cercania al pokemon
+                    bool entrenador_mas_cerca(void* _entrenador_actual, void* _entrenador_siguiente){
+                        Entrenador* entrenador_actual = (Entrenador*) _entrenador_actual;
+                        Entrenador* entrenador_siguiente = (Entrenador*) _entrenador_siguiente;
 
-            Pokemon* pokemon = (Pokemon*) list_get(pokemons,cont_pok);
-
-            while(cont_ent < list_size(entrenadores_con_margen)){
-                //Si la distancia del entrenador actual es mayor al entrenador siguiente entonces el entrenador siguiente esta mas cerca que el actual
-                if(distancia(entrenador_actual->pos_actual_x,entrenador_actual->pos_actual_y,pokemon->pos_x,pokemon->pos_y) >
-                distancia(entrenador_siguiente->pos_actual_x,entrenador_siguiente->pos_actual_y,pokemon->pos_x,pokemon->pos_y)){
-
-                    //Asigno el entrenador siguiente al actual
-                    entrenador_actual = entrenador_siguiente;
-                    //Incremento el contador y asigno el proximo entrenador de la lista a la variable siguiente
-                    entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+                        return distancia(entrenador_actual->pos_actual, pokemon->coordenada) < distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                    }
+                    list_sort(entrenadores_con_margen, entrenador_mas_cerca);
                 }
-                //Si el actual esta mas cerca entonces solo agarro el siguiente
-                entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
-            }
-            //En entrenador_actual esta el entrenador mas cercano al pokemon
-            list_add(estado_ready, entrenador_actual);
-            //FIXME: La cague porque si hago un list_remove(entrenadores_con_margen, entrenador_actual) lo saco de esa lista,
-            // y no de estado_new o estado_block, aparte no se de que lista la deberia sacar porque las concatene. Puta vida.
+                //Obtengo el primero que es el mas cercano
+                Entrenador* entrenador_cercano = (Entrenador*) list_get(entrenadores_con_margen,0);
 
-            cont_pok++;
+                //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
+                list_remove(entrenadores_con_margen, 0);
+
+                //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
+                switch(entrenador_cercano->estado){
+                    case (NEW):
+                        bool remover(void* _entrenador){
+                            Entrenador* entrenador = (Entrenador*) _entrenador;
+                            return entrenador->tid == entrenador_cercano->tid;
+                        }
+                        list_remove_by_condition(estado_new, remover);
+
+                        entrenador_cercano->pokemon_objetivo = pokemon;
+                        entrenador_cercano->razon_movimiento = CATCH;
+                        list_add(estado_ready,entrenador_cercano);
+                        entrenador_cercano->estado = READY;
+
+                        sem_post( &new_ready_transition[entrenador_cercano->tid]);
+                        break;
+
+                    case (BLOCK):
+                        bool remover(void* _entrenador){
+                            Entrenador* entrenador = (Entrenador*) _entrenador;
+                            return entrenador->tid == entrenador_cercano->tid;
+                        }
+                        list_remove_by_condition(estado_block, remover);
+
+                        entrenador_cercano->pokemon_objetivo = pokemon;
+                        entrenador_cercano->razon_movimiento = CATCH;
+                        list_add(estado_ready,entrenador_cercano);
+                        entrenador_cercano->estado = READY;
+
+                        //TODO: Agregar semaforo de transicion de block a ready
+                        break;
+
+                    case default:
+                        printf("Andate a a concha de tu hermana");
+                        break;
+                }
+
+                //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
+                list_remove(pokemons,0);
+                cant_pok--;
+            }
         }
+
+//        Entrenador* entrenador_actual = (Entrenador*) list_get(entrenadores_con_margen,cont_ent);
+//        Entrenador* entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+//
+//        while(cont_pok < list_size(pokemons)){
+//
+//            Pokemon* pokemon = (Pokemon*) list_get(pokemons,cont_pok);
+//
+//            while(cont_ent < list_size(entrenadores_con_margen)){
+//                //Si la distancia del entrenador actual es mayor al entrenador siguiente entonces el entrenador siguiente esta mas cerca que el actual
+//
+//                if(distancia(entrenador_actual->pos_actual_x,entrenador_actual->pos_actual_y,pokemon->pos_x,pokemon->pos_y) >
+//                distancia(entrenador_siguiente->pos_actual_x,entrenador_siguiente->pos_actual_y,pokemon->pos_x,pokemon->pos_y)){
+//
+//                    //Asigno el entrenador siguiente al actual
+//                    entrenador_actual = entrenador_siguiente;
+//                    //Incremento el contador y asigno el proximo entrenador de la lista a la variable siguiente
+//                    entrenador_siguiente = (Entrenador*) list_get(entrenadores_con_margen,++cont_ent);
+//                }
+//            }
+//            //En entrenador_actual esta el entrenador mas cercano al pokemon
+//            list_add(estado_ready, entrenador_actual);
+//
+//
+//            cont_pok++;
+//        }
 
     }
 
@@ -793,7 +882,13 @@ void exec_default(MessageType header) {
     }
 }
 
-int distancia(int pos_actual_x, int pos_actual_y, int pos_destino_x, int pos_destino_y) {
+int distancia(Coordenada actual, Coordenada siguiente) {
+
+    int pos_actual_x = actual.pos_x;
+    int pos_actual_y = actual.pos_y;
+    int pos_destino_x = siguiente.pos_x;
+    int pos_destino_y = siguiente.pos_y;
+
     int dist_en_x = abs(pos_actual_x - pos_destino_x);
     int dist_en_y = abs(pos_actual_y - pos_destino_y);
     return dist_en_x + dist_en_y;

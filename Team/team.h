@@ -258,13 +258,11 @@ void exec_default(MessageType header);
 
 /**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.
- * @param pos_actual_x
- * @param pos_actual_y
- * @param pos_destino_x
- * @param pos_destino_y
+ * @param actual
+ * @param siguiente
  * @return
  */
-int distancia(int pos_actual_x, int pos_actual_y, int pos_destino_x, int pos_destino_y);
+int distancia(Coordenada actual, Coordenada siguiente);
 
 /**
  * Envio un mensaje de prueba al servidor(Broker)

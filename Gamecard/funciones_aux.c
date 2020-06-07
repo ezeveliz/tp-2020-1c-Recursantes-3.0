@@ -62,24 +62,14 @@ char* obtener_bitmap(FILE* archivo_bitmap, int cant_bloques){
     int bitmap_size = tamanio_bitmap(cant_bloques);
     char* buffer = malloc(bitmap_size + 1);
 
-    //Copio cada byte del archivo a un buffer
-    for(int i = 0; i < bitmap_size;i++){
-        buffer[i] = fgetc(archivo_bitmap);
-    }
-
-    //Agrego el caracter de final de string
-    buffer[bitmap_size] = '\0';
+    fread( buffer, sizeof(char), bitmap_size, archivo_bitmap );
 
     return buffer;
 }
 
-void escribir_bitmap(t_bitarray* bitmap, FILE* archivo){
-
-    char* buffer = bitmap->bitarray;
-    for(int i = 0; i < bitmap->size;i++){
-        //copio cada byte al archivo
-        fputc(buffer[i],archivo);
-    }
+int escribir_bitmap(t_bitarray* bitmap, FILE* archivo){
+    rewind(archivo);
+    return fwrite(bitmap->bitarray,sizeof(char),bitmap->size,archivo);
 }
 
 /* Crea una carpeta real

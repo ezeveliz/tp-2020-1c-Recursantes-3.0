@@ -4,12 +4,20 @@
 
 #include "tallGrass.h"
 
-char* punto_montaje;
+char* carpeta_montaje;
 
 int main(){
     montar("..");
-
-    FILE* fd = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
+    t_list* bloques = obtener_bloques_libres(32);
+    for(int i = 0; i < list_size(bloques) ; i++){
+        printf("%d\n", *(int*)list_get(bloques,i));
+    }
+    t_list* bloques1 = obtener_bloques_libres(32);
+    for(int i = 0; i < list_size(bloques1) ; i++){
+        printf("%d\n", *(int*)list_get(bloques1,i));
+    }
+    //printf("%d",obtener_cantidad_bloques());
+//    FILE* fd = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
     //close_tall_grass(fd);
 //    if(fd != NULL){
 //        printf("%d\n",fd->_fileno);
@@ -39,7 +47,7 @@ int montar(char* punto_montaje){
         int resultado_met = crear_metadata( path_tall_grass);
         int resultado_blok = crear_blocks(path_tall_grass);
         int resultado_file = crear_file(path_tall_grass);
-        punto_montaje = path_tall_grass;// Seteo en una variable global
+        carpeta_montaje = path_tall_grass;// Seteo en una variable global
         return (resultado_met || resultado_blok || resultado_file);
     }
 
@@ -147,13 +155,31 @@ int crear_file(char* path){
  */
 
 char* obtener_path_file(){
-    return concatenar_strings(punto_montaje,"/Files");
+    return concatenar_strings(carpeta_montaje,"/Files");
 }
 char* obtener_path_blocks(){
-    return concatenar_strings(punto_montaje,"/Blocks");
+    return concatenar_strings(carpeta_montaje,"/Blocks");
 }
 char* obtener_path_metadata(){
-    return concatenar_strings(punto_montaje,"/Metadata/Metadata.bin");
+    return concatenar_strings(carpeta_montaje,"/Metadata/Metadata.bin");
+}
+char* obtener_path_bitmap(){
+    return concatenar_strings(carpeta_montaje,"/Metadata/Bitmap.bin");
+}
+
+int obtener_cantidad_bloques(){
+    t_config* metadata = config_create(obtener_path_metadata());
+    int blocks = config_get_int_value(metadata, "BLOCKS");
+    config_destroy(metadata);
+
+    return blocks;
+}
+int obtener_tamanio_bloques(){
+    t_config* metadata = config_create(obtener_path_metadata());
+    int blocks = config_get_int_value(metadata, "BLOCK_SIZE");
+    config_destroy(metadata);
+
+    return blocks;
 }
 
 //Tipo 0 para directorio 1 para archivo
@@ -351,4 +377,29 @@ int read_tall_grass(){
 
 int rmfile_tall_grass(){
 
+}
+
+//Te devuelve la lista con los que hay
+t_list* obtener_bloques_libres(int cantidad_pedida){
+
+    int cantidad_bloques = obtener_cantidad_bloques();
+    char* path_bitmap = obtener_path_bitmap();
+    t_list* bloques_libres = list_create();
+    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
+    t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
+    int contador_bloques_obtenidos = 0;
+
+    for(int i = 0; i < cantidad_bloques && contador_bloques_obtenidos < cantidad_pedida; i++){
+        int estado_bloque= bitarray_test_bit(bitmap,i);
+        if(estado_bloque == 0){
+            int* bloque_libre = malloc(sizeof(uint32_t));
+            *bloque_libre = i;
+            list_add(bloques_libres,bloque_libre);
+            bitarray_set_bit(bitmap,i);
+            contador_bloques_obtenidos++;
+        }
+    }
+    escribir_bitmap(bitmap, archivo_bitmap);
+    fclose(archivo_bitmap);
+    return bloques_libres;
 }

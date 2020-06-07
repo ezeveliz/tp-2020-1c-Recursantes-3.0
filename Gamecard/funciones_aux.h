@@ -21,6 +21,6 @@ int tamanio_bitmap(int cantidad_bloques);
 void doom_bitmap(t_bitarray* bitarray);
 void limpiar_bitmpa(t_bitarray* bitarray);
 char* obtener_bitmap(FILE* archivo_bitmap, int cant_bloques);
-void escribir_bitmap(t_bitarray* bitmap, FILE* archivo);
+int escribir_bitmap(t_bitarray* bitmap, FILE* archivo);
 int crear_carpeta(char* path, int modo);
 char* concatenar_strings(char*path1, char* path2);

@@ -20,8 +20,8 @@
 #endif //GAMECARD_TALLGRASS_H
 
 typedef struct{
-    int size;
-    char** bloques;
+    uint32_t size;
+    char* bloques;
 }t_metadata;
 
 typedef struct{
@@ -61,3 +61,12 @@ int calcular_bloques_archivo(t_metadata* metadata);
 
 t_metadata* obtener_metadata_archivo(t_file * archivo);
 void metadata_destroy(t_metadata* metadata);
+
+FILE* obtener_file_bloque(int numero_bloque);
+int obtener_bloque(char* bloques,int posicion);
+int agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
+
+write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo);
+
+int calcular_bloques(int byts);
+void agregar_byte_archivo(t_file* archivo, int cantidad);

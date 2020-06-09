@@ -54,6 +54,7 @@ typedef enum estado_entrenador{
 } estado_entrenador;
 
 typedef enum razonBloqueo{
+    SIN_BLOQUEO,
     DEADLOCK,
     ESPERANDO_CATCH,
     ESPERANDO_POKEMON,

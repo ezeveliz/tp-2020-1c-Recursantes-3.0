@@ -628,25 +628,49 @@ void appeared_pokemon(t_list* paquete){
     algoritmo_de_cercania(NULL);
 }
 
-void algoritmo_de_cercania(Entrenador entrenador_exec){
+void algoritmo_de_cercania(Entrenador* entrenador_exec){
 
-    //Probe esta comparacion en boludeces y funciono, pendiente probarlo aca, importante pasarselo como NULL si hay un appeared o localized porque sino no funciona
-    if(entrenador_exec.tid != NULL) {
-        //TODO: fijarme que posicion esta mas cerca de la posicion de este entrenador
-        //Tengo lugar para atrapar pokemons
-        if((entrenador_exec->cant_stock < entrenador_exec->cant_objetivos) && (entrenador_exec->razon_bloqueo == ESPERANDO_POKEMON)){
-            bool mas_cercano(void* )
-            list_sort(pokemons,mas_cercano);
+    if(entrenador_exec->tid != NULL) {
+
+        //TODO: Esto iria aca? Porque en realidad el entrenador se bloquea cuando manda el catch por lo que solo habria que cambiar la razon de bloqueo
+        //list_remove(estado_exec,0);
+
+        int cant_pok = list_size(pokemons);
+        //Verifico que haya pokemons para atrapar
+        if(cant_pok > 0) {
+
+            //Verifico que el entrenador tiene tiene espacio para seguir capturando pokemons
+            if ((entrenador_exec->cant_stock < entrenador_exec->cant_objetivos) &&
+                (entrenador_exec->razon_bloqueo == ESPERANDO_POKEMON)) {
+                bool mas_cercano(void *_pokemon_actual, void *_pokemon_siguiente) {
+                    Pokemon *pokemon_actual = (Pokemon *) _pokemon_actual;
+                    Pokemon *pokemon_siguiente = (Pokemon *) _pokemon_siguiente;
+
+                    return distancia(entrenador_exec->pos_actual, pokemon_actual->coordenada) <
+                           distancia(entrenador_exec->pos_actual, pokemon_siguiente->coordenada);
+                }
+                list_sort(pokemons, mas_cercano);
+
+                Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
+
+                entrenador_exec -> estado = READY;
+                entrenador_exec-> razon_bloqueo = SIN_BLOQUEO;
+                entrenador_exec->pokemon_objetivo = pokemon;
+                list_add(estado_ready,entrenador_exec);
+
+                list_remove(pokemons,0);
+            }
+        } else {
+            //No hay pokemons para atrapar
+            entrenador_exec-> estado = BLOCK;
+            entrenador_exec->razon_bloqueo = ESPERANDO_POKEMON;
+
+            //TODO: Esto hay que hacerlo aca? Porque en realidad el entrenador ya esta bloqueado cuando mandamos el catch
+            list_add(estado_block, entrenador_exec);
         }
     }
     else{
         //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
-        //TODO: list_sort en vez de while
-        //FIXME: La cague porque si hago un list_remove(entrenadores_con_margen, entrenador_actual) lo saco de esa lista,
-        // y no de estado_new o estado_block, aparte no se de que lista la deberia sacar porque las concatene. Puta vida.
-
-
-
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
         bool puede_ir_ready(void* _entreador){
             Entrenador* entrenador = (Entrenador*) _entreador;

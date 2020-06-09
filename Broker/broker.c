@@ -104,36 +104,42 @@ void *server_function(void *arg) {
             case SUB_NEW:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
+                    log_info(logger, "Nuevo subscriptor de NEW");
                     break;
                 }
 
             case SUB_APPEARED:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
+                    log_info(logger, "Nuevo subscriptor de APPEARED");
                     break;
                 }
 
             case SUB_LOCALIZED:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
+                    log_info(logger, "Nuevo subscriptor de LOCALIZED");
                     break;
                 }
 
             case SUB_CAUGHT:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
+                    log_info(logger, "Nuevo subscriptor de CAUGHT");
                     break;
                 }
 
             case SUB_GET:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
+                    log_info(logger, "Nuevo subscriptor de GET");
                     break;
                 }
 
             case SUB_CATCH:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
+                    log_info(logger, "Nuevo subscriptor de CATCH");
                     break;
                 }
 
@@ -435,6 +441,7 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
 
     if(existe_sub(id, una_cola)){
         subscriptor_delete(id, una_cola);
+        log_info(logger, "Ya existia el subscriptor en el sistema");
     }
 
     subscriptor* nuevo_subscriptor = subscriptor_create(id, ip, puerto, fd);
@@ -507,12 +514,24 @@ void mandar_mensaje(void* cosito){
     t_paquete* paquete = create_package(un_mensaje->tipo);
     add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
 
-    if (send_message_test(paquete, un_subscriptor->socket/*send_package(paquete, un_subscriptor->socket*/) > 0){
+    if (send_package(paquete, un_subscriptor->socket) > 0){
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
     }
 
-    if (receive_package(un_subscriptor->socket, ACK)){
+    // Trato de recibir el ACK
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(un_subscriptor->socket, buffer_header) <= 0) {
+        log_info(logger, "La bardiaste mal maquina");
+        exit(-1);
+    }
+    t_list* rta_list = receive_package(un_subscriptor->socket, buffer_header);
+    int rta = *(int*) list_get(rta_list, 0);
+
+    if (buffer_header->type == ACK){
         flag_ack(coso->id_subscriptor, coso->id_mensaje);
+    } else{
+        log_info(logger, "NO AMIGO LPM TE LLEGO ALGO QUE NO ERA UN ACK LISTO CERRAMO ACA");
+        exit(-1);
     }
 
 //    printMenSubList();

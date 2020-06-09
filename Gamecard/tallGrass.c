@@ -15,6 +15,7 @@ int main(){
     write_tall_grass(archivo, palabra , strlen(palabra), 0);
     printf("%d\n %s\n",archivo->metadata->size,archivo->metadata->bloques);
 
+
 }
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista

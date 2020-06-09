@@ -642,6 +642,7 @@ void algoritmo_de_cercania(Entrenador* entrenador_exec){
             //Verifico que el entrenador tiene tiene espacio para seguir capturando pokemons
             if ((entrenador_exec->cant_stock < entrenador_exec->cant_objetivos) &&
                 (entrenador_exec->razon_bloqueo == ESPERANDO_POKEMON)) {
+                pthread_mutex_lock(&mutex_pokemon);
                 bool mas_cercano(void *_pokemon_actual, void *_pokemon_siguiente) {
                     Pokemon *pokemon_actual = (Pokemon *) _pokemon_actual;
                     Pokemon *pokemon_siguiente = (Pokemon *) _pokemon_siguiente;
@@ -650,6 +651,7 @@ void algoritmo_de_cercania(Entrenador* entrenador_exec){
                            distancia(entrenador_exec->pos_actual, pokemon_siguiente->coordenada);
                 }
                 list_sort(pokemons, mas_cercano);
+                pthread_mutex_unlock(&mutex_pokemon);
 
                 Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
 
@@ -658,7 +660,10 @@ void algoritmo_de_cercania(Entrenador* entrenador_exec){
                 entrenador_exec->pokemon_objetivo = pokemon;
                 list_add(estado_ready,entrenador_exec);
 
+                pthread_mutex_lock(&mutex_pokemon);
                 list_remove(pokemons,0);
+                pthread_mutex_unlock(&mutex_pokemon);
+
             }
         } else {
             //No hay pokemons para atrapar
@@ -741,7 +746,9 @@ void algoritmo_de_cercania(Entrenador* entrenador_exec){
                 }
 
                 //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
+                pthread_mutex_lock(&mutex_pokemon);
                 list_remove(pokemons,0);
+                pthread_mutex_unlock(&mutex_pokemon);
                 cant_pok--;
             }
         }

@@ -66,7 +66,7 @@ void metadata_destroy(t_metadata* metadata);
 
 FILE* obtener_file_bloque(int numero_bloque);
 int obtener_bloque(char* bloques,int posicion);
-int agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
+void agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
 
 write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo);
 int next(t_file* archivo);
@@ -77,3 +77,5 @@ int contar_elementos_array(char** array);
 int liberar_elementos_array(char** array);
 int bloque_relativo_archivo(int posicion);
 char** cortar_bloques_array(char* array);
+
+char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion);

@@ -26,6 +26,8 @@ typedef struct{
 
 typedef struct{
     char* path;
+    t_metadata* metadata;
+    int pos;
 } t_file;
 
 int montar(char* punto_montaje);
@@ -59,7 +61,7 @@ int espacio_libre_archivo();
 
 int calcular_bloques_archivo(t_metadata* metadata);
 
-t_metadata* obtener_metadata_archivo(t_file * archivo);
+t_metadata* obtener_metadata_archivo(char* file);
 void metadata_destroy(t_metadata* metadata);
 
 FILE* obtener_file_bloque(int numero_bloque);
@@ -67,6 +69,11 @@ int obtener_bloque(char* bloques,int posicion);
 int agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
 
 write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo);
-
+int next(t_file* archivo);
 int calcular_bloques(int byts);
 void agregar_byte_archivo(t_file* archivo, int cantidad);
+
+int contar_elementos_array(char** array);
+int liberar_elementos_array(char** array);
+int bloque_relativo_archivo(int posicion);
+char** cortar_bloques_array(char* array);

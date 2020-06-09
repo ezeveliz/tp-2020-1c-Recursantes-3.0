@@ -78,6 +78,9 @@ typedef enum razon_movimiento{
     RESOLUCION_DEADLOCK
 }RazonMovimiento;
 
+/**
+ * Estructura que representa al entrenador
+ */
 typedef struct tEntrenador{
     int tid;
     Coordenada pos_actual;

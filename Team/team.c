@@ -1,35 +1,53 @@
 #include "team.h"
 
+/**
+ * Declaracion de vbles globales
+ */
+
+// Estructuras de configuracion de Team, la segunda es solo temporal
 TEAMConfig config;
+t_config *config_file;
+
+// Logger de Team
 t_log* logger;
+
+// Logger del server de Team
 t_log* logger_server;
+
+// Hilos encargados de recibir los distintos mensajes del Broker
 pthread_t appeared_thread;
 pthread_t localized_thread;
 pthread_t caught_thread;
-t_config *config_file;
+
 // Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
 t_dictionary* objetivo_global;
+
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
-// Array de semaforos que bloquean a los hilos hasta pasar a ready
+
+// Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
-// Array de semaforos que bloquean a los hilos hasta pasar a execute
+
+// Array de semaforos que bloquean a los hilos para pasar de ready a execute
 sem_t* ready_exec_transition;
-//Array de semaforos que bloquean a los hilos hasta pasar a ready
+
+// Array de semaforos que bloquean a los hilos para pasar de block a ready
 sem_t* block_ready_transition;
-// Lista de los entrenadores los distintos estados
+
+// Listas de entrenadores que representan los distintos estados
 t_list* estado_new;
 t_list* estado_ready;
 t_list* estado_exec;
 t_list* estado_block;
 t_list* estado_finish;
-//Lista de los pokemons con sus posiciones
+
+// Lista de los pokemons(Los recibidos por Appeared o Localized)
 t_list* pokemons;
-//Agrego semaforo mutex para cuando quiero agregar o sacar instancias de pokemons de la lista
+
+// Semaforo Mutex para proteger la lista de pokemones
 pthread_mutex_t mutex_pokemon;
 
 int main() {
-    MessageType test = ABC;
     pthread_t server_thread;
 
     // Leo archivo de configuracion, si no lo encuentro salgo del proceso
@@ -47,23 +65,19 @@ int main() {
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
 
-    initialize_structures();
-
     //Creo 3 hilos para suscribirme a las colas globales
     subscribe_to_queues();
 
-    //initialize_structures();
+    // Inicializo estructuras, semaforos e hilos
+    initialize_structures();
 
-    //Esta linea esta solo de prueba
-    //send_to_server(test);
+    // TODO: joinear hilos de entrenadores
 
-    //Joineo el hilo main con el del servidor para el GameBoy, en realidad ninguno de los 2 tendria que terminar nunca
+    //Joineo el hilo main con el del servidor para el GameBoy
     pthread_join(server_thread, NULL);
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
-
-
 }
 
 int read_config_options() {
@@ -156,7 +170,6 @@ void* subscribe_to_queue_thread(void* arg) {
     int broker = connect_and_subscribe(cola);
     log_info(logger, "Subscribed to queue");
 
-    //TODO: PROBAR ESTO
     // Me quedo en un loop infinito esperando a recibir cosas
     while (true) {
 
@@ -287,12 +300,10 @@ void* server_function(void* arg) {
 void initialize_structures() {
 
     //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa
-    if(pthread_mutex_init(&mutex_pokemon, NULL) != 0){
-        //TODO: ver que pasa si no puede inicializar el mutex
-    }
+    pthread_mutex_init(&mutex_pokemon, NULL);
     pokemons = list_create();
-    //Itero la lista de entrenadores, y creo un hilo por cada uno
 
+    // Inicializo las listas de estados y otras cosas
     char **ptr = config.posiciones_entrenadores;
     int pos = 0, tamanio_entrenadores = 0;
     objetivo_global = dictionary_create();
@@ -305,6 +316,7 @@ void initialize_structures() {
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
 
+        // Instancio un nuevo entrenador
         Entrenador *entrenador = (Entrenador *) malloc(sizeof(Entrenador));
         entrenador->estado = NEW;
         entrenador->objetivos_particular = dictionary_create();
@@ -314,35 +326,38 @@ void initialize_structures() {
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
         char **pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
         char **posiciones = string_split(coordenada, "|");
+
+        // Seteo los objetivos globales
         add_global_objectives(objetivos_entrenador, pokemon_entrenador);
 
-        //Instancio la estructura entrenador con los datos recogidos del archivo de configuracion
-
+        // Seteo los objetivos del entrenador y los que ya tiene
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
         add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
 
+        // Buscamos y seteamos la cantidad de Pokemones maxima que puede tener el entrenador
         int contador_objetivos = 0;
         void iterador_objetivos(char* clave, void* contenido){
             contador_objetivos += *(int*) contenido;
         }
         dictionary_iterator(entrenador->objetivos_particular,iterador_objetivos);
-
         entrenador->cant_objetivos = contador_objetivos;
 
+        // Buscamos y seteamos la cantidad actual de pokemons que tiene el entrenador
         int contador_stock = 0;
         void iterador_stock(char* clave, void* contenido){
             contador_stock += *(int*) contenido;
         }
         dictionary_iterator(entrenador->stock_pokemons,iterador_stock);
-
         entrenador->cant_stock = contador_stock;
 
         // Le asigno al entrenador sus coordenadas
         sscanf(posiciones[0], "%d", &entrenador->pos_actual.pos_x);
         sscanf(posiciones[1], "%d", &entrenador->pos_actual.pos_y);
+
         // Le asigno un tid falso al entrenador
         entrenador->tid = pos;
 
+        // Agrego al entrenador a New
         list_add(estado_new, (void *) entrenador);
         pos++;
     }
@@ -359,6 +374,7 @@ void initialize_structures() {
     // Creo un array de semaforos para bloquear la transicion block - ready
     block_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
 
+    // Itero los entrenadores, inicializamos los semaforos y el hilo correspondiente a cada uno
     for (int count = 0; count < tamanio_entrenadores; count++) {
 
         // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
@@ -376,8 +392,6 @@ void initialize_structures() {
         send_message_thread((void*) clave, string_length(clave), GET_POK);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
-
-    // Iterar lista de hilos y joinear, esto habria que hacerlo en main?
 }
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){

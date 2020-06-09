@@ -6,31 +6,7 @@
 gcc cliente-test.c -o cliente-test -Wall -lcommons -lcommLib -lpthread; ./cliente-test
  */
 
-#include <stdint.h>
-#include <string.h>
-#include <stdarg.h>
-
-#include <commons/config.h>
-#include <commons/log.h>
-#include <commons/collections/list.h>
-#include <commLib/connections.h>
-#include <commLib/structures.h>
-
-typedef struct ClienteTestCFG {
-    char* broker_ip;
-    int broker_port;
-    char* cliente_test_ip;
-    int cliente_test_port;
-
-} ClienteTestCFG;
-
-ClienteTestCFG config;
-t_log * logger;
-int broker_fd;
-
-int connect_to_broker();
-bool set_config();
-int subscribir_cola(MessageType cola);
+#include "cliente-test.h"
 
 int main(int argc, char **argv) {
     logger = log_create("cliente_test.log", "CLIENTE_TEST", 1, LOG_LEVEL_TRACE);

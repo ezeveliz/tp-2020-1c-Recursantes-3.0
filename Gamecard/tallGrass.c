@@ -4,6 +4,7 @@
 
 #include "tallGrass.h"
 
+//TODO_ Revisar esto
 char* carpeta_montaje;
 
 int main(){
@@ -44,7 +45,9 @@ int montar(char* punto_montaje){
         int resultado_met = crear_metadata( path_tall_grass);
         int resultado_blok = crear_blocks(path_tall_grass);
         int resultado_file = crear_file(path_tall_grass);
-        carpeta_montaje = path_tall_grass;// Seteo en una variable global
+
+        // Seteo en una variable global
+        carpeta_montaje = path_tall_grass;
         return (resultado_met || resultado_blok || resultado_file);
     }
 
@@ -491,7 +494,7 @@ void agregar_bloque_archivo(t_file* archivo, uint32_t bloque){
     char* bloque_string2 = concatenar_strings(bloque_string1,"]");
     //Le saco la ultima ] para agregar el numero al final del array con el formato correspondiente
     char* bloques_abiertos = string_substring(blocks,0,string_length(blocks)-1);
-    //Concateno todo
+    //Concateno los demas string
     char* bloques_final = concatenar_strings(bloques_abiertos,bloque_string2);
 
 
@@ -692,25 +695,41 @@ t_list* obtener_bloques_libres(int cantidad_pedida){
     int cantidad_bloques = obtener_cantidad_bloques();
     char* path_bitmap = obtener_path_bitmap();
     t_list* bloques_libres = list_create();
-    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
-    t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
-    int contador_bloques_obtenidos = 0;
 
-    for(int i = 0; i < cantidad_bloques && contador_bloques_obtenidos < cantidad_pedida; i++){
-        int estado_bloque= bitarray_test_bit(bitmap,i);
-        if(estado_bloque == 0){
-            int* bloque_libre = malloc(sizeof(uint32_t));
-            *bloque_libre = i;
-            list_add(bloques_libres,bloque_libre);
-            bitarray_set_bit(bitmap,i);
-            contador_bloques_obtenidos++;
+    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
+
+    //Lo dejo esperando hasta que pueda entrar
+    while(1){
+        //Bloque el archivo y si tengo exito entra el el while
+        if( flock(archivo_bitmap->_fileno, LOCK_EX | LOCK_NB) == 0){
+            t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
+            int contador_bloques_obtenidos = 0;
+
+            //Busco todos los bloques que necestio
+            for(int i = 0; i < cantidad_bloques && contador_bloques_obtenidos < cantidad_pedida; i++){
+                int estado_bloque= bitarray_test_bit(bitmap,i);
+                //Si esta libre lo agrego
+                if(estado_bloque == 0){
+                    int* bloque_libre = malloc(sizeof(uint32_t));
+                    *bloque_libre = i;
+                    list_add(bloques_libres,bloque_libre);
+                    bitarray_set_bit(bitmap,i);
+                    contador_bloques_obtenidos++;
+                }
+            }
+            //Escribo el nuevo bitmap bloqueado en el archivo
+            escribir_bitmap(bitmap, archivo_bitmap);
+            //Libero la estructura
+            free(bitmap->bitarray);
+            bitarray_destroy(bitmap);
+            //Desbloqueo el archivo
+            flock(archivo_bitmap->_fileno, LOCK_UN);
+            break;
         }
+
     }
-    escribir_bitmap(bitmap, archivo_bitmap);
     fclose(archivo_bitmap);
     free(path_bitmap);
-    free(bitmap->bitarray);
-    bitarray_destroy(bitmap);
     return bloques_libres;
 }
 

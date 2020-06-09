@@ -16,6 +16,7 @@
 #include "funciones_aux.h"
 #include <sys/file.h>
 #include <commons/config.h>
+#include <pthread.h>
 
 #endif //GAMECARD_TALLGRASS_H
 
@@ -29,6 +30,9 @@ typedef struct{
     t_metadata* metadata;
     int pos;
 } t_file;
+
+//TODO: ACOMODA ESTO ENFERMO
+
 
 int montar(char* punto_montaje);
 void limpiar_unidades_antiguas(char* path);

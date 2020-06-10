@@ -227,25 +227,27 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
  *
  * @param message
  * @param size, tamanio del mensaje a enviar
- * @param header
+ * @param header del mensaje a enviar
+ * @param tid del entrenador, si me pasan -1, el tid no importa(en el caso de un GET por ejemplo), si no lo tomo en cuenta
  */
-void send_message_thread(void* message, int size, MessageType header);
+void send_message_thread(void* message, int size, MessageType header, int tid);
 
 /**
  * Creo un paquetito para pasarle informacion al hilo que se va a encargar de mandarle una solicitud al Broker
  *
  * @param message
  * @param size, tamanio del mensaje a enviar
- * @param header
- * @return
+ * @param header del mensaje a enviar
+ * @param tid del entrenador que envio el mensaje
+ * @return paquete void* que le voy a pasar al hilo encargado de enviar el mensaje
  */
-void* create_message_package(void* message, int size, MessageType header);
+void* create_message_package(void* message, int size, MessageType header, int tid);
 
 /**
  * Funcion encarga de mandarle una solicitud al Broker, responderle con una confirmacion y ejecutar el caso por default en caso de que no se pueda comunicar
  *
  * @param response_package
- * @return
+ * @return nada
  */
 void* message_function(void* message_package);
 
@@ -253,8 +255,9 @@ void* message_function(void* message_package);
  * Funcion por default a ejecutarse segun el tipo de mensaje enviado
  *
  * @param header, tipo de solicitud enviada
+ * @param tid, tid del entrenador que solicito el mensaje, si es -1 no utilizar
  */
-void exec_default(MessageType header);
+void exec_default(MessageType header, int tid);
 
 /**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.
@@ -263,11 +266,5 @@ void exec_default(MessageType header);
  * @return
  */
 int distancia(Coordenada actual, Coordenada siguiente);
-
-/**
- * Envio un mensaje de prueba al servidor(Broker)
- * @param mensaje
- */
-void send_to_server(MessageType mensaje);
 
 #endif //TEAM_TEAM_H

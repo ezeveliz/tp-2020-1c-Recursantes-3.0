@@ -389,7 +389,7 @@ void initialize_structures() {
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
-        send_message_thread((void*) clave, string_length(clave), GET_POK);
+        send_message_thread((void*) clave, string_length(clave), GET_POK, -1);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 }
@@ -823,10 +823,10 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
     }
 }
 
-void send_message_thread(void* message, int size, MessageType header) {
+void send_message_thread(void* message, int size, MessageType header, int tid) {
 
     // Creo un paquete con el mensaje, su tamaño y el header para poderselo pasar al thread
-    void* message_package = create_message_package(message, size, header);
+    void* message_package = create_message_package(message, size, header, tid);
 
     // Levanto un hilo detacheable para poder enviar el mensaje
     pthread_t message_thread;
@@ -834,11 +834,12 @@ void send_message_thread(void* message, int size, MessageType header) {
     pthread_detach(message_thread);
 }
 
-void* create_message_package(void* message, int size, MessageType header) {
+void* create_message_package(void* message, int size, MessageType header, int tid) {
     t_new_message* message_package = malloc(sizeof(t_new_message));
     message_package->message = message;
     message_package->size = size;
     message_package->header = header;
+    message_package->tid = tid;
 
     return (void*)message_package;
 }
@@ -850,6 +851,7 @@ void* message_function(void* message_package){
     void* message = new_message_package->message;
     int size = new_message_package->size;
     MessageType header = new_message_package->header;
+    int tid = new_message_package->tid;
 
     // Me conecto al Broker
     int broker = connect_to_broker();
@@ -859,7 +861,6 @@ void* message_function(void* message_package){
 
         // Ejecuto accion por default
         exec_default(header);
-        // TODO: Limpieza
 
     } else {
 
@@ -871,33 +872,39 @@ void* message_function(void* message_package){
         if (send_package(package, broker) == -1) {
 
             // Ejecuto accion por default
-            exec_default(header);
+            exec_default(header, tid);
 
         } else {
 
+            // Me quedo esperando hasta que me respondan el id correlacional o la confirmacion, si falla al recibir
+            // el header significa que algo en el Broker se rompio, ejecuto la accion por default
             MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
             if(receive_header(broker, buffer_header) <= 0) {
-                return false; // TODO: ver que hacer aca
+
+                // Ejecuto accion por default
+                exec_default(header, tid);
+
+            // Pude recibir el header, intento recibir el resto de la respuesta
+            } else {
+
+                // Recibo el id correlacional/ confirmacion
+                t_list* rta_list = receive_package(broker, buffer_header); // Si llegas a fallar aca despues de todas las comprobaciones, matate
+
+                // Id del mensaje enviado
+                int id = *(int*) list_get(rta_list, 0);
+
+
+                // TODO: Enviar confirmacion con un ACK como header y con el id correlacional como contenido
             }
-
-            // Recibo el id correlacional o lo que sea
-            t_list* rta_list = receive_package(broker, buffer_header);
-            int rta = *(int*) list_get(rta_list, 0);
-
-
-            // TODO: Enviar confirmacion con un ACK como header y con el id correlacional como contenido
-
-            // Limpieza de estos ultimos 2 recv y send
         }
 
-        // TODO: Limpieza gral
         // Me desconecto del Broker
         disconnect_from_broker(broker);
     }
 }
 
 // TODO: verificar si esta cosa necesitaria mas parametros o no
-void exec_default(MessageType header) {
+void exec_default(MessageType header, int tid) {
     switch (header) {
         case GET_POK:
             // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
@@ -921,22 +928,4 @@ int distancia(Coordenada actual, Coordenada siguiente) {
     int dist_en_x = abs(pos_actual_x - pos_destino_x);
     int dist_en_y = abs(pos_actual_y - pos_destino_y);
     return dist_en_x + dist_en_y;
-}
-
-//Funcion de prueba
-void send_to_server(MessageType mensaje){
-    int broker = connect_to_broker();
-    t_paquete* paquete = create_package(mensaje);
-
-
-    char* enviar = malloc(50);
-    strcpy(enviar, "test");
-
-    add_to_package(paquete,(void*) enviar, strlen("test")+1);
-
-
-    if(send_package(paquete, broker)  == -1){
-        printf("No se pudo mandar");
-    }
-    disconnect_from_broker(broker);
 }

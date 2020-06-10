@@ -45,6 +45,9 @@ typedef struct {
     struct timespec* end_time;
 } t_interval;
 
+/**
+ * Enum para identificar los estados de un entrenador dado
+ */
 typedef enum estado_entrenador{
     NEW,
     READY,
@@ -53,13 +56,19 @@ typedef enum estado_entrenador{
     FINISH,
 } estado_entrenador;
 
+/**
+ * Enum para identificar las distintas causas de bloqueo
+ */
 typedef enum razonBloqueo{
     SIN_BLOQUEO,
     DEADLOCK,
     ESPERANDO_CATCH,
-    ESPERANDO_POKEMON,
+    ESPERANDO_POKEMON, // Estoy disponible pero no hay pokemones para darme
 }RazonBloqueo;
 
+/**
+ * Estructura que representa un par de coordenadas
+ */
 typedef struct coordenada{
     int pos_x;
     int pos_y;
@@ -68,12 +77,14 @@ typedef struct coordenada{
 /**
  * Estructura de pokemon
  */
-
 typedef struct {
-    char* especie;
-    Coordenada coordenada;
+    char* especie; // Nombre
+    Coordenada coordenada; // Posicion en la que se encuentra
 }Pokemon;
 
+/**
+ * Representa la razon por la que se esta moviendo el entrenador, para atrapar un pokemon o por un intercambio
+ */
 typedef enum razon_movimiento{
     CATCH,
     RESOLUCION_DEADLOCK
@@ -84,30 +95,27 @@ typedef enum razon_movimiento{
  */
 typedef struct tEntrenador{
     int tid;
-    Coordenada pos_actual;
-    RazonMovimiento razon_movimiento;
-    t_dictionary* objetivos_particular;
-    t_dictionary* stock_pokemons;
-    struct timespec* tiempo_llegada;
-    estado_entrenador estado;
-    int cant_stock;
-    int cant_objetivos;
+    Coordenada pos_actual; // Posicion en la que se encuentra actualmente
+    RazonMovimiento razon_movimiento; // Razon por la que se esta ejecutando el hilo del entrenador
+    t_dictionary* objetivos_particular; // Objetivos del entrenador
+    t_dictionary* stock_pokemons; // Pokemones que ya posee
+    struct timespec* tiempo_llegada; // Tiempo en que llega a Ready
+    estado_entrenador estado; // Estado en el que se encientra
+    int cant_stock; // Cant de pokemones que posee
+    int cant_objetivos; // Cant de pokemones que debe atrapar
     RazonBloqueo razon_bloqueo;
-    Pokemon* pokemon_objetivo;
-    struct tEntrenador* entrenador_objetivo;
+    Pokemon* pokemon_objetivo; // Pokemon hacia el que me dirijo
+    struct tEntrenador* entrenador_objetivo; // Entrnador hacia el que me dirijo
 }Entrenador;
 
 /**
- * Estrucura encargada de representar una respuesta al cliente
- * Esta formada por el socket cliente al cual responder, un int que va a representar la respuesta y el cliente
- * se encargara de interpretar y un Header de respuesta
+ * Estrucura encargada de representar el mensaje que manda un entrenador y que se le va a pasar al hilo encargado de enviarlo
  */
 typedef struct {
-    void* message;
-    int size;
-    MessageType header;
+    void* message; // Mensaje a enviar
+    int size; // Tamaño del mensaje a enviar
+    MessageType header; // Tipo de mensaje a enviar
+    int tid; // Tid del entrenador que envia el mensaje, si es -1, el mensaje no fue solicitado por un entrenador, p/ej: el get_pok
 } t_new_message;
-
-
 
 #endif //TEAM_TEAMSTRUCTURES_H

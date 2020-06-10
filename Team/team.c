@@ -34,6 +34,9 @@ sem_t* ready_exec_transition;
 // Array de semaforos que bloquean a los hilos para pasar de block a ready
 sem_t* block_ready_transition;
 
+//Semaforo que se encarga de verificar que la lista de pokemons no este vacia
+sem_t* s_cantidad_pokemons;
+
 // Listas de entrenadores que representan los distintos estados
 t_list* estado_new;
 t_list* estado_ready;
@@ -193,6 +196,7 @@ void* subscribe_to_queue_thread(void* arg) {
                         pthread_mutex_lock(&mutex_pokemon);
                         list_add(pokemons, pokemon);
                         pthread_mutex_unlock(&mutex_pokemon);
+                        sem_post(&s_cantidad_pokemons);
                         cant --;
                     }
 
@@ -386,6 +390,8 @@ void initialize_structures() {
         Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
+    //Inicializo el semaforo en 0 porque no hay pokemons todavia
+    sem_init(&s_cantidad_pokemons,0,0);
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
@@ -623,6 +629,7 @@ void appeared_pokemon(t_list* paquete){
     pthread_mutex_lock(&mutex_pokemon);
     list_add(pokemons, pokemon);
     pthread_mutex_unlock(&mutex_pokemon);
+    sem_post(&s_cantidad_pokemons);
 
     list_destroy(paquete);
     algoritmo_de_cercania(NULL);
@@ -631,7 +638,7 @@ void appeared_pokemon(t_list* paquete){
 void algoritmo_de_cercania(Entrenador* entrenador_exec){
 
     if(entrenador_exec->tid != NULL) {
-
+        sem_wait(&s_cantidad_pokemons);
         //TODO: Esto iria aca? Porque en realidad el entrenador se bloquea cuando manda el catch por lo que solo habria que cambiar la razon de bloqueo
         //list_remove(estado_exec,0);
 
@@ -860,7 +867,7 @@ void* message_function(void* message_package){
     if (broker == -1) {
 
         // Ejecuto accion por default
-        exec_default(header);
+        exec_default(header,tid);
 
     } else {
 

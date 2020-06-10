@@ -31,7 +31,6 @@ typedef struct{
     int pos;
 } t_file;
 
-//TODO: Si hay tiempo revisar funciones que no sirven
 
 //Para obtenr path
 char* obtener_path_file();
@@ -79,10 +78,8 @@ void metadata_destroy(t_metadata* metadata);
 //busca la posicion de un caracter en un archivo
 int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion);
 
-int calcular_espacio_libre_archivo(t_metadata* metadata);
+
 int calcular_bloques_archivo(t_metadata* metadata);
-int espacio_libre_archivo();
-int calcular_bloques(int byts);
 
 //Funciones array
 int contar_elementos_array(char** array);

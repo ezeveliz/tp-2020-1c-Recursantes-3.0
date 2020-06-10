@@ -682,9 +682,10 @@ char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion){
 
     return buffer;
 }
-
 int rmfile_tall_grass(){
-
+/*
+ * NO creo que sea necesaria esta funcion
+ */
 }
 
 //Te devuelve la lista con los que hay
@@ -786,14 +787,14 @@ int calcular_bloques_archivo(t_metadata* metadata){
     return resultado;
 }
 
-int calcular_bloques(int byts){
-    int tamanio_bloque = obtener_tamanio_bloques();
-    int resultado = byts/tamanio_bloque;
-    if(byts % tamanio_bloque != 0 ){
-        resultado ++;
-    }
-    return resultado;
-}
+//int calcular_bloques(int byts){
+//    int tamanio_bloque = obtener_tamanio_bloques();
+//    int resultado = byts/tamanio_bloque;
+//    if(byts % tamanio_bloque != 0 ){
+//        resultado ++;
+//    }
+//    return resultado;
+//}
 
 
 void metadata_destroy(t_metadata* metadata){

@@ -81,7 +81,7 @@ void* server_client(void* _params){
 
     //Libero la memoria que pedi
     free(header);
-    free(params->client_ip);
+    //free(params->client_ip);
     free(params);
 
 }
@@ -567,6 +567,38 @@ t_appeared_pokemon* void_a_appeared_pokemon(void* stream){
 
     return appeared_pokemon;
 }
+
+
+size_t sizeof_new_pokemon(t_new_pokemon* estructura){
+    size_t tam = sizeof(uint32_t)*4;
+    tam += estructura->nombre_pokemon_length;
+    return tam;
+}
+size_t sizeof_appeared_pokemon(t_appeared_pokemon* estructura){
+    size_t tam = sizeof(uint32_t)*3;
+    tam += estructura->nombre_pokemon_length;
+    return tam;
+}
+size_t sizeof_get_pokemon(t_get_pokemon* estructura){
+    size_t tam = sizeof(uint32_t);
+    tam += estructura->nombre_pokemon_length;
+    return tam;
+}
+size_t sizeof_localized_pokemon(t_localized_pokemon* estructura){
+    size_t tam = sizeof(uint32_t)*3;
+    tam += estructura->nombre_pokemon_length;
+    return tam;
+}
+size_t sizeof_catch_pokemon(t_catch_pokemon* estructura){
+    size_t tam = sizeof(uint32_t)*3;
+    tam += estructura->nombre_pokemon_length;
+    return tam;
+}
+size_t sizeof_caught_pokemon(t_caught_pokemon* estructura){
+    size_t tam = sizeof(uint32_t);
+    return tam;
+}
+
 
 unsigned long unix_epoch() {
 

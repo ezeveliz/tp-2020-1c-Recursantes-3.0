@@ -344,37 +344,6 @@ subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
 }
 
 
-size_t sizeof_new_pokemon(t_new_pokemon* estructura){
-    size_t tam = sizeof(uint32_t)*4;
-    tam += estructura->nombre_pokemon_length;
-    return tam;
-}
-size_t sizeof_appeared_pokemon(t_appeared_pokemon* estructura){
-    size_t tam = sizeof(uint32_t)*3;
-    tam += estructura->nombre_pokemon_length;
-    return tam;
-}
-size_t sizeof_get_pokemon(t_get_pokemon* estructura){
-    size_t tam = sizeof(uint32_t);
-    tam += estructura->nombre_pokemon_length;
-    return tam;
-}
-size_t sizeof_localized_pokemon(t_localized_pokemon* estructura){
-    size_t tam = sizeof(uint32_t)*3;
-    tam += estructura->nombre_pokemon_length;
-    return tam;
-}
-size_t sizeof_catch_pokemon(t_catch_pokemon* estructura){
-    size_t tam = sizeof(uint32_t)*3;
-    tam += estructura->nombre_pokemon_length;
-    return tam;
-}
-size_t sizeof_caught_pokemon(t_caught_pokemon* estructura){
-    size_t tam = sizeof(uint32_t);
-    return tam;
-}
-
-
 bool existe_sub(int id, t_list* cola){
    bool id_search(void* un_sub){
        subscriptor* sub = (subscriptor*) un_sub;

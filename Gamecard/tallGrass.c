@@ -12,17 +12,15 @@ int main(){
     t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
     char* palabra = "aaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
     write_tall_grass(archivo, palabra , strlen(palabra), 0);
-   palabra = "bbbbbbb";// No tiene que agregar ninguno
-   write_tall_grass(archivo, palabra , strlen(palabra), 5);
-   char* algo = read_tall_grass(archivo,5,2);
+    palabra = "bbbbbbb";// No tiene que agregar ninguno
+    write_tall_grass(archivo, palabra , strlen(palabra), 5);
+    char* algo = read_tall_grass(archivo,5,2);
     printf("%s",algo);
     free(algo);
     free(archivo->path);
     free(archivo->metadata->bloques);
     free(archivo->metadata);
     free(archivo);
-
-
 
 }
 
@@ -690,44 +688,43 @@ int rmfile_tall_grass(){
 }
 
 //Te devuelve la lista con los que hay
-//TODO:Usar un lock o semaforo
-t_list* obtener_bloques_libres(int cantidad_pedida){
+t_list* obtener_bloques_libres(int cantidad_pedida) {
     int cantidad_bloques = obtener_cantidad_bloques();
-    char* path_bitmap = obtener_path_bitmap();
-    t_list* bloques_libres = list_create();
+    char *path_bitmap = obtener_path_bitmap();
+    t_list *bloques_libres = list_create();
 
-    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
+    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
 
     //Lo dejo esperando hasta que pueda entrar
-    while(1){
-        //Bloque el archivo y si tengo exito entra el el while
-        if( flock(archivo_bitmap->_fileno, LOCK_EX | LOCK_NB) == 0){
-            t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
-            int contador_bloques_obtenidos = 0;
+    while (flock(archivo_bitmap->_fileno, LOCK_EX | LOCK_NB) != 0) {}
 
-            //Busco todos los bloques que necestio
-            for(int i = 0; i < cantidad_bloques && contador_bloques_obtenidos < cantidad_pedida; i++){
-                int estado_bloque= bitarray_test_bit(bitmap,i);
-                //Si esta libre lo agrego
-                if(estado_bloque == 0){
-                    int* bloque_libre = malloc(sizeof(uint32_t));
-                    *bloque_libre = i;
-                    list_add(bloques_libres,bloque_libre);
-                    bitarray_set_bit(bitmap,i);
-                    contador_bloques_obtenidos++;
-                }
-            }
-            //Escribo el nuevo bitmap bloqueado en el archivo
-            escribir_bitmap(bitmap, archivo_bitmap);
-            //Libero la estructura
-            free(bitmap->bitarray);
-            bitarray_destroy(bitmap);
-            //Desbloqueo el archivo
-            flock(archivo_bitmap->_fileno, LOCK_UN);
-            break;
+    //Bloque el archivo y si tengo exito entra el el while
+    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
+                                         tamanio_bitmap(cantidad_bloques));
+    int contador_bloques_obtenidos = 0;
+
+    //Busco todos los bloques que necestio
+    for (int i = 0; i < cantidad_bloques && contador_bloques_obtenidos < cantidad_pedida; i++) {
+
+        //Si esta libre lo agrego
+        if (bitarray_test_bit(bitmap, i) == 0) {
+            uint32_t *bloque_libre = (int*) malloc(sizeof(uint32_t));
+            *bloque_libre = i;
+            list_add(bloques_libres, bloque_libre);
+            bitarray_set_bit(bitmap, i);
+            contador_bloques_obtenidos++;
         }
-
     }
+
+    //Escribo el nuevo bitmap bloqueado en el archivo
+    escribir_bitmap(bitmap, archivo_bitmap);
+    //Libero la estructura
+    free(bitmap->bitarray);
+    bitarray_destroy(bitmap);
+    //Desbloqueo el archivo
+    flock(archivo_bitmap->_fileno, LOCK_UN);
+
+
     fclose(archivo_bitmap);
     free(path_bitmap);
     return bloques_libres;
@@ -752,23 +749,28 @@ int liberar_bloques(t_list* bloques_a_liberar){
     }
 }
 
-//TODO: Modificar ese nose
+
 t_metadata* obtener_metadata_archivo(char* path){
-    t_config* nose = config_create(path);
+    //Trato a la metadata del archivo como un config
+    t_config* conf = config_create(path);
     t_metadata* metadata = malloc(sizeof(t_metadata));
-    metadata->size= config_get_int_value(nose,"SIZE");
-    int  largo_string = strlen(config_get_string_value(nose,"BLOCKS"));
+    //sete el tamanio
+    metadata->size= config_get_int_value(conf,"SIZE");
+    //calculo el largo del string de bloques
+    int  largo_string = strlen(config_get_string_value(conf,"BLOCKS"));
+    //Pido memoria para los bloques
     char* bloques_viejos = malloc(largo_string + 1);
-    memcpy(bloques_viejos,config_get_string_value(nose,"BLOCKS"),largo_string+1);
+    //Copio la info del archivo en el puntero que agarre recien
+    memcpy(bloques_viejos,config_get_string_value(conf,"BLOCKS"),largo_string+1);
+    //Asigno los bloques a la metadata
     metadata->bloques = bloques_viejos;
-    config_destroy(nose);
+    //Libero y retorno
+    config_destroy(conf);
     return metadata;
 }
 
 int espacio_libre_archivo(t_file* archivo){
-    t_metadata* metadata = obtener_metadata_archivo(archivo);
-    int espacio_libre = (calcular_bloques_archivo(metadata) * obtener_tamanio_bloques()) - metadata->size;
-    metadata_destroy(metadata);
+    int espacio_libre = (calcular_bloques_archivo(archivo->metadata) * obtener_tamanio_bloques()) - (archivo->metadata->size);
     return espacio_libre;
 
 }

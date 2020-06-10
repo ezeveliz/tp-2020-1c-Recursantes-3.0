@@ -155,14 +155,14 @@ void *server_function(void *arg) {
                     // Cargamos el un_mensaje a la lista de New_pokemon
                     cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(NEW_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
                     break;
                 }
 
@@ -398,14 +398,14 @@ void subscriptor_delete(int id, t_list* cola){
 //        printf("id: %d, ip: %s, port: %d, socket: %d \n", s->id_subs, s->ip_subs, s->puerto_subs, s->socket);
 //    }
 //}
-//void printMenSubList(){
-//    int size = list_size(MENSAJE_SUBSCRIPTORE);
-//    for(int i=0; i<size; i++){
-//        mensaje_subscriptor* s = list_get(MENSAJE_SUBSCRIPTORE, i);
-//        printf("id_mensaje: %d, id_sub: %d, enviado: %s, ack: %s \n", s->id_mensaje, s->id_subscriptor, s->enviado ? "true" : "false", s->ack ? "true" : "false");
-//    }
-//}
-//
+void printMenSubList(){
+    int size = list_size(MENSAJE_SUBSCRIPTORE);
+    for(int i=0; i<size; i++){
+        mensaje_subscriptor* s = list_get(MENSAJE_SUBSCRIPTORE, i);
+        printf("id_mensaje: %d, id_sub: %d, enviado: %s, ack: %s \n", s->id_mensaje, s->id_subscriptor, s->enviado ? "true" : "false", s->ack ? "true" : "false");
+    }
+}
+
 //void printMenList() {
 //    int size = list_size(MENSAJES);
 //    for (int i = 0; i < size; i++) {
@@ -439,6 +439,7 @@ void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
     int id = *((int*) list_get(cosas, 0));
 
+    // Si cambia el puerto o la ip lo borro y vuelvo a crearlo
     if(existe_sub(id, una_cola)){
         subscriptor_delete(id, una_cola);
         log_info(logger, "Ya existia el subscriptor en el sistema");
@@ -521,20 +522,19 @@ void mandar_mensaje(void* cosito){
     // Trato de recibir el ACK
     MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
     if(receive_header(un_subscriptor->socket, buffer_header) <= 0) {
-        log_info(logger, "La bardiaste mal maquina");
-        exit(-1);
+        log_error(logger, "No recibimos el ACK");
+        return;
     }
-    t_list* rta_list = receive_package(un_subscriptor->socket, buffer_header);
-    int rta = *(int*) list_get(rta_list, 0);
 
     if (buffer_header->type == ACK){
         flag_ack(coso->id_subscriptor, coso->id_mensaje);
+        log_info(logger, "Llego el ACK");
     } else{
         log_info(logger, "NO AMIGO LPM TE LLEGO ALGO QUE NO ERA UN ACK LISTO CERRAMO ACA");
         exit(-1);
     }
 
-//    printMenSubList();
+    printMenSubList();
 
 }
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub){

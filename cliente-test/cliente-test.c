@@ -66,6 +66,10 @@ int main(int argc, char **argv) {
                 case (NEW_POK):
                     log_info(logger, "Me llega un New");
 
+                    // Mando el ACK
+                    t_paquete* paquete = create_package(ACK);
+                    send_package(paquete, broker_fd);
+
                     break;
 
                 case (APPEARED_POK):
@@ -76,6 +80,9 @@ int main(int argc, char **argv) {
             }
 
             free(buffer_header);
+        }
+        else {
+            log_info(logger, "El if me dio falso");
         }
     }
 

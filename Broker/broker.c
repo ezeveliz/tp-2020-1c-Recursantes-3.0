@@ -556,12 +556,6 @@ void* flag_ack(uint32_t id_sub, uint32_t id_men){
     }
 }
 
-//void recibir_ack(){
-//TODO
-//}
-
-//        mandar_mensaje_thread(un_subscriptor, un_mensaje);
-
 /* TODO
  * Cuando los subscriptores reciban todos los mensajes borrar el mensaje de la memoria (hay que borrarlo tambien de la estrutura ?)
  
@@ -575,3 +569,45 @@ void* flag_ack(uint32_t id_sub, uint32_t id_men){
  * Copiar y pegar funciones de la memoria principal de tps pasados
  */
 
+/*
+███╗   ███╗███████╗███╗   ███╗ ██████╗ ██████╗ ██╗ █████╗
+████╗ ████║██╔════╝████╗ ████║██╔═══██╗██╔══██╗██║██╔══██╗
+██╔████╔██║█████╗  ██╔████╔██║██║   ██║██████╔╝██║███████║
+██║╚██╔╝██║██╔══╝  ██║╚██╔╝██║██║   ██║██╔══██╗██║██╔══██║
+██║ ╚═╝ ██║███████╗██║ ╚═╝ ██║╚██████╔╝██║  ██║██║██║  ██║
+╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝
+*/
+
+// TODO: luego buscar como se usa el list_sort
+// https://github.com/sisoputnfrba/so-commons-library/blob/master/tests/unit-tests/test_list.c
+
+void create_particion(){
+    //hacer el constructor
+}
+
+/*
+ * Se buscará una partición libre que tenga suficiente memoria continua como para contener el valor.
+ * En caso de no encontrarla, se pasará al paso siguiente (si corresponde, en caso contrario se pasará al paso 3 directamente).
+ * 
+ * Se compactará la memoria y se realizará una nueva búsqueda.
+ * En caso de no encontrarla, se pasará al paso siguiente.
+ *
+ * Se procederá a eliminar una partición de datos. Luego, si no se pudo encontrar una partición con suficiente memoria
+ * como para contener el valor, se volverá al paso 2 o al 3 según corresponda.
+ *
+ * Se deberá poder configurar la frecuencia de compactación (en la unidad “cantidad de búsquedas fallidas”).
+ * El valor -1 indicará compactar solamente cuando se hayan eliminado todas las particiones.
+ */
+
+/*
+void asignar_particion(particion* nueva_particion){
+    particion* encontrado = buscar_particion_libre();
+    if(encontrado){
+        cambiar la base y el tamaño de la particion libre
+        list_add(PARTICIONES, nueva_particion);
+        ordenar_particiones();
+    } else {
+//        INTENTOS++;
+    }
+}
+ */

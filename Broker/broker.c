@@ -482,6 +482,7 @@ void mandar_mensaje(void* cosito){
     mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
 
     t_paquete* paquete = create_package(un_mensaje->tipo);
+    add_to_package(paquete, (void*) &un_mensaje->id_correlacional, sizeof(int));
     add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
 
     if (send_package(paquete, un_subscriptor->socket) > 0){

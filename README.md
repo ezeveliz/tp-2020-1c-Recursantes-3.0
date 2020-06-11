@@ -13,6 +13,7 @@
 
  - Primero hay que subscribirse a una cola, pasandole al Broker un id propio.
  - Cada vez que se manda un mensaje el Broker va a devolver un id unico para ese mensaje.
+ - Los mensajes que el Broker manda a las colas estan compuestos por [0]id_correlacional(int) y [1]contenido del mensaje(struct_pokemon)
  - Cada vez que el Broker manda un mensaje a una cola hay que mandarle un `ACK` para marcarlo como recibido.
 
 *Para mejores ejemplos ver [cliente-test.c](cliente-test/cliente-test.c)*
@@ -74,7 +75,8 @@ if(receive_header(broker_fd, buffer_header) > 0) {
     if (buffer_header->type == NEW_POK) {
 
         // Deserealizo el stream
-        t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
+        int id_correlacional = *(int*) list_get(rta_list, 0);
+        t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(rta_list,1));
 
         // Mando el ACK
         t_paquete* paquete = create_package(ACK);

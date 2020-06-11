@@ -544,7 +544,8 @@ void* trainer_thread(void* arg){
                 t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, 0, 1); // Reemplazar las coordenadas estas por las del pokemon, ahora lo puse asi para que no rompa porque esa funcion espera uint_32
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
-                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
+                //TODO: @EZE fijate si estan bien los paramentros porque antes no compilaba, entiendo que si pero por las dudas
+                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof(t_catch_pokemon), CATCH_POK, entrenador->tid);
 
                 // Me bloqueo esperando la rta del Broker
                 // TODO: crear semaforo para transicion esperando catch a bloqueado normal
@@ -720,11 +721,7 @@ void appeared_pokemon(t_list* paquete){
 
 void algoritmo_de_cercania(){
 
-    // TODO: me parece que seria mas conveniente primero consultar si hay pokemons disponibles(para no hacer el filter y crear listas al pedo)
-    //  , una vez que sepamos que hay pokemons, ahi hallar la lista de entrenaores con margen y ahi verificar denuevo si hay alguno,
-    //  si no hay salir, sino pasar el/los que corresponda a ready
-
-    //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+    sem_wait(&s_cantidad_pokemons);
     //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
     bool puede_ir_ready(void* _entreador){
         Entrenador* entrenador = (Entrenador*) _entreador;
@@ -802,58 +799,6 @@ void algoritmo_de_cercania(){
         }
     }
 
-    // @Rodri, esto es lo que ya no vamos a usar, si queres borralo, te lo deje por las dudas
-
-    /**
-    if(entrenador_exec->tid != NULL) {
-        sem_wait(&s_cantidad_pokemons);
-        //TODO: Esto iria aca? Porque en realidad el entrenador se bloquea cuando manda el catch por lo que solo habria que cambiar la razon de bloqueo
-        //list_remove(estado_exec,0);
-
-        int cant_pok = list_size(pokemons);
-        //Verifico que haya pokemons para atrapar
-        if(cant_pok > 0) {
-
-            //Verifico que el entrenador tiene tiene espacio para seguir capturando pokemons
-            if ((entrenador_exec->cant_stock < entrenador_exec->cant_objetivos) &&
-                (entrenador_exec->razon_bloqueo == ESPERANDO_POKEMON)) {
-                pthread_mutex_lock(&mutex_pokemon);
-                bool mas_cercano(void *_pokemon_actual, void *_pokemon_siguiente) {
-                    Pokemon *pokemon_actual = (Pokemon *) _pokemon_actual;
-                    Pokemon *pokemon_siguiente = (Pokemon *) _pokemon_siguiente;
-
-                    return distancia(entrenador_exec->pos_actual, pokemon_actual->coordenada) <
-                           distancia(entrenador_exec->pos_actual, pokemon_siguiente->coordenada);
-                }
-                list_sort(pokemons, mas_cercano);
-                pthread_mutex_unlock(&mutex_pokemon);
-
-                Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
-
-                entrenador_exec -> estado = READY;
-                entrenador_exec-> razon_bloqueo = SIN_BLOQUEO;
-                entrenador_exec->pokemon_objetivo = pokemon;
-                list_add(estado_ready,entrenador_exec);
-
-                pthread_mutex_lock(&mutex_pokemon);
-                list_remove(pokemons,0);
-                pthread_mutex_unlock(&mutex_pokemon);
-
-            }
-        } else {
-            //No hay pokemons para atrapar
-            entrenador_exec-> estado = BLOCK;
-            entrenador_exec->razon_bloqueo = ESPERANDO_POKEMON;
-
-            //TODO: Esto hay que hacerlo aca? Porque en realidad el entrenador ya esta bloqueado cuando mandamos el catch
-            list_add(estado_block, entrenador_exec);
-        }
-    }
-    else{
-
-
-    }
-     */
 }
 
 void free_resources(){

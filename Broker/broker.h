@@ -81,6 +81,15 @@ t_list* MENSAJE_SUBSCRIPTORE;
 
 int IDENTIFICADOR_MENSAJE;
 
+
+typedef struct {
+    int base;
+    int tam;
+    bool libre;
+    unsigned long ultimo_uso;
+} particion;
+t_list* PARTICIONES;
+
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub);

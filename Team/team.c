@@ -570,8 +570,8 @@ void* trainer_thread(void* arg){
 
         // TODO: implementar esta funcion
         // Verifico si el entrenador completo sus objetivos
-        bool objetivos_cumplidos = false;
-        if (objetivos_cumplidos) {
+        //bool objetivos_cumplidos = false;
+        if (objetivos_cumplidos(entrenador)) {
 
             // TODO: quitarlo de la lista en la que este
             //  - la de bloqueado si estaba esperando un catch
@@ -994,4 +994,21 @@ int distancia(Coordenada actual, Coordenada siguiente) {
     int dist_en_x = abs(pos_actual_x - pos_destino_x);
     int dist_en_y = abs(pos_actual_y - pos_destino_y);
     return dist_en_x + dist_en_y;
+}
+
+bool objetivos_cumplidos(Entrenador* entrenador){
+
+    //TODO: Crear un vector de booleanos del tamanio del diccionario e ir guardando el resultado de dictionary_has_key
+    // -Verificar tambien los valores, se viene un lindo monstruo
+
+    if(dictionary_size(entrenador->objetivos_particular) != dictionary_size(entrenador->stock_pokemons)){
+        //Si ni siquiera tienen la misma cantidad de elementos ni sigo controlando
+        return false;
+    }else{
+        void* iterador(char* key, void* value){
+            dictionary_has_key(entrenador->stock_pokemons, key);
+        }
+        dictionary_iterator(entrenador->objetivos_particular,iterador);
+    }
+
 }

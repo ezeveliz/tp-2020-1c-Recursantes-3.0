@@ -274,4 +274,11 @@ void caught_pokemon(int tid, uint32_t atrapado);
  */
 int distancia(Coordenada actual, Coordenada siguiente);
 
+/**
+ * Verifica si el entrenador cumplio todos sus objetivos respecto al stock de pokemons
+ * @param entrenador
+ * @return true o false
+ */
+bool objetivos_cumplidos(Entrenador* entrenador);
+
 #endif //TEAM_TEAM_H

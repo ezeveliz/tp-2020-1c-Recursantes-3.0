@@ -7,9 +7,11 @@
 t_config *archConfig;
 t_log *logger;
 
+//TODO: Modificar los logs deacuerdo al enunciado
+
 int main(int argc, char *argv[]) {
 
-    archConfig = config_create("../gameboy_config");
+    archConfig = config_create("/home/emi/Documentos/Facultad /Operativos/TP/tp-2020-1c-Recursantes-3.0/Gameboy/gameboy_config");
     logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
 
     if (argc > 2) {
@@ -114,7 +116,8 @@ void broker_distribuidor(int argc, char *argv[]) {
     int id;
 
     switch (str2Msj(argv[2])) {
-        case NEW_POKEMON:
+        // ./gameboy BROKER NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD]
+        case NEW_POK:
 
             if (argc < PARAMETROS_BROKER_NEW) {
                 msj_error();
@@ -131,7 +134,8 @@ void broker_distribuidor(int argc, char *argv[]) {
             free(new_pokemon);
             break;
 
-        case APPEARED_POKEMON:
+        // ./gameboy BROKER APPEARED_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE_CORRELATIVO]
+        case APPEARED_POK:
 
             if (argc < PARAMETROS_BROKER_APPEARED) {
                 msj_error();
@@ -150,7 +154,8 @@ void broker_distribuidor(int argc, char *argv[]) {
             free(mensaje_serializado);
             break;
 
-        case CATCH_POKEMON:
+        // ./gameboy BROKER CATCH_POKEMON [POKEMON] [POSX] [POSY]
+        case CATCH_POK:
             if (argc < PARAMETROS_BROKER_CATCH) {
                 msj_error();
                 break;
@@ -166,7 +171,8 @@ void broker_distribuidor(int argc, char *argv[]) {
             free(mensaje_serializado);
             break;
 
-        case CAUGHT_POKEMON:
+        //  ./gameboy BROKER CAUGHT_POKEMON [ID_MENSAJE_CORRELATIVO] [OK/FAIL]
+        case CAUGHT_POK:
             if (argc < PARAMETROS_BROKER_CAUGHT) {
                 msj_error();
                 break;
@@ -183,7 +189,8 @@ void broker_distribuidor(int argc, char *argv[]) {
             free(mensaje_serializado);
             break;
 
-        case GET_POKEMON:
+        // ./gameboy BROKER GET_POKEMON [POKEMON]
+        case GET_POK:
             if (argc < PARAMETROS_BROKER_GET) {
                 msj_error();
                 break;
@@ -203,7 +210,7 @@ void broker_distribuidor(int argc, char *argv[]) {
     }
 
     free(ip);
-    free_package(paquete);
+    //free_package(paquete);
 }
 
 void team_distribuidor(int argc, char *argv[]) {
@@ -213,7 +220,9 @@ void team_distribuidor(int argc, char *argv[]) {
     void *mensaje_serializado;
 
     switch (str2Msj(argv[2])) {
-        case APPEARED_POKEMON:
+
+        // ./gameboy TEAM APPEARED_POKEMON [POKEMON] [POSX] [POSY]
+        case APPEARED_POK:
             if (argc < PARAMETROS_TEAM_APPEARED) {
                 msj_error();
                 break;
@@ -243,7 +252,9 @@ void gamecard_distribuidor(int argc, char *argv[]) {
     void *mensaje_serializado;
     int id;
     switch (str2Msj(argv[2])) {
-        case NEW_POKEMON:
+
+        // ./gameboy GAMECARD NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD] [ID_MENSAJE]
+        case NEW_POK:
             if (argc < PARAMETROS_GAMECARD_NEW) {
                 msj_error();
                 break;
@@ -261,7 +272,8 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             free(mensaje_serializado);
             break;
 
-        case CATCH_POKEMON:
+        // ./gameboy GAMECARD CATCH_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE]
+        case CATCH_POK:
             if (argc < PARAMETROS_GAMECARD_CATCH) {
                 msj_error();
                 break;
@@ -279,7 +291,8 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             free(mensaje_serializado);
             break;
 
-        case GET_POKEMON:
+        // ./gameboy GAMECARD GET_POKEMON [POKEMON] [ID_MENSAJE]
+        case GET_POK:
             if (argc < PARAMETROS_GAMECARD_GET) {
                 msj_error();
                 break;
@@ -287,6 +300,9 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             paquete = create_package(GET_POK);
             t_get_pokemon *get_pokemon = create_get_pokemon(argv[3]);
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
+
+            int id = atoi(argv[4]);
+            add_to_package(paquete, &id, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
 
             mensaje_proceso(GAMECARD, paquete);
@@ -367,6 +383,8 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
  * @params: string del nombre de la cola
  * @params: el tiempo en formato string
  */
+
+// ./gameboy SUSCRIPTOR [COLA_DE_MENSAJES] [TIEMPO]
 void suscribir(char *cola_mensaje, char *tiempo) {
     //Genera el socket para enviar al broker
     int broker = crear_broker_socket();
@@ -576,6 +594,8 @@ void timer(int tiempo) {
 
 void timer_handler(int signum) {
     printf("\nTermino el tiempo!\n");
+    log_destroy(logger);
+    config_destroy(archConfig);
     exit(-1);
 }
 

@@ -260,6 +260,13 @@ void* message_function(void* message_package);
 void exec_default(MessageType header, int tid);
 
 /**
+ * Funcion que se ejecuta cuando recibo la respuesta de un catch, le avisa al entrenador si atrapo al pokemon o no
+ * @param tid, tid del entrenador que mando originalmente el mensaje
+ * @param atrapado, respuesta que me mando el Broker, un 0 es no atrapado y un 1 es atrapado
+ */
+void caught_pokemon(int tid, uint32_t atrapado);
+
+/**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.
  * @param actual
  * @param siguiente

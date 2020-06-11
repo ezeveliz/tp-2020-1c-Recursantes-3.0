@@ -118,4 +118,13 @@ typedef struct {
     int tid; // Tid del entrenador que envia el mensaje, si es -1, el mensaje no fue solicitado por un entrenador, p/ej: el get_pok
 } t_new_message;
 
+/**
+ * Esta estructura relaciona al tid de un entrenador con el id correlacional de
+ * un mensaje que este esperando(solo para los catches en realidad)
+ */
+typedef struct {
+    int tid;
+    uint32_t id_correclativo;
+} WaitingMessage;
+
 #endif //TEAM_TEAMSTRUCTURES_H

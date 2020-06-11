@@ -44,11 +44,22 @@ t_list* estado_exec;
 t_list* estado_block;
 t_list* estado_finish;
 
+// Lista en la que voy a encolar mensajes de los que este esperando respuesta(catches)
+t_list* waiting_list;
+
 // Lista de los pokemons(Los recibidos por Appeared o Localized)
 t_list* pokemons;
 
 // Semaforo Mutex para proteger la lista de pokemones
 pthread_mutex_t mutex_pokemon;
+
+// Semaforo mutex para proteger la lista de espera de respuestas
+pthread_mutex_t mutex_waiting_list;
+
+// TODO: falta una lista mas, esta lista solo va  tener los pokemones
+//  recibidos(nombre, no estructura) por Localized, ya que segun el enunciado una vez
+//  que se recibe un pokemon no hay que seguir aceptando pokemones de
+//  la misma especie. https://docs.google.com/document/d/1be91Gn93O2Vp8frZoV1i5CmtOG0scE1PS8dMHsCP314/edit#heading=h.46r0co2
 
 int main() {
     pthread_t server_thread;
@@ -174,18 +185,25 @@ void* subscribe_to_queue_thread(void* arg) {
     log_info(logger, "Subscribed to queue");
 
     // Me quedo en un loop infinito esperando a recibir cosas
-    while (true) {
+    bool a = true;// Uso esto solo para que desaparezca la sombra amarilla
+    while (a) {
 
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
         if(receive_header(broker, buffer_header) > 0) {
 
-            // Recibo la res
+            // Recibo la respuesta del Broker
             t_list* rta_list = receive_package(broker, buffer_header);
-            // TODO: hay que ver de filtrar los ids de los mensajes que nosotros hayamos solicitado
+
+            // La posicion 0 de la lista recibida es siempre el id correlacional correspondiente
+            // El resto del mensajes usa las estructuras locas del Broker(detalladas en la commLib)
+
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
             switch (cola) {
                 case (LOCALIZED_POK):;
+
+                    // TODO: filtrar los mensajes recibidos aca segun los pokemones que haya recibido con anterioridad
                     int cant = *(int*) list_get(rta_list, 1);
+
                     while(cant > 0) {
                         Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
@@ -203,10 +221,12 @@ void* subscribe_to_queue_thread(void* arg) {
                     algoritmo_de_cercania(NULL);
                     break;
                 case (CAUGHT_POK):
+
+                    // TODO: Filtrar los mensajes segun el id correlacional recibido y los que tenga guardados
                     break;
 
             }
-            // TODO: confirmar la recepcion con un send que mande un 1 o un ACK o algo de eso
+            // TODO: confirmar la recepcion con un send que mande un ACK como contenido
 
             // Limpieza
             free(buffer_header);
@@ -316,6 +336,10 @@ void initialize_structures() {
     estado_block = list_create();
     estado_finish = list_create();
     estado_exec = list_create();
+    waiting_list = list_create();
+
+    // Inicializo semaforo mutex que protege la lista de espera
+    pthread_mutex_init(&mutex_waiting_list, NULL);
 
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
@@ -484,31 +508,90 @@ void* trainer_thread(void* arg){
 
         int distancia_a_viajar = 0;
 
-        if(entrenador->razon_movimiento == CATCH){
-            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo->coordenada);
-        }
-        else{
-            distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
+        // Segun la razon de movimiento voy a calcular la distancia al objetivo de una manera diferente
+        switch(entrenador->razon_movimiento) {
+            case (CATCH):;
+                distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo->coordenada);
+                break;
+            case (RESOLUCION_DEADLOCK):;
+                distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
+                break;
         }
 
-        // Esto es solo valido para FIFO y SJF-SD, en RR debo suspender el ciclo despues de cumplido el Q y en SJF-CD no se
+        // Esto es solo valido para FIFO y SJF-SD, en RR debo suspender el ciclo despues de cumplido el Q y en SJF-CD(verificar en cada iteracion?) no se
         while (distancia_a_viajar > 0) {
             sleep(config.retardo_ciclo_cpu);
             distancia_a_viajar--;
         }
 
-        //FIXME: Pasos a seguir:
-        // 1. Verificar cual es la razon del movimiento (CATCH / Resolucion de deadlock)
-        // 2. Si es CATCH, enviar el mensaje correspondiente y bloquearse
-        // 2.1 Una vez que me hacen signal sobre el semaforo (CAUGHT), verificar si lo atrape o no y actualizar
-        // la lista de objetivos globales y stock de pokemons.
-        // 3. Si es resolucion de deadlock, simular 5 ciclos de CPU y realizar el intercambio entre dos entrenadores.
-        // 4. Como sabemos con que entrenador tiene que hacer el intercambio?
-        // 5. Si ya cumplimos con los objetivos, asignar el estado FINISH, nos borramos de todas las listas y llamar al
-        // algoritmo de cercania para ver si hay otro hilo que se puede liberar.
-        // 2.2 (Continuacion de 2.1) Una vez que respondieron el CAUGHT llamar al algoritmo de cercania.
+        // Ya viaje a destino, ahora tengo que solicitar el catch o realizar el intercambio
+        switch (entrenador->razon_movimiento) {
 
-        sem_wait(&block_ready_transition[entrenador->tid]);
+            // Estaba viajando para atrapar un Pokemon
+            case (CATCH):;
+
+                // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
+
+                // Me quito de la lista de ejecucion
+                list_remove(estado_exec, 0);
+
+                // Me asigno la razon de bloqueo ESPERANDO_CATCH y me agrego a l alista de bloqueo
+                entrenador->razon_bloqueo = ESPERANDO_CATCH;
+                list_add(estado_block, entrenador);
+
+                // Creo la estructura t_catch_pokemon para enviarle al Broker
+                Pokemon* pok = entrenador->pokemon_objetivo;
+                t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, 0, 1); // Reemplazar las coordenadas estas por las del pokemon, ahora lo puse asi para que no rompa porque esa funcion espera uint_32
+
+                // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
+                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
+
+                // Me bloqueo esperando la rta del Broker
+                // TODO: crear semaforo para transicion esperando catch a bloqueado normal
+
+                break;
+
+            // Estaba viajando para intercambiar un Pokemon
+            case (RESOLUCION_DEADLOCK):;
+
+                // TODO: fijarse que esto tambien deberia ser interrumpible por el planificador
+
+                // El intercambio ocupa 5 ciclos de CPU
+                int retardo_simulacion = 5;
+                while (retardo_simulacion > 0) {
+                    sleep(config.retardo_ciclo_cpu);
+                    retardo_simulacion--;
+                }
+
+                // Terminar de implementar
+                break;
+        }
+
+        // TODO: implementar esta funcion
+        // Verifico si el entrenador completo sus objetivos
+        bool objetivos_cumplidos = false;
+        if (objetivos_cumplidos) {
+
+            // TODO: quitarlo de la lista en la que este
+            //  - la de bloqueado si estaba esperando un catch
+            //  - o la de ejecucion si estaba intercambiando
+
+            // Le asigno el estado finish
+            entrenador->estado = FINISH;
+
+            // TODO: agregar a la lista de Finish?
+
+        // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
+        } else {
+
+            // Actualizo la razon de bloqueo
+            entrenador->razon_bloqueo = ESPERANDO_POKEMON;
+
+            // TODO: Si venia de un intercambio meterme en bloqueado, ya que viene de ejecucion
+
+            // Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
+            sem_wait(&block_ready_transition[entrenador->tid]);
+        }
     }
 
     // TODO: liberar la memoria reservada:
@@ -635,8 +718,93 @@ void appeared_pokemon(t_list* paquete){
     algoritmo_de_cercania(NULL);
 }
 
-void algoritmo_de_cercania(Entrenador* entrenador_exec){
+void algoritmo_de_cercania(){
 
+    // TODO: me parece que seria mas conveniente primero consultar si hay pokemons disponibles(para no hacer el filter y crear listas al pedo)
+    //  , una vez que sepamos que hay pokemons, ahi hallar la lista de entrenaores con margen y ahi verificar denuevo si hay alguno,
+    //  si no hay salir, sino pasar el/los que corresponda a ready
+
+    //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
+    //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
+    bool puede_ir_ready(void* _entreador){
+        Entrenador* entrenador = (Entrenador*) _entreador;
+        return (entrenador->cant_stock < entrenador->cant_objetivos) && (entrenador->razon_bloqueo == ESPERANDO_POKEMON);
+    }
+    t_list* entrenadores_con_margen = list_filter(estado_block,puede_ir_ready);
+
+    //Pongo todos en una lista asi es mas facil trabajar
+    list_add_all(entrenadores_con_margen,estado_new);
+
+    //Verifico que la lista de entrenadores no sea vacia
+    if(list_size(entrenadores_con_margen) > 0){
+        int cant_pok = list_size(pokemons);
+        while(cant_pok > 0){
+            Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
+
+            //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
+            if(list_size(entrenadores_con_margen) > 1){
+
+                //Ordeno a los entrenadores por cercania al pokemon
+                bool entrenador_mas_cerca(void* _entrenador_actual, void* _entrenador_siguiente){
+                    Entrenador* entrenador_actual = (Entrenador*) _entrenador_actual;
+                    Entrenador* entrenador_siguiente = (Entrenador*) _entrenador_siguiente;
+
+                    return distancia(entrenador_actual->pos_actual, pokemon->coordenada) < distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                }
+                list_sort(entrenadores_con_margen, entrenador_mas_cerca);
+            }
+            //Obtengo el primero que es el mas cercano
+            Entrenador* entrenador_cercano = (Entrenador*) list_get(entrenadores_con_margen,0);
+
+            //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
+            list_remove(entrenadores_con_margen, 0);
+
+            bool remover(void* _entrenador){
+                Entrenador* entrenador = (Entrenador*) _entrenador;
+                return entrenador->tid == entrenador_cercano->tid;
+            }
+            //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
+            switch(entrenador_cercano->estado){
+                case (NEW):;
+
+                    list_remove_by_condition(estado_new, remover);
+
+                    entrenador_cercano->pokemon_objetivo = pokemon;
+                    entrenador_cercano->razon_movimiento = CATCH;
+                    list_add(estado_ready,entrenador_cercano);
+                    entrenador_cercano->estado = READY;
+
+                    sem_post( &new_ready_transition[entrenador_cercano->tid]);
+                    break;
+
+                case (BLOCK):;
+
+                    list_remove_by_condition(estado_block, remover);
+
+                    entrenador_cercano->pokemon_objetivo = pokemon;
+                    entrenador_cercano->razon_movimiento = CATCH;
+                    list_add(estado_ready,entrenador_cercano);
+                    entrenador_cercano->estado = READY;
+
+                    sem_post(&block_ready_transition[entrenador_cercano->tid]);
+                    break;
+
+                default:
+                    printf("Andate a a concha de tu hermana");
+                    break;
+            }
+
+            //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
+            pthread_mutex_lock(&mutex_pokemon);
+            list_remove(pokemons,0);
+            pthread_mutex_unlock(&mutex_pokemon);
+            cant_pok--;
+        }
+    }
+
+    // @Rodri, esto es lo que ya no vamos a usar, si queres borralo, te lo deje por las dudas
+
+    /**
     if(entrenador_exec->tid != NULL) {
         sem_wait(&s_cantidad_pokemons);
         //TODO: Esto iria aca? Porque en realidad el entrenador se bloquea cuando manda el catch por lo que solo habria que cambiar la razon de bloqueo
@@ -682,91 +850,10 @@ void algoritmo_de_cercania(Entrenador* entrenador_exec){
         }
     }
     else{
-        //Quiere decir que voy a desbloquear un entrenador de NEW o BLOCK
-        //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
-        bool puede_ir_ready(void* _entreador){
-            Entrenador* entrenador = (Entrenador*) _entreador;
-            return (entrenador->cant_stock < entrenador->cant_objetivos) && (entrenador->razon_bloqueo == ESPERANDO_POKEMON);
-        }
-        t_list* entrenadores_con_margen = list_filter(estado_block,puede_ir_ready);
 
-        //Pongo todos en una lista asi es mas facil trabajar
-        list_add_all(entrenadores_con_margen,estado_new);
-
-        //Verifico que la lista de entrenadores no sea vacia
-        if(list_size(entrenadores_con_margen) > 0){
-            int cant_pok = list_size(pokemons);
-            while(cant_pok > 0){
-                Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
-
-                //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
-                if(list_size(entrenadores_con_margen) > 1){
-
-                    //Ordeno a los entrenadores por cercania al pokemon
-                    bool entrenador_mas_cerca(void* _entrenador_actual, void* _entrenador_siguiente){
-                        Entrenador* entrenador_actual = (Entrenador*) _entrenador_actual;
-                        Entrenador* entrenador_siguiente = (Entrenador*) _entrenador_siguiente;
-
-                        return distancia(entrenador_actual->pos_actual, pokemon->coordenada) < distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
-                    }
-                    list_sort(entrenadores_con_margen, entrenador_mas_cerca);
-                }
-                //Obtengo el primero que es el mas cercano
-                Entrenador* entrenador_cercano = (Entrenador*) list_get(entrenadores_con_margen,0);
-
-                //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
-                list_remove(entrenadores_con_margen, 0);
-
-                bool remover(void* _entrenador){
-                    Entrenador* entrenador = (Entrenador*) _entrenador;
-                    return entrenador->tid == entrenador_cercano->tid;
-                }
-                //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
-                switch(entrenador_cercano->estado){
-                    case (NEW):;
-
-                        list_remove_by_condition(estado_new, remover);
-
-                        entrenador_cercano->pokemon_objetivo = pokemon;
-                        entrenador_cercano->razon_movimiento = CATCH;
-                        list_add(estado_ready,entrenador_cercano);
-                        entrenador_cercano->estado = READY;
-
-                        sem_post( &new_ready_transition[entrenador_cercano->tid]);
-                        break;
-
-                    case (BLOCK):;
-
-                        list_remove_by_condition(estado_block, remover);
-
-                        entrenador_cercano->pokemon_objetivo = pokemon;
-                        entrenador_cercano->razon_movimiento = CATCH;
-                        list_add(estado_ready,entrenador_cercano);
-                        entrenador_cercano->estado = READY;
-
-                        sem_post(&block_ready_transition[entrenador_cercano->tid]);
-                        break;
-
-                    default:
-                        printf("Andate a a concha de tu hermana");
-                        break;
-                }
-
-                //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
-                pthread_mutex_lock(&mutex_pokemon);
-                list_remove(pokemons,0);
-                pthread_mutex_unlock(&mutex_pokemon);
-                cant_pok--;
-            }
-        }
 
     }
-
-    // Problema: que pasaria si entre que filtro y ordeno la lista de entrenadores,
-    //  cambia el estado de algun entrenador(porque se ejecuto esta misma funcion en otro hilo)
-    // Habria que poner un super Mutex para evitar que cambie el estado de los entrenadores
-
-    // TODO: Iterar la lista de Pokemones, no olvidar el mutex para proteger la lista
+     */
 }
 
 void free_resources(){
@@ -898,10 +985,23 @@ void* message_function(void* message_package){
                 t_list* rta_list = receive_package(broker, buffer_header); // Si llegas a fallar aca despues de todas las comprobaciones, matate
 
                 // Id del mensaje enviado
-                int id = *(int*) list_get(rta_list, 0);
+                uint32_t id = *(uint32_t *) list_get(rta_list, 0);
 
+                // Solo voy a utilizar el id si es un catch para filtrar los mensajes recibidos
+                if (header == CATCH_POK) {
 
-                // TODO: Enviar confirmacion con un ACK como header y con el id correlacional como contenido
+                    // Instancio una cosa y la agrego a la lista de mensajes en espera por una rta
+                    WaitingMessage cosa;
+                    cosa.tid = tid;
+                    cosa.id_correclativo = id;
+
+                    pthread_mutex_lock(&mutex_waiting_list);
+                    list_add(waiting_list, &cosa);
+                    pthread_mutex_unlock(&mutex_waiting_list);
+                }
+
+                // TODO: loggear los mensajes enviados?
+                // TODO: Limpieza
             }
         }
 
@@ -910,19 +1010,33 @@ void* message_function(void* message_package){
     }
 }
 
-// TODO: verificar si esta cosa necesitaria mas parametros o no
 void exec_default(MessageType header, int tid) {
     switch (header) {
-        case GET_POK:
-            // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
+
+        // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
+        case GET_POK:;
+
+            // No existen locaciones para el pokemon solicitado, no tendria que hacer nada
             break;
-        case CATCH_POK:
-            // Accion a realizar por default cuando hago un CATCH_POK y no funciona la comunicacion con el Broker
+
+        // Accion a realizar por default cuando hago un CATCH_POK y no funciona la comunicacion con el Broker
+        case CATCH_POK:;
+
+            // El Pokemon ha sido atrapado
+            caught_pokemon(tid, 1);
             break;
         default:
             printf("Chupame la pija\n");
             break;
     }
+}
+
+void caught_pokemon(int tid, uint32_t atrapado) {
+
+    // Declaro si y no para hacer las compraraciones
+    uint32_t si = 1;
+    uint32_t no = 0;
+    // TODO: Ir a buscar el entrenador de la lista de bloqueados y confirmarle si lo atrapo o no
 }
 
 int distancia(Coordenada actual, Coordenada siguiente) {

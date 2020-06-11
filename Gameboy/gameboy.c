@@ -411,6 +411,9 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             logear_mensaje(buffer_header, rta_list);
             list_destroy_and_destroy_elements(rta_list, &free);
 
+            // Mando el ACK
+            t_paquete* paquete = create_package(ACK);
+            send_package(paquete, broker);
             /*ack = create_package(ACK);
             id_correlativo = *(int*)list_get(rta_list,0);
             add_to_package(ack,(void *)&id, sizeof(int));
@@ -509,16 +512,17 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     void *mensaje = list_get(rta_list, 1);
 
     switch (buffer_header->type) {
-        case SUB_NEW: {
-            t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
-            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
-                     id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
-                     newPokemon->pos_y);
-            free(newPokemon->nombre_pokemon);
-            free(newPokemon);
+        case NEW_POK: {
+            //t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
+//            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
+//                     id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
+//                     newPokemon->pos_y);
+//            free(newPokemon->nombre_pokemon);
+//            free(newPokemon);
+            printf("Llego un mensaje new_pok\n");
             break;
         }
-        case SUB_APPEARED: {
+        case APPEARED_POK: {
             t_appeared_pokemon *appearedPokemon = void_a_appeared_pokemon(mensaje);
             log_info(logger, "Mensaje de cola APEPEARED_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo, appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
@@ -526,7 +530,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             free(appearedPokemon);
             break;
         }
-        case SUB_CATCH: {
+        case CATCH_POK: {
             t_catch_pokemon *catchPokemon = void_a_catch_pokemon(mensaje);
             log_info(logger, "Mensaje de cola CATCH_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo,
@@ -535,14 +539,14 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             free(catchPokemon);
             break;
         }
-        case SUB_CAUGHT: {
+        case CAUGHT_POK: {
             t_caught_pokemon *caughtPokemon = void_a_caught_pokemon(mensaje);
             log_info(logger, "Mensaje de cola CAUGHT_POKEMON Id correlativo: %d\n Fue atrapado: %d\n", id_correlativo,
                      caughtPokemon->atrapado);
             free(caughtPokemon);
             break;
         }
-        case SUB_GET: {
+        case GET_POK: {
             t_get_pokemon *getPokemon = void_a_get_pokemon(mensaje);
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
                      getPokemon->nombre_pokemon);
@@ -550,7 +554,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             free(getPokemon);
             break;
         }
-        case SUB_LOCALIZED: {
+        case LOCALIZED_POK: {
             t_localized_pokemon *localizedPokemon = void_a_localized_pokemon(mensaje);
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);

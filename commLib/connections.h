@@ -303,4 +303,36 @@ t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
  * */
 unsigned long unix_epoch();
 
+
+/**
+ * @return tamanio de new_pokemon
+ * */
+size_t sizeof_new_pokemon(t_new_pokemon* estructura);
+
+/**
+ * @return tamanio de appeared_pokemon
+ * */
+size_t sizeof_appeared_pokemon(t_appeared_pokemon* estructura);
+
+/**
+ * @return tamanio de get_pokemon
+ * */
+size_t sizeof_get_pokemon(t_get_pokemon* estructura);
+
+/**
+ * @return tamanio de localized_pokemon
+ * */
+size_t sizeof_localized_pokemon(t_localized_pokemon* estructura);
+
+/**
+ * @return tamanio de catch_pokemon
+ * */
+size_t sizeof_catch_pokemon(t_catch_pokemon* estructura);
+
+/**
+ * @return tamanio de caught_pokemon
+ * */
+size_t sizeof_caught_pokemon(t_caught_pokemon* estructura);
+
+
 #endif

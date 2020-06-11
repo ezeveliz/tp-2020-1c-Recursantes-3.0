@@ -86,12 +86,9 @@ void *server_function(void *arg) {
 
     //--Funcion que se ejecuta cuando se pierde la conexion con un cliente
     void lost(int fd, char *ip, int port) {
-        if(&fd == null && ip == null && &port == null){
-            log_info(logger, "Se perdió una conexión");
-            //Cierro la conexión fallida
-            log_info(logger, "Cerrando conexión");
-            close(fd);
-        }
+        //Cierro la conexión fallida
+        log_info(logger, "Se perdió una conexión");
+        close(fd);
     }
 
     //--funcion que se ejecuta cuando se recibe un nuevo mensaje de un cliente ya conectado

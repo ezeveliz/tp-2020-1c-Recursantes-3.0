@@ -7,7 +7,7 @@
 t_config *archConfig;
 t_log *logger;
 
-//TODO: Modificar los logs deacuerdo al enunciado
+//TODO: Revisar suscripcion y probarla con el broker
 
 int main(int argc, char *argv[]) {
 
@@ -367,7 +367,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
         return -1;
     }
 
-    log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
+    //log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
     close_socket(server_socket);
     return 1;
 
@@ -511,7 +511,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     switch (buffer_header->type) {
         case SUB_NEW: {
             t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
-            log_info(logger, "NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
+            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
                      id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
                      newPokemon->pos_y);
             free(newPokemon->nombre_pokemon);
@@ -520,7 +520,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case SUB_APPEARED: {
             t_appeared_pokemon *appearedPokemon = void_a_appeared_pokemon(mensaje);
-            log_info(logger, "APEPEARED_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
+            log_info(logger, "Mensaje de cola APEPEARED_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo, appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
             free(appearedPokemon->nombre_pokemon);
             free(appearedPokemon);
@@ -528,7 +528,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case SUB_CATCH: {
             t_catch_pokemon *catchPokemon = void_a_catch_pokemon(mensaje);
-            log_info(logger, "CATCH_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
+            log_info(logger, "Mensaje de cola CATCH_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo,
                      catchPokemon->nombre_pokemon, catchPokemon->pos_x, catchPokemon->pos_y);
             free(catchPokemon->nombre_pokemon);
@@ -537,14 +537,14 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case SUB_CAUGHT: {
             t_caught_pokemon *caughtPokemon = void_a_caught_pokemon(mensaje);
-            log_info(logger, "CAUGHT_POKEMON Id correlativo: %d\n Fue atrapado: %d\n", id_correlativo,
+            log_info(logger, "Mensaje de cola CAUGHT_POKEMON Id correlativo: %d\n Fue atrapado: %d\n", id_correlativo,
                      caughtPokemon->atrapado);
             free(caughtPokemon);
             break;
         }
         case SUB_GET: {
             t_get_pokemon *getPokemon = void_a_get_pokemon(mensaje);
-            log_info(logger, "GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
+            log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
                      getPokemon->nombre_pokemon);
             free(getPokemon->nombre_pokemon);
             free(getPokemon);
@@ -552,7 +552,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case SUB_LOCALIZED: {
             t_localized_pokemon *localizedPokemon = void_a_localized_pokemon(mensaje);
-            log_info(logger, "GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
+            log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
             free(localizedPokemon->nombre_pokemon);
             free(localizedPokemon);

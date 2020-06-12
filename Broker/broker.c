@@ -709,3 +709,31 @@ void asignar_particion(particion* nueva_particion){
     }
 }
  */
+
+// Ordena las particiones y mergea las particiones libres
+void ordenar_particiones(){
+    bool particion_anterior(particion* particion_antes, particion* particion_despues) {
+        return particion_antes->base < particion_despues->base;
+    }
+
+    list_sort(PARTICIONES, (void*) particion_anterior);
+
+    mergear_particiones_libres();
+    return;
+}
+
+// Recorro la tabla, si encuentro dos particiones libres consecutivas las mergeo
+void mergear_particiones_libres(){
+    int size = list_size(PARTICIONES);
+    for(int i=0; i<size; i++){
+        particion* una_particion = list_get(PARTICIONES, i);
+        particion* siguiente_particion = list_get(PARTICIONES, i + 1);
+
+        if (una_particion->libre && siguiente_particion->libre){
+            una_particion->tam += siguiente_particion->tam;
+            list_remove(PARTICIONES, i+1);
+            free(siguiente_particion);
+        }
+    }
+    return;
+}

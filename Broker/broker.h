@@ -86,7 +86,7 @@ t_list* MENSAJE_SUBSCRIPTORE;
 int IDENTIFICADOR_MENSAJE;
 
 
-typedef struct {
+typedef struct particion {
     int base;
     int tam;
     bool libre;

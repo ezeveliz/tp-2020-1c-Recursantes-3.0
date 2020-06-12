@@ -214,7 +214,7 @@ void* subscribe_to_queue_thread(void* arg) {
                         pthread_mutex_lock(&mutex_pokemon);
                         list_add(pokemons, pokemon);
                         pthread_mutex_unlock(&mutex_pokemon);
-                        sem_post(&s_cantidad_pokemons);
+                        sem_post(s_cantidad_pokemons);
                         cant --;
                     }
 
@@ -998,8 +998,7 @@ int distancia(Coordenada actual, Coordenada siguiente) {
 
 bool objetivos_cumplidos(Entrenador* entrenador){
 
-    //TODO: Crear un vector de booleanos del tamanio del diccionario e ir guardando el resultado de dictionary_has_key
-    // -Verificar tambien los valores, se viene un lindo monstruo
+    //TODO: verificar las cantidades de stock de pokemons y objetivos
 
     //Creo un vector de booleanos del tamanio del diccionario de objetivos
     int tamanio_dic = dictionary_size(entrenador->objetivos_particular);
@@ -1011,7 +1010,7 @@ bool objetivos_cumplidos(Entrenador* entrenador){
         return false;
     }else{
         //Le asgino al vector de booleanos el resultado de dictionary_has_key
-        void* iterador(char* key, void* value){
+        void iterador(char* key, void* value){
            objetivos[count] =  dictionary_has_key(entrenador->stock_pokemons, key) && dictionary_get(entrenador->stock_pokemons,key) == *(int*) value;
            count++;
         }
@@ -1022,7 +1021,6 @@ bool objetivos_cumplidos(Entrenador* entrenador){
             if(objetivos[i] == false)
                 return false;
         }
-
 
     }
 

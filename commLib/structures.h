@@ -28,6 +28,7 @@ typedef enum _MessageType {
     APPEARED_POK, // Tambien aplica a GameBoy-Team
     LOCALIZED_POK,
     CAUGHT_POK,
+    ACK,
 } MessageType;
 
 /**

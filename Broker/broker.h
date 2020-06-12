@@ -24,7 +24,7 @@ typedef struct BrokerCFG {
     char* mem_algorithm;
     char* mem_swap_algorithm;
     char* free_partition_algorithm;
-    int broker_ip;
+    char* broker_ip;
     int broker_port;
     int compactation_freq;
     char* log_file;
@@ -85,12 +85,6 @@ void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub);
 void* asignar_puntero_a_memoria();
-size_t sizeof_new_pokemon(t_new_pokemon* estructura);
-size_t sizeof_appeared_pokemon(t_appeared_pokemon* estructura);
-size_t sizeof_get_pokemon(t_get_pokemon* estructura);
-size_t sizeof_localized_pokemon(t_localized_pokemon* estructura);
-size_t sizeof_catch_pokemon(t_catch_pokemon* estructura);
-size_t sizeof_caught_pokemon(t_caught_pokemon* estructura);
 subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket);
 bool existe_sub(int id, t_list* cola);
 void subscriptor_delete(int id, t_list* cola);
@@ -100,4 +94,11 @@ mensaje* find_mensaje(int id);
 subscriptor* find_subscriptor(int id);
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje);
 void recursar_operativos();
+void mandar_mensaje(void* coso);
+void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub);
+mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream);
+void* flag_enviado(uint32_t id_sub, uint32_t id_men);
+void* flag_ack(uint32_t id_sub, uint32_t id_men);
+int send_message_test(t_paquete* paquete, int socket);
+
 #endif //TEAM_BROKER_H

@@ -27,32 +27,34 @@
 #define PARAMETROS_TEAM_APPEARED 6
 #define PARAMETROS_GAMECARD_NEW 8
 #define PARAMETROS_GAMECARD_CATCH 7
-#define PARAMETROS_GAMECARD_GET 4
-#define PARAMETROS_SUSCRIPCION 3
+#define PARAMETROS_GAMECARD_GET 5
+#define PARAMETROS_SUSCRIPCION 4
 
 /*
  * Funciones de funcionamiento
  */
-void broker_distribuidor(int , char** );
+void broker_distribuidor( int , char** );
 
-void team_distribuidor(int , char** );
+void team_distribuidor( int , char** );
 
-void gamecard_distribuidor(int , char** );
+void gamecard_distribuidor( int , char** );
 
-void suscribir(char* ,char* );
+void suscribir( char* ,char* );
 
-int envio_mensaje(t_paquete*, char* , uint32_t);
+int envio_mensaje( t_paquete*, char* , uint32_t );
 
-void mensaje_proceso(int, t_paquete* );
+int mensaje_proceso( int, t_paquete* );
 
 /*
  * Funciones auxiliares
  */
-int str2Proces (const char*);
+int str2Proces ( const char*);
 
-int str2Msj (const char* );
+int str2Msj ( const char* );
 
-int okFailToInt(char* );
+int str2Queue ( const char* );
+
+int okFailToInt( char* );
 
 void msj_error();
 
@@ -60,15 +62,15 @@ void msj_error();
  * Funciones tamanio
  */
 
-int size_t_new_pokemon(t_new_pokemon* );
+int size_t_new_pokemon( t_new_pokemon* );
 
-int size_t_appeared_pokemon(t_appeared_pokemon*);
+int size_t_appeared_pokemon( t_appeared_pokemon* );
 
-int size_t_catch_pokemon(t_catch_pokemon*);
+int size_t_catch_pokemon( t_catch_pokemon* );
 
-int size_t_caught_pokemon(t_caught_pokemon*);
+int size_t_caught_pokemon( t_caught_pokemon* );
 
-int size_t_get_pokemon(t_get_pokemon*);
+int size_t_get_pokemon( t_get_pokemon* );
 
 /*
  * Funciones de tiempo
@@ -82,6 +84,8 @@ void timer(int);
  * Funciones para suscribirme
  */
 
-int subscribe_to_queue(MessageType);
+void logear_mensaje( MessageHeader*, t_list* );
 
-void serverFunction();
+int crear_broker_socket();
+
+int suscribir_broker(int ,char *);

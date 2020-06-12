@@ -55,19 +55,22 @@ t_file* open_tall_grass(char* path);
 int close_tall_grass( t_file * fd );
 char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion);
 int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo);
+int truncate_tall_grass(t_file* archivo, uint32_t off_set);
+int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte);
 
 //Laburan sobre metadata archivo
 int next(t_file* archivo);
 int set_estado_archivo(FILE* archivo,char estado);
 void agregar_byte_archivo(t_file* archivo, int cantidad);
+void disminuir_byte_archivo(t_file* archivo, int cantidad);
 void agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
-
+void sacar_bloques(t_file* archivo,uint32_t cantidad);
 
 //Funciones para obtener distintos elementos del fileSystem
 int obtener_cantidad_bloques();
 int obtener_tamanio_bloques();
 t_list* obtener_bloques_libres(int cantidad_pedida);
-FILE* obtener_file_bloque(int numero_bloque);
+FILE* obtener_file_bloque(int numero_bloque,char* flag);
 int obtener_bloque(char* bloques,int posicion);
 
 //Funciones sobre metadata

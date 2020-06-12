@@ -7,8 +7,6 @@
 t_config *archConfig;
 t_log *logger;
 
-//TODO: Revisar suscripcion y probarla con el broker
-
 int main(int argc, char *argv[]) {
 
     archConfig = config_create("/home/emi/Documentos/Facultad /Operativos/TP/tp-2020-1c-Recursantes-3.0/Gameboy/gameboy_config");
@@ -513,6 +511,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
 
     switch (buffer_header->type) {
         case NEW_POK: {
+            //TODO: Ver esto mañana
             //t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
 //            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
 //                     id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,

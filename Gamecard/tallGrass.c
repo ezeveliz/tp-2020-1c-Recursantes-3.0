@@ -4,23 +4,28 @@
 
 #include "tallGrass.h"
 
-//TODO_ Revisar esto
+//TODO: Revisar suscripcion y probarla con el broker
+
 char* carpeta_montaje;
 
 int main(){
     montar("..");
     t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
-    char* palabra = "aaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
+    char* palabra = "aaaaaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
     write_tall_grass(archivo, palabra , strlen(palabra), 0);
     palabra = "bbbbbbb";// No tiene que agregar ninguno
     write_tall_grass(archivo, palabra , strlen(palabra), 5);
-    char* algo = read_tall_grass(archivo,5,2);
-    printf("%s",algo);
-    free(algo);
-    free(archivo->path);
-    free(archivo->metadata->bloques);
-    free(archivo->metadata);
-    free(archivo);
+    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
+    delet_tall_grass(archivo, 9, 26);
+    printf("\n------------ \n");
+    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
+//    char* algo = read_tall_grass(archivo,5,2);
+//    printf("%s",algo);
+//    free(algo);
+//    free(archivo->path);
+//    free(archivo->metadata->bloques);
+//    free(archivo->metadata);
+//    free(archivo);
 
 }
 
@@ -385,8 +390,6 @@ int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_d
     return -1;
 }
 
-
-
 int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo){
 
     int exedente_byte = (archivo->metadata->size) - posicion_dentro_archivo;
@@ -406,7 +409,7 @@ int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escr
         //Obtengo el primer bloque en el que voy a escribir
         nro_bloque_uso = nro_bloque_ant= next(archivo);
         //Obtengo su file descriptor
-        file_bloque_uso = obtener_file_bloque(nro_bloque_uso);
+        file_bloque_uso = obtener_file_bloque(nro_bloque_uso,"r+");
 
         //Itero por cada byte a escribir
         for(int i = 0; i < size_a_escribir; i++){
@@ -414,7 +417,7 @@ int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escr
             //Verifico que siga siendo el mismo bloque sino cambio su archivo
             if(nro_bloque_uso != nro_bloque_ant){
                 fclose(file_bloque_uso);
-                file_bloque_uso = obtener_file_bloque(nro_bloque_uso);
+                file_bloque_uso = obtener_file_bloque(nro_bloque_uso,"r+");
                 nro_bloque_ant = nro_bloque_uso;
             }
             //Calculo la poiscion relativa dentro del archivo de bloque
@@ -473,6 +476,7 @@ int next(t_file* archivo){
 
     return nro_bloque_actual;
 }
+
 void agregar_bloque_archivo(t_file* archivo, uint32_t bloque){
     t_config* metadata = config_create(archivo->path);
     char* blocks = config_get_string_value(metadata,"BLOCKS");
@@ -529,13 +533,31 @@ void agregar_byte_archivo(t_file* archivo, int cantidad){
     config_destroy(metadata);
     free(size);
 }
-FILE* obtener_file_bloque(int numero_bloque){
+
+void disminuir_byte_archivo(t_file* archivo, int cantidad){
+    //Abro el archivo de metadata como un t_config
+    //Me aprobecho de eso para simplificar la cosa
+    t_config* metadata = config_create(archivo->path);
+    int size_anterior = config_get_int_value(metadata,"SIZE");
+    char* size = string_itoa(size_anterior - cantidad);
+    //Modifico el t_config con el nuevo valor
+    config_set_value(metadata,"SIZE", size);
+    //modifico la estructura t_file tambien
+    archivo->metadata->size = config_get_int_value(metadata,"SIZE");
+    //Salvo el archivo
+    config_save(metadata);
+    //Libero el t_config
+    config_destroy(metadata);
+    free(size);
+}
+
+FILE* obtener_file_bloque(int numero_bloque,char* flag){
     char* path_bloques = obtener_path_blocks();
     char* numero_bloque_s = string_itoa(numero_bloque) ;
     //Genero el path del bloque
     char* nombre_archivo_bloque = string_from_format("%s/%s%s",path_bloques,numero_bloque_s,".bin");
     //Lo abro para escribir
-    FILE * archivo_bloque = fopen(nombre_archivo_bloque,"r+");
+    FILE * archivo_bloque = fopen(nombre_archivo_bloque,flag);
     //Libero
     free(path_bloques);
     free(numero_bloque_s);
@@ -544,7 +566,6 @@ FILE* obtener_file_bloque(int numero_bloque){
     //Retorno el file descriptor
     return archivo_bloque;
 }
-
 
 //Obtengo el bloque de un array en una determinada posicion
 int obtener_bloque(char* bloques,int posicion){
@@ -649,14 +670,14 @@ char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion){
 
     //Busco el bloque correspondiente y abro el archivo de ese bloque
     nro_bloque_uso = nro_bloque_ant= next(archivo);
-    file_bloque_uso = obtener_file_bloque(nro_bloque_uso);
+    file_bloque_uso = obtener_file_bloque(nro_bloque_uso,"r+");
 
     //Itero por cada byte a leer
     for(int i = 0; i < size_a_leer; i++){
         //Verifico que siga siendo el mismo bloque sino cambio su archivo
         if(nro_bloque_uso != nro_bloque_ant){
             fclose(file_bloque_uso);
-            file_bloque_uso = obtener_file_bloque(nro_bloque_uso);
+            file_bloque_uso = obtener_file_bloque(nro_bloque_uso,"r+");
             nro_bloque_ant = nro_bloque_uso;
         }
 
@@ -682,6 +703,117 @@ char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion){
 
     return buffer;
 }
+
+int truncate_tall_grass(t_file* archivo, uint32_t off_set){
+    //Seteo la pos al archivo
+    archivo->pos = off_set;
+    //Calculo los bytes a disminuir
+    int bytes_a_disminuir = (archivo->metadata->size - off_set);
+
+    //Calculo los bloques por los q paso la posicion
+    int bloque_usado_en_array = bloque_relativo_archivo(archivo->pos);
+    int nro_bloque_actual = obtener_bloque(archivo->metadata->bloques,bloque_usado_en_array);
+
+    //Obtengo el file del archivo
+    FILE * bloque = obtener_file_bloque(nro_bloque_actual,"r+");
+    //Trunco el archivo del bloque en la pos que debo
+    ftruncate(bloque->_fileno, (archivo->pos % obtener_tamanio_bloques()));
+
+    //voy incrementando la pos en el array de bloques del archivo para liberarlos
+    int i = bloque_usado_en_array +1;
+    int bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, i);
+
+    FILE* bloque_a_liberar_archivo;
+    //Libero hasta que el proximo bloque que quiero obtener me de error
+    while(bloque_a_liberar != -1){
+        //Para eliminar la info los abro como si fueran archivos nuevos
+        bloque_a_liberar_archivo= obtener_file_bloque(bloque_a_liberar,"w+");
+        fclose(bloque_a_liberar_archivo);
+        i++;
+        bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, i);
+    }
+
+    //El unico caso en el que vas a tener uno mas es si borras el archivo, sino siempre va a ser la parte entera
+    // de la divicion
+    int bloques_a_sacar;
+
+
+    bloques_a_sacar = bytes_a_disminuir/obtener_tamanio_bloques();
+
+    if((bytes_a_disminuir % obtener_tamanio_bloques()) != 0){
+        bloques_a_sacar++;
+    }
+
+    sacar_bloques(archivo,bloques_a_sacar);
+    //Disminuyo en la metadata
+    disminuir_byte_archivo(archivo, bytes_a_disminuir);
+    return bytes_a_disminuir;
+}
+
+//Funcion para sacar el ultimo bloque de la metadata del archivo
+void sacar_bloques(t_file* archivo, uint32_t cantidad){
+    t_config* metadata = config_create(archivo->path);
+    char* blocks = config_get_string_value(metadata,"BLOCKS");
+    char* bloques_final = malloc(strlen(archivo->path) + 1);
+    strcpy(bloques_final,archivo->metadata->bloques);
+    char* bloques_abiertos;
+
+    for(int i = 0; i < cantidad; i++) {
+        //Controlo que el array de bloques no este vacio
+        if (strlen(bloques_final) != 2) {
+
+            //controlo que haya un solo elemento y lo scao
+            if (strlen(bloques_final) == 3) {
+                bloques_abiertos = string_substring(bloques_final, 0, string_length(bloques_final) - 2);
+                // Si hay mas de uno lo saco a el y a su coma
+            } else {
+                bloques_abiertos = string_substring(bloques_final, 0, string_length(bloques_final) - 3);
+            }
+
+            strcpy(bloques_final,bloques_abiertos);
+            //Concateno el corchete para cerrar el array
+            string_append(&bloques_final,"]");
+            free(bloques_abiertos);
+        }
+    }
+        //Libero el array viejo
+        free(archivo->metadata->bloques);
+        //Asigno version nueva ya guardada de bloques
+        archivo->metadata->bloques = bloques_final;
+
+        //Lo abro como config seteo el nuevo array, guardo en archivo y libero
+        config_set_value(metadata,"BLOCKS", bloques_final);
+        config_save(metadata);
+
+    config_destroy(metadata);
+
+}
+
+int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) {
+    char *caracter_a_copiar;
+
+    for (int i = 0; i < cantidad_byte && (off_set + cantidad_byte + i) < (archivo->metadata->size); i++) {
+        if ((off_set + cantidad_byte + i) < archivo->metadata->size) {
+            caracter_a_copiar = read_tall_grass(archivo, 1, (off_set + cantidad_byte + i));
+            write_tall_grass(archivo, caracter_a_copiar, 1, off_set + i);
+            free(caracter_a_copiar);
+        }
+
+    }
+    //Si la cantidad de bytes que queres borrar rebasa al archivo trunca en una posicion menor
+    //Para evitar eso pongo una validacion
+    int pos_truncar;
+
+    if((archivo->metadata->size - cantidad_byte) > off_set){
+        pos_truncar = archivo->metadata->size - cantidad_byte;
+    }else{
+        pos_truncar = off_set;
+    }
+
+    return truncate_tall_grass(archivo,pos_truncar);
+
+}
+
 int rmfile_tall_grass(){
 /*
  * NO creo que sea necesaria esta funcion
@@ -749,7 +881,6 @@ int liberar_bloques(t_list* bloques_a_liberar){
         return -1;
     }
 }
-
 
 t_metadata* obtener_metadata_archivo(char* path){
     //Trato a la metadata del archivo como un config

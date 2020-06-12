@@ -47,8 +47,10 @@ void *server_function(void *arg);
  * Configuration ends
  */
 
+void* MEMORIA_PRINCIPAL;
 
 t_log * logger;
+t_log * tp_logger;
 
 t_list* LIST_NEW_POKEMON;
 t_list* LIST_APPEARED_POKEMON;

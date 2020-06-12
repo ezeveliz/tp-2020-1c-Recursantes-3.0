@@ -37,7 +37,19 @@ int main(int argc, char **argv) {
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
     //tests_broker();
+    particion* nueva_particion = particion_create(0, 3, false);
+    particion* nueva_particion1 = particion_create(3, 4, false);
+    particion* nueva_particion2 = particion_create(7, 2, false);
+    particion* nueva_particion4 = particion_create(9, 2, false);
+    particion* nueva_particion3 = particion_create(11, 7, false);
+    particion* particion_inicial = particion_create(18, 2, true);
 
+    particion_delete(0);
+    particion_delete(7);
+
+    printPartList();
+    particion* encontrada = buscar_particion_libre(2);
+    log_info(logger, "%d", encontrada->base);
     pthread_join(server_thread, NULL);
 
     return EXIT_SUCCESS;
@@ -617,10 +629,10 @@ void particion_delete(int base){
 particion* buscar_particion_libre(int tam){
     if(strcmp(config.free_partition_algorithm, "FF") == 0){
             log_debug(logger, "First fit search starts...");
-            first_fit_search(tam);
+            return first_fit_search(tam);
     }else if (strcmp(config.free_partition_algorithm, "BF") == 0){
             log_debug(logger, "Best fit search starts...");
-            best_fit_search(tam);
+            return best_fit_search(tam);
     }else{
         log_error(logger, "Unexpected algorithm");
     }
@@ -635,7 +647,7 @@ particion* first_fit_search(tam){
             return x;
         }
     }
-    log_warning(logger, "No hay particiones disponibles :|");
+    log_warning(logger, "There are not availables partitions  :|");
     return NULL;
 }
 

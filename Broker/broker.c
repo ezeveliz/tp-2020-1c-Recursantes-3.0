@@ -24,6 +24,10 @@ int main(int argc, char **argv) {
     SUBSCRIPTORES = list_create();
     MENSAJES = list_create();
     MENSAJE_SUBSCRIPTORE = list_create();
+    PARTICIONES = list_create();
+
+
+
 
     // Inicializamos las colas
     LIST_NEW_POKEMON = list_create();
@@ -379,7 +383,16 @@ void printMenSubList(){
 //        printf("id_mensaje: %d, id_co: %d \n", s->id, s->id_correlacional);
 //    }
 //}
-
+void printPartList() {
+    int size = list_size(PARTICIONES);
+    printf("<--------------------------------------------\n");
+    for(int i=0; i<size; i++) {
+        particion *s = list_get(PARTICIONES, i);
+        printf("base: %d, tam: %d, is_free: %s, ultimo_uso: % " PRIu64 "\n", s->base, s->tam,
+               s->libre ? "true" : "false", s->ultimo_uso);
+    }
+    printf("-------------------------------------------->\n");
+}
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
 
@@ -581,14 +594,87 @@ void* flag_ack(uint32_t id_sub, uint32_t id_men){
 // TODO: luego buscar como se usa el list_sort
 // https://github.com/sisoputnfrba/so-commons-library/blob/master/tests/unit-tests/test_list.c
 
-void create_particion(){
-    //hacer el constructor
+particion* particion_create(int base, int tam, bool is_free){
+    particion* nueva_particion = malloc(sizeof(particion));
+
+    nueva_particion->base = base;
+    nueva_particion->tam = tam;
+    nueva_particion->libre = is_free;
+    nueva_particion->ultimo_uso = unix_epoch();
+
+    list_add(PARTICIONES, nueva_particion);
+
+    return nueva_particion;
+}
+
+void particion_delete(int base){
+    for(int i = 0; i<list_size(PARTICIONES);i++){
+        particion* x = list_get(PARTICIONES, i);
+        if(x->base == base){x->libre = true;}
+    }
+}
+
+particion* buscar_particion_libre(int tam){
+    if(strcmp(config.free_partition_algorithm, "FF") == 0){
+            log_debug(logger, "First fit search starts...");
+            first_fit_search(tam);
+    }else if (strcmp(config.free_partition_algorithm, "BF") == 0){
+            log_debug(logger, "Best fit search starts...");
+            best_fit_search(tam);
+    }else{
+        log_error(logger, "Unexpected algorithm");
+    }
+}
+
+particion* first_fit_search(tam){
+    int size = list_size(PARTICIONES);
+    for(int i=0; i<size; i++){
+        particion* x = list_get(PARTICIONES, i);
+        if(x->libre == true && tam <= x->tam ){
+            log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
+            return x;
+        }
+    }
+    log_warning(logger, "No hay particiones disponibles :|");
+    return NULL;
+}
+
+particion* best_fit_search(tam){
+    int size = list_size(PARTICIONES);
+    t_list* candidatos = list_create();
+    for(int i=0; i<size; i++){
+        particion* x = list_get(PARTICIONES, i);
+        if(x->libre == true && tam <= x->tam){
+            log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
+            list_add(candidatos, x);
+        }
+    }
+    log_debug(logger, "Looking for the best fit one..");
+    int candidatos_size = list_size(candidatos);
+    if(candidatos_size != 0){
+        particion* best_fit;
+        int best_fit_diff = 9999;
+        for(int i=0; i<candidatos_size; i++){
+            particion* y = list_get(candidatos, i);
+            int diff = y->tam - tam;
+            if(diff == 0){log_info(logger, "Best fit partition found!(base:%d)", y->base);return y;}
+            if(best_fit_diff > diff){
+                best_fit_diff = diff;
+                best_fit = y;
+            }
+        }
+        log_info(logger, "Best fit partition found!(base:%d)", best_fit->base);
+        return best_fit;
+    }else{
+        log_warning(logger, "There are not availables partitions :|");
+        return NULL;
+    }
 }
 
 /*
  * Se buscará una partición libre que tenga suficiente memoria continua como para contener el valor.
  * En caso de no encontrarla, se pasará al paso siguiente (si corresponde, en caso contrario se pasará al paso 3 directamente).
- * 
+ *
  * Se compactará la memoria y se realizará una nueva búsqueda.
  * En caso de no encontrarla, se pasará al paso siguiente.
  *
@@ -605,7 +691,7 @@ void asignar_particion(particion* nueva_particion){
     if(encontrado){
         cambiar la base y el tamaño de la particion libre
         list_add(PARTICIONES, nueva_particion);
-        ordenar_particiones();
+        ordenar_particiones();//mergear_particiones_libres()
     } else {
 //        INTENTOS++;
     }

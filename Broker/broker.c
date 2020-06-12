@@ -11,8 +11,13 @@ int main(int argc, char **argv) {
     } else {
         cfg_path = strdup(argv[1]);
     }
-    logger = log_create("broker.log", "BROKER", 1, LOG_LEVEL_TRACE);
+    // Logs que piden en el TP
+    tp_logger = log_create("broker.log", "BROKER", 1, LOG_LEVEL_TRACE);
+
+    // Logs propios
+    logger = log_create(".broker-log-propio.log", "BROKER", 1, LOG_LEVEL_TRACE);
     log_info(logger,"Log started.");
+
     set_config();
     log_info(logger,"Configuration succesfully setted.");
 
@@ -21,6 +26,7 @@ int main(int argc, char **argv) {
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
 
+    MEMORIA_PRINCIPAL = malloc(config.mem_size);
     SUBSCRIPTORES = list_create();
     MENSAJES = list_create();
     MENSAJE_SUBSCRIPTORE = list_create();
@@ -96,7 +102,7 @@ void *server_function(void *arg) {
     //--Funcion que se ejecuta cuando se conecta un nuevo programa
     void new(int fd, char *ip, int port) {
         if(&fd != null && ip != null && &port != null) {
-            log_info(logger, "Nueva conexión");
+            log_info(tp_logger, "Se conecta un nuevo proceso");
         }
     }
 
@@ -117,47 +123,48 @@ void *server_function(void *arg) {
             case SUB_NEW:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
-                    log_info(logger, "Nuevo subscriptor de NEW");
+                    log_info(tp_logger, "Nuevo subscriptor de NEW");
                     break;
                 }
 
             case SUB_APPEARED:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
-                    log_info(logger, "Nuevo subscriptor de APPEARED");
+                    log_info(tp_logger, "Nuevo subscriptor de APPEARED");
                     break;
                 }
 
             case SUB_LOCALIZED:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
-                    log_info(logger, "Nuevo subscriptor de LOCALIZED");
+                    log_info(tp_logger, "Nuevo subscriptor de LOCALIZED");
                     break;
                 }
 
             case SUB_CAUGHT:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
-                    log_info(logger, "Nuevo subscriptor de CAUGHT");
+                    log_info(tp_logger, "Nuevo subscriptor de CAUGHT");
                     break;
                 }
 
             case SUB_GET:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
-                    log_info(logger, "Nuevo subscriptor de GET");
+                    log_info(tp_logger, "Nuevo subscriptor de GET");
                     break;
                 }
 
             case SUB_CATCH:;
                 {
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
-                    log_info(logger, "Nuevo subscriptor de CATCH");
+                    log_info(tp_logger, "Nuevo subscriptor de CATCH");
                     break;
                 }
 
             case NEW_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola NEW_POK");
                     // Le llega un un_mensaje
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
 
@@ -181,6 +188,7 @@ void *server_function(void *arg) {
 
             case APPEARED_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola APPEARED_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_appeared_pokemon* appeared_pokemon = void_a_appeared_pokemon(list_get(cosas,1));
 
@@ -204,6 +212,7 @@ void *server_function(void *arg) {
 
             case LOCALIZED_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola LOCALIZED_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_localized_pokemon* localized_pokemon = void_a_localized_pokemon(list_get(cosas,1));
 
@@ -227,6 +236,7 @@ void *server_function(void *arg) {
 
             case CAUGHT_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola CAUGHT_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_caught_pokemon* caught_pokemon = void_a_caught_pokemon(list_get(cosas,1));
 
@@ -250,6 +260,7 @@ void *server_function(void *arg) {
 
             case GET_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola GET_POK");
                     t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,0));
 
                     // Cargamos el un_mensaje en nuestro sistema
@@ -272,6 +283,7 @@ void *server_function(void *arg) {
 
             case CATCH_POK:;
                 {
+                    log_info(tp_logger, "Llega un mensaje a la cola CATCH_POK");
                     t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,0));
 
                     // Cargamos el un_mensaje en nuestro sistema
@@ -508,6 +520,7 @@ void mandar_mensaje(void* cosito){
     add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
 
     if (send_package(paquete, un_subscriptor->socket) > 0){
+        log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
     }
 
@@ -520,7 +533,7 @@ void mandar_mensaje(void* cosito){
 
     if (buffer_header->type == ACK){
         flag_ack(coso->id_subscriptor, coso->id_mensaje);
-        log_info(logger, "Llego el ACK");
+        log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
     } else{
         log_info(logger, "NO AMIGO LPM TE LLEGO ALGO QUE NO ERA UN ACK LISTO CERRAMO ACA");
         exit(-1);
@@ -622,7 +635,10 @@ particion* particion_create(int base, int tam, bool is_free){
 void particion_delete(int base){
     for(int i = 0; i<list_size(PARTICIONES);i++){
         particion* x = list_get(PARTICIONES, i);
-        if(x->base == base){x->libre = true;}
+        if(x->base == base){
+            x->libre = true;
+            log_info(tp_logger, "Se elimina la particion con base %d", x->base);
+        }
     }
 }
 

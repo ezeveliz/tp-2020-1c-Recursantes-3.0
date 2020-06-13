@@ -28,31 +28,9 @@ int main(int argc, char **argv) {
     pthread_detach(server_thread);
 
     for (int i = 0; i < 10; ++i) {
-        // Mando un NEW_POK
-        t_new_pokemon* new_pok = malloc(sizeof(t_new_pokemon));
-        new_pok = create_new_pokemon("Mamame las bolas", 1, 2, 3);
-        t_paquete* paquete = create_package(NEW_POK);
-        size_t tam = sizeof(uint32_t)*4 + new_pok->nombre_pokemon_length;
-        add_to_package(paquete, new_pokemon_a_void(new_pok), tam);
-        send_package(paquete, broker_fd);
-        log_info(logger, "Mando el mensaje de New Pokemon");
-
-        // Trato de recibir el encabezado de la respuesta
-        MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
-        if(receive_header(broker_fd, buffer_header) <= 0) {
-            log_info(logger, "No recibi un header");
-            return false;
-        }
-        if(buffer_header->type == NEW_POK){
-            log_info(logger, "Estoy por recibir el id del mensaje, todo piola");
-        } else {
-            exit(-1);
-        }
-
-        // Recibo el id mensaje
-        t_list* rta_list = receive_package(broker_fd, buffer_header);
-        int id_mensaje_new_pokemon = *(int*) list_get(rta_list, 0);
-        log_info(logger, "Tengo el id de mensaje: %d", id_mensaje_new_pokemon);
+        int broker_socket_mensaje = connect_to_broker();
+        mandar_mensaje();
+        close_socket(broker_socket_mensaje);
     }
 
 
@@ -97,6 +75,7 @@ void server(){
 
 bool set_config(){
 
+    config.id_cliente = 69;
     config.broker_ip = "127.0.0.1";
     config.broker_port = 5002;
     config.cliente_test_ip = "127.0.0.1";
@@ -124,9 +103,7 @@ int subscribir_cola(MessageType cola){
     // Creo un paquete para la suscripcion a una cola
     t_paquete* paquete = create_package(cola);
 
-    int* id = malloc(sizeof(int));
-    *id = 69; // Numero cualquiera
-    add_to_package(paquete, (void*) id, sizeof(int));
+    add_to_package(paquete, (void*) &config.id_cliente, sizeof(int));
 
     // Envio el paquete, si no se puede enviar retorno false
     if(send_package(paquete, broker_fd)  == -1){
@@ -155,4 +132,32 @@ int subscribir_cola(MessageType cola){
     list_destroy_and_destroy_elements(rta_list, element_destroyer);
 
     return rta == 1;
+}
+
+void mandar_mensaje(){
+    // Mando un NEW_POK
+    t_new_pokemon* new_pok = malloc(sizeof(t_new_pokemon));
+    new_pok = create_new_pokemon("Mamame las bolas", 1, 2, 3);
+    t_paquete* paquete = create_package(NEW_POK);
+    size_t tam = sizeof(uint32_t)*4 + new_pok->nombre_pokemon_length;
+    add_to_package(paquete, new_pokemon_a_void(new_pok), tam);
+    send_package(paquete, broker_fd);
+    log_info(logger, "Mando el mensaje de New Pokemon");
+
+    // Trato de recibir el encabezado de la respuesta
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(broker_fd, buffer_header) <= 0) {
+        log_info(logger, "No recibi un header");
+        return;
+    }
+    if(buffer_header->type == NEW_POK){
+        log_info(logger, "Estoy por recibir el id del mensaje, todo piola");
+    } else {
+        exit(-1);
+    }
+
+    // Recibo el id mensaje
+    t_list* rta_list = receive_package(broker_fd, buffer_header);
+    int id_mensaje_new_pokemon = *(int*) list_get(rta_list, 0);
+    log_info(logger, "Tengo el id de mensaje: %d", id_mensaje_new_pokemon);
 }

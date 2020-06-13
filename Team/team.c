@@ -531,6 +531,10 @@ void initialize_structures() {
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
+    // Reservo memoria para el algoritmo de Deadlock
+    thread_deadlock = malloc(sizeof(pthread_t));
+
+    // Levanto el hilo del algoritmo de Deadlock
     pthread_create(thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
 }
 

@@ -56,13 +56,16 @@ t_list* waiting_list;
 t_list* pokemons;
 
 // Lista de pokemons para filtrar los que ya el broker nos envio
-t_list* pokemons_localized;
+t_list* pokemons_received;
 
 // Semaforo Mutex para proteger la lista de pokemones
 pthread_mutex_t mutex_pokemon;
 
 // Semaforo mutex para proteger la lista de espera de respuestas
 pthread_mutex_t mutex_waiting_list;
+
+// Semaforo mutex para proteger la lista de pokemones recibidos(solo nombre)
+pthread_mutex_t mutex_pokemons_received;
 
 // TODO: falta una lista mas, esta lista solo va  tener los pokemones
 //  recibidos(nombre, no estructura) por Localized, ya que segun el enunciado una vez
@@ -199,36 +202,78 @@ void* subscribe_to_queue_thread(void* arg) {
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
         if(receive_header(broker, buffer_header) > 0) {
 
+            char* pokName;
+
             // Recibo la respuesta del Broker
             t_list* rta_list = receive_package(broker, buffer_header);
 
             // La posicion 0 de la lista recibida es siempre el id correlacional correspondiente
             // El resto del mensajes usa las estructuras locas del Broker(detalladas en la commLib)
 
+            // En la posicion 0 viene el id de mensaje correlativo
+            int idCorrelativo = *(int*) list_get(rta_list, 0);
+
+            bool encontrador(void* _nombre) {
+                return string_equals_ignore_case(pokName, (char*)_nombre);
+            }
+
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
             switch (cola) {
+
+                case (APPEARED_POK):;
+
+                    appeared_pokemon(rta_list);
+
+                    break;
+
                 case (LOCALIZED_POK):;
 
-                    // TODO: filtrar los mensajes recibidos aca segun los pokemones que haya recibido con anterioridad
-                    int cant = *(int*) list_get(rta_list, 1);
+                    // Obtengo el paquetito de appeared
+                    t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 1));
 
-                    while(cant > 0) {
-                        Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+                    // Obtengo el nombre de pokemon
+                    pokName = localizedPokemon->nombre_pokemon;
 
-                        pokemon->especie = (char*) list_get(rta_list,0);
-                        pokemon->coordenada.pos_x = *(int*) list_get(rta_list,cant*2);// Suponiendo que la informacion viene: nombre, cant, [coordenadas], esto funciona
-                        pokemon->coordenada.pos_y = *(int*) list_get(rta_list,cant*2 + 1);
+                    // Verifico que no haya recibido el pokemon ya
+                    if (!list_any_satisfy(pokemons_received, encontrador)) {
 
-                        pthread_mutex_lock(&mutex_pokemon);
-                        list_add(pokemons, pokemon);
-                        pthread_mutex_unlock(&mutex_pokemon);
-                        sem_post(s_cantidad_pokemons);
-                        cant --;
+                        // Hallo la cantidad de pokemones recibidos
+                        int cant = localizedPokemon->cantidad_coordenas;
+
+                        // Hallo el array de coordenadas recibidas
+                        int* coordenadas = localizedPokemon->coordenadas;
+
+                        // Itero sobre los pokemones recibidos
+                        while(cant > 0) {
+
+                            // Instancio un nuevo pokemon
+                            Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+
+                            // Seteo los parametros de la estructura Pokemon
+                            pokemon->especie = pokName;
+                            pokemon->coordenada.pos_x = coordenadas[cant * 2];
+                            pokemon->coordenada.pos_y = coordenadas[(cant * 2) + 1];
+
+                            // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
+                            pthread_mutex_lock(&mutex_pokemon);
+                            list_add(pokemons, pokemon);
+                            pthread_mutex_unlock(&mutex_pokemon);
+                            sem_post(s_cantidad_pokemons);
+                            cant --;
+                        }
+
+
+                        list_add(pokemons_received, (void*) pokName);
+
+                        algoritmo_de_cercania();
                     }
-
-                    algoritmo_de_cercania();
                     break;
-                case (CAUGHT_POK):
+
+                case (CAUGHT_POK):;
+
+                    // Obtengo el paquetito de caught
+                    t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(list_get(rta_list, 1));
+
 
                     // TODO: Filtrar los mensajes segun el id correlacional recibido y los que tenga guardados
                     break;
@@ -334,7 +379,7 @@ void initialize_structures() {
     //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa y los que el broker ya nos envio
     pthread_mutex_init(&mutex_pokemon, NULL);
     pokemons = list_create();
-    pokemons_localized = list_create();
+    pokemons_received = list_create();
 
     // Inicializo las listas de estados y otras cosas
     char **ptr = config.posiciones_entrenadores;
@@ -762,6 +807,8 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 }
 
 void appeared_pokemon(t_list* paquete){
+
+    // TODO: implementar validaciones locas
 
     // Id del mensaje, nunca lo usamos
     int id = *(int*)list_get(paquete, 0); // Si es -1, el mensaje viene del GameBoy, sino del Broker

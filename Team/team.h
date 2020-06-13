@@ -192,6 +192,11 @@ void algoritmo_de_cercania();
  */
 void free_resources();
 
+/**
+ * Algoritmo de deadlock
+ */
+void algoritmo_deadlock();
+
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

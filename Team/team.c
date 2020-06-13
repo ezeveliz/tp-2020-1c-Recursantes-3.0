@@ -1,7 +1,7 @@
 #include "team.h"
 
 /**
- * Declaracion de vbles globales
+ * Declaracion de variables globales
  */
 
 // Estructuras de configuracion de Team, la segunda es solo temporal
@@ -24,6 +24,8 @@ t_dictionary* objetivo_global;
 
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
+
+pthread_t* thread_deadlock;
 
 // Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
@@ -443,6 +445,8 @@ void initialize_structures() {
         send_message_thread(pok_void, sizeof_get_pokemon(pok_void), GET_POK, -1);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
+
+    pthread_create(&thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
 }
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
@@ -876,6 +880,20 @@ void free_resources(){
     config_destroy(config_file);
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);
+}
+
+
+void algoritmo_deadlock(){
+
+    sleep(config.tiempo_reconexion);
+
+    bool _entrenadores_sin_margen(void* _entrenador){
+        Entrenador* entrenador = (Entrenador*) _entrenador;
+        return entrenador->cant_objetivos == entrenador->cant_stock;
+    }
+    t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
+
+
 }
 
 //----------------------------------------HELPERS----------------------------------------

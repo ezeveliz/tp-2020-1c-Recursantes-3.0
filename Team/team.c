@@ -378,7 +378,7 @@ void initialize_structures() {
         void iterador_stock(char* clave, void* contenido){
             contador_stock += *(int*) contenido;
         }
-        dictionary_iterator(entrenador->stock_pokemons,iterador_stock);
+        dictionary_iterator(entrenador->stock_pokemons, iterador_stock);
         entrenador->cant_stock = contador_stock;
 
         // Le asigno al entrenador sus coordenadas
@@ -420,7 +420,10 @@ void initialize_structures() {
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
 
-    //Inicializo el semaforo en 0 porque no hay pokemons todavia
+    // Reservo espacio de memoria para el semaforo de la lista de Pokemones
+    s_cantidad_pokemons = malloc(sizeof(sem_t));
+
+    // Inicializo el semaforo en 0 porque no hay pokemons todavia
     sem_init(s_cantidad_pokemons,0,0);
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
@@ -479,7 +482,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
         }
     }
 
-    // Itero la lista de pokemones que posee un entrenador dado, para restarle al objetivo global
+    // Itero la lista de pokemones que posee un ent    renador dado, para restarle al objetivo global
     for (char* pokemon = *pokemon_entrenador; pokemon ; pokemon = *++pokemon_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno
@@ -753,7 +756,7 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 void appeared_pokemon(t_list* paquete){
 
     // Id del mensaje, nunca lo usamos
-    int id = *(int*)list_get(paquete, 0);
+    int id = *(int*)list_get(paquete, 0); // Si es -1, el mensaje viene del GameBoy, sino del Broker
 
     // Contenido del appeared
     void* appeared_void = list_get(paquete, 1);
@@ -1054,14 +1057,34 @@ void caught_pokemon(int tid, int atrapado) {
     // Chequeo si lo atrape
     if (atrapado == si) {
 
-        //
+        // Le aumento el stock en uno al entrenador
+        entrenador->cant_stock += 1;
+
+        char* pok_name = entrenador->pokemon_objetivo->especie;
+
+        // Verifico si existe el pokemon en el stock del entrenador
+        if (dictionary_has_key(entrenador->stock_pokemons, pok_name)) {
+
+            // En este caso existia, le sumo
+            *(int*)dictionary_get(entrenador->stock_pokemons, pok_name) += 1;
+
+            // Si el pokemon no existia en el diccionario, lo agrego
+        } else {
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(entrenador->stock_pokemons, pok_name, (void*) necesidad);
+        }
 
     // En este caso no pude atrapar el pokemon
     } else {
 
-        //
-        entrenador->pokemon_objetivo
+        // Obtengo el pokemon y libero la memoria?
+        Pokemon* pok = entrenador->pokemon_objetivo;
+
     }
+
+    // TODO: decidir que hacer con el pokemon aca
 
     // Ahora el entrenador vuelve al estado block normal
     sem_post(&block_catch_transition[entrenador->tid]);
@@ -1081,29 +1104,15 @@ int distancia(Coordenada actual, Coordenada siguiente) {
 
 bool objetivos_cumplidos(Entrenador* entrenador){
 
-    //TODO: Crear un vector de booleanos del tamanio del diccionario e ir guardando el resultado de dictionary_has_key
-    // -Verificar tambien los valores, se viene un lindo monstruo
+    bool todosCumplen = true;
 
-    //Creo un vector de booleanos del tamanio del diccionario de objetivos
-    int tamanio_dic = dictionary_size(entrenador->objetivos_particular);
-    bool* objetivos = (bool*) malloc( tamanio_dic * sizeof(t_dictionary));
-    int count=0, i=0;
+    // Itero el diccionario de objetivos particular
+    void iterador(char* key, void* value){
 
-    if(dictionary_size(entrenador->objetivos_particular) != dictionary_size(entrenador->stock_pokemons)){
-        //Si ni siquiera tienen la misma cantidad de elementos ni sigo controlando
-        return false;
-    }else{
-        //Le asgino al vector de booleanos el resultado de dictionary_has_key
-        void iterador(char* key, void* value){
-           objetivos[count] =  dictionary_has_key(entrenador->stock_pokemons, key) && (*(int*)dictionary_get(entrenador->stock_pokemons,key) == *(uint32_t*) value);
-           count++;
-        }
-        dictionary_iterator(entrenador->objetivos_particular,iterador);
-
-        //Si en algun elemento del array es false no cumplio con sus objetivos
-        while(objetivos[i] < tamanio_dic){
-            if(objetivos[i] == false)
-                return false;
-        }
+        // Por cada iteracion verifico que se cumplan las condiciones, si alguna vez no se cumplen, va a dar false para siempre jua jua jua(risa maligna)
+        todosCumplen &= (dictionary_has_key(entrenador->stock_pokemons, key) && (*(int*)dictionary_get(entrenador->stock_pokemons,key) == *(uint32_t*) value));
     }
+    dictionary_iterator(entrenador->objetivos_particular, iterador);
+
+    return todosCumplen;
 }

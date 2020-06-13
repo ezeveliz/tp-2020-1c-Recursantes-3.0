@@ -8,7 +8,6 @@
 #define BLOCKS 64
 #define MAGIC_NUMBER "TALL_GRASS"
 
-
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 #include <commons/collections/list.h>

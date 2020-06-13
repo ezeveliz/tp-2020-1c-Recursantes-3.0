@@ -932,6 +932,7 @@ void free_resources(){
 
 void algoritmo_deadlock(){
 
+
     sleep(config.tiempo_reconexion);
 
     bool _entrenadores_sin_margen(void* _entrenador){

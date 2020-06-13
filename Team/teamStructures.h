@@ -95,6 +95,9 @@ typedef enum razon_movimiento{
  */
 typedef struct tEntrenador{
     int tid;
+    int acumulado_actual; // Aca voy acumulando los ciclos de la rafaga actual
+    int ultima_ejecucion; // Aca tengo guardado solo el largo de la ultima rafaga
+    float ultimo_estimado; // Aca guardo el ultimo estimado del planificador
     Coordenada pos_actual; // Posicion en la que se encuentra actualmente
     RazonMovimiento razon_movimiento; // Razon por la que se esta ejecutando el hilo del entrenador
     t_dictionary* objetivos_particular; // Objetivos del entrenador

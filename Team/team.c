@@ -291,7 +291,7 @@ void* subscribe_to_queue_thread(void* arg) {
                     pthread_mutex_lock(&mutex_waiting_list);
                     bool hallar_entrenador(void* _mensaje) {
                         WaitingMessage* mensaje = (WaitingMessage*)_mensaje;
-                        return mensaje->id_correlativo === idCorrelativo;
+                        return mensaje->id_correlativo == idCorrelativo;
                     }
                     WaitingMessage* mensaje = (WaitingMessage*)list_remove_by_condition(waiting_list, hallar_entrenador);
                     pthread_mutex_unlock(&mutex_waiting_list);
@@ -440,6 +440,9 @@ void initialize_structures() {
         entrenador->estado = NEW;
         entrenador->objetivos_particular = dictionary_create();
         entrenador->stock_pokemons = dictionary_create();
+        entrenador->acumulado_actual = 0;
+        entrenador->ultima_ejecucion = 0;
+        entrenador->ultimo_estimado = 0;
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -612,9 +615,6 @@ void* trainer_thread(void* arg){
         // Bloqueo esperando a que el planificador decida que ejecute
         sem_wait( &ready_exec_transition[entrenador->tid] );
 
-        // TODO: hay que ir acumulando el tiempo ejecutado en algun lugar para los calculos del SJF y del RR
-        // Hallo la distancia hasta el destino, duermo al hilo durante x cantidad de segundos para simular ciclos de CPU
-
         int distancia_a_viajar = 0;
 
         // Segun la razon de movimiento voy a calcular la distancia al objetivo de una manera diferente
@@ -629,9 +629,15 @@ void* trainer_thread(void* arg){
                 break;
         }
 
-        // Esto es solo valido para FIFO y SJF-SD, en RR debo suspender el ciclo despues de cumplido el Q y en SJF-CD(verificar en cada iteracion?) no se
+        // Itero tantas veces como unidades se tenga que mover el entrenador a su posicion destino
         while (distancia_a_viajar > 0) {
+
+            // Duermo el entrenador durante un ciclo de CPU
             sleep(config.retardo_ciclo_cpu);
+
+            // Acumulo un ciclo de ejecucion
+            entrenador->acumulado_actual += 1;
+
             distancia_a_viajar--;
         }
 
@@ -642,6 +648,10 @@ void* trainer_thread(void* arg){
             case (CATCH):;
 
                 // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
+
+                // Seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                entrenador->ultima_ejecucion = entrenador->acumulado_actual;
+                entrenador->acumulado_actual = 0;
 
                 // Me quito de la lista de ejecucion
                 list_remove(estado_exec, 0);
@@ -665,16 +675,24 @@ void* trainer_thread(void* arg){
             // Estaba viajando para intercambiar un Pokemon
             case (RESOLUCION_DEADLOCK):;
 
-                // TODO: fijarse que esto tambien deberia ser interrumpible por el planificador
-
-                // El intercambio ocupa 5 ciclos de CPU
+                // Simulo la ejecucion de 5 ciclos de CPU para el intercambio
                 int retardo_simulacion = 5;
                 while (retardo_simulacion > 0) {
+
+                    // Duermo durante el tiepo que ocupa un ciclo de ejecucion
                     sleep(config.retardo_ciclo_cpu);
+
+                    // Acumulo uno de los ciclos del intercambio
+                    entrenador->acumulado_actual += 1;
+
                     retardo_simulacion--;
                 }
 
-                // Terminar de implementar
+                // Seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                entrenador->ultima_ejecucion = entrenador->acumulado_actual;
+                entrenador->acumulado_actual = 0;
+
+                // TODO: ver que carajohacer aca
                 break;
         }
 
@@ -988,7 +1006,7 @@ void algoritmo_deadlock(){
         Entrenador* entrenador_segundo = (Entrenador*) list_get(entrenadores_sin_margen,cont);
 
         //TODO: Ver si esta asquerosidad se puede achicar
-        if(dictionary_contains(entrenador_primero->objetivos_particular, entrenador_segundo->stock_pokemons &&
+        if(dictionary_contains(entrenador_primero->objetivos_particular, entrenador_segundo->stock_pokemons) &&
         dictionary_contains(entrenador_segundo->objetivos_particular, entrenador_primero->stock_pokemons)){
             //Quiere decir que el segundo entrenador tiene en stock un pokemon objetivo del primer entrenador y visceversa
 

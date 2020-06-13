@@ -79,7 +79,13 @@ bool subscribe_to_queue(int broker, MessageType cola);
 void* server_function(void* arg);
 
 /**
- * Inicializo las estructuras necesarias TODO: detallar
+ * Inicializo cosas:
+ *  -   Listas de estados
+ *  -   Diccionario de objetivos globales
+ *  -   Semaforos para proteccion de listas
+ *  -   Entrenadores, con su ubicacion, objetivos particulares, el estado inicial, un tid falso(el contador en un for)
+ *  -   Semaforos para sincronizacion de entrenadores
+ *  -   Mando los mensajes de get_pok segun las necesidades globales
  */
 void initialize_structures();
 
@@ -169,7 +175,7 @@ void lost(int socket_server, char * ip, int port);
 void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruct);
 
 /**
- * Se llama a esta funcion cuando el servidor recibe un APPEARD
+ * Se llama a esta funcion cuando el servidor recibe un APPEARED
  * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
  */
 void appeared_pokemon(t_list* paquete );
@@ -264,7 +270,7 @@ void exec_default(MessageType header, int tid);
  * @param tid, tid del entrenador que mando originalmente el mensaje
  * @param atrapado, respuesta que me mando el Broker, un 0 es no atrapado y un 1 es atrapado
  */
-void caught_pokemon(int tid, uint32_t atrapado);
+void caught_pokemon(int tid, int atrapado);
 
 /**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.

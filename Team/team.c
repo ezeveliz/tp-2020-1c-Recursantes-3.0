@@ -34,6 +34,9 @@ sem_t* ready_exec_transition;
 // Array de semaforos que bloquean a los hilos para pasar de block a ready
 sem_t* block_ready_transition;
 
+// Array de semaforos que bloquean a los hilos que estan esperando un catch
+sem_t* block_catch_transition;
+
 //Semaforo que se encarga de verificar que la lista de pokemons no este vacia
 sem_t* s_cantidad_pokemons;
 
@@ -218,7 +221,7 @@ void* subscribe_to_queue_thread(void* arg) {
                         cant --;
                     }
 
-                    algoritmo_de_cercania(NULL);
+                    algoritmo_de_cercania();
                     break;
                 case (CAUGHT_POK):
 
@@ -401,25 +404,36 @@ void initialize_structures() {
     ready_exec_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
     // Creo un array de semaforos para bloquear la transicion block - ready
     block_ready_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
+    // Creo un array de semaforos para bloquear los entrenadores que esten esperando un catch
+    block_catch_transition = (sem_t*) malloc(tamanio_entrenadores * sizeof(sem_t));
 
     // Itero los entrenadores, inicializamos los semaforos y el hilo correspondiente a cada uno
     for (int count = 0; count < tamanio_entrenadores; count++) {
 
-        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
+        // Inicializo los semaforos correspondientes al entrenador en 0 para que quede bloqueado
         sem_init(&new_ready_transition[count], 0, 0);
-        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
         sem_init(&ready_exec_transition[count], 0, 0);
-        // Inicializo el semaforo correspondiente al entrenado en 0 para que quede bloqueado
         sem_init(&block_ready_transition[count], 0, 0);
+        sem_init(&block_catch_transition[count], 0, 0);
+
         Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
+
     //Inicializo el semaforo en 0 porque no hay pokemons todavia
-    sem_init(&s_cantidad_pokemons,0,0);
+    sem_init(s_cantidad_pokemons,0,0);
 
     // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
     void iterador_pokemons(char* clave, void* contenido){
-        send_message_thread((void*) clave, string_length(clave), GET_POK, -1);
+
+        // Creo la estructura de pokemon para mandarle al Broker
+        t_get_pokemon* get_pok = create_get_pokemon(clave);
+
+        // Paso la estructura a void
+        void* pok_void = get_pokemon_a_void(get_pok);
+
+        // Envio el get al Broker con un hilo
+        send_message_thread(pok_void, sizeof_get_pokemon(pok_void), GET_POK, -1);
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 }
@@ -490,8 +504,10 @@ void* trainer_thread(void* arg){
     // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
     sem_wait( &new_ready_transition[entrenador->tid] );
 
+    // Reservo memoria, para el tiempo de llegada, aca guardo cuando entra a Ready
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
 
+    // Me quedo iterando hasta que este en estado Finish
     while(entrenador->estado != FINISH){
 
         // Marco el momento en que el entrenador llego a Ready
@@ -511,9 +527,11 @@ void* trainer_thread(void* arg){
         // Segun la razon de movimiento voy a calcular la distancia al objetivo de una manera diferente
         switch(entrenador->razon_movimiento) {
             case (CATCH):;
+
                 distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->pokemon_objetivo->coordenada);
                 break;
             case (RESOLUCION_DEADLOCK):;
+
                 distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
                 break;
         }
@@ -535,20 +553,19 @@ void* trainer_thread(void* arg){
                 // Me quito de la lista de ejecucion
                 list_remove(estado_exec, 0);
 
-                // Me asigno la razon de bloqueo ESPERANDO_CATCH y me agrego a l alista de bloqueo
+                // Me asigno la razon de bloqueo ESPERANDO_CATCH y me agrego a la lista de bloqueo
                 entrenador->razon_bloqueo = ESPERANDO_CATCH;
                 list_add(estado_block, entrenador);
 
                 // Creo la estructura t_catch_pokemon para enviarle al Broker
                 Pokemon* pok = entrenador->pokemon_objetivo;
-                t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, 0, 1); // Reemplazar las coordenadas estas por las del pokemon, ahora lo puse asi para que no rompa porque esa funcion espera uint_32
+                t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, pok->coordenada.pos_x, pok->coordenada.pos_y);
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
-                //TODO: @EZE fijate si estan bien los paramentros porque antes no compilaba, entiendo que si pero por las dudas
-                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof(t_catch_pokemon), CATCH_POK, entrenador->tid);
+                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
 
                 // Me bloqueo esperando la rta del Broker
-                // TODO: crear semaforo para transicion esperando catch a bloqueado normal
+                sem_wait(&block_catch_transition[entrenador->tid]);
 
                 break;
 
@@ -568,14 +585,29 @@ void* trainer_thread(void* arg){
                 break;
         }
 
-        // TODO: implementar esta funcion
         // Verifico si el entrenador completo sus objetivos
         //bool objetivos_cumplidos = false;
         if (objetivos_cumplidos(entrenador)) {
 
-            // TODO: quitarlo de la lista en la que este
-            //  - la de bloqueado si estaba esperando un catch
-            //  - o la de ejecucion si estaba intercambiando
+            // Dependiendo de la razon del movimiento me tengo que quitar de una lista distinta
+            switch (entrenador->razon_movimiento) {
+
+                // Si esperaba un catch me tengo que quitar de la lista de Bloqueados
+                case (CATCH):;
+
+                    bool removedor(void* _trainer) {
+                        Entrenador* trainer = (Entrenador*)_trainer;
+                        return trainer->tid == entrenador->tid;
+                    }
+                    list_remove_by_condition(estado_block, removedor);
+                    break;
+
+                // Si estaba resolviendo un DeadLock, me tengo que quita de la lista de ejecucion
+                case (RESOLUCION_DEADLOCK):;
+
+                    list_remove(estado_exec, 0);
+                    break;
+            }
 
             // Le asigno el estado finish
             entrenador->estado = FINISH;
@@ -585,10 +617,17 @@ void* trainer_thread(void* arg){
         // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
 
+            // Chequeo si venia de una resolucion de deadlock
+            if (entrenador->razon_movimiento == RESOLUCION_DEADLOCK) {
+
+                // Me quito de la lista de Ejecucion
+                list_remove(estado_exec, 0);
+
+                // Me agrego a la lista de Bloqueo
+                list_add(estado_block, entrenador);
+            }
             // Actualizo la razon de bloqueo
             entrenador->razon_bloqueo = ESPERANDO_POKEMON;
-
-            // TODO: Si venia de un intercambio meterme en bloqueado, ya que viene de ejecucion
 
             // Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
             sem_wait(&block_ready_transition[entrenador->tid]);
@@ -690,6 +729,16 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
     t_list* paquete_recibido = receive_package(server_socket, headerStruct);
 
+    // Si desaprobamos por esto es culpa de Emi
+    int confirmacion = 1;
+
+    // Creo paquete para responderle al GameBoy
+    t_paquete *package = create_package(headerStruct->type);
+    add_to_package(package, &confirmacion, sizeof(int));
+
+    // Envio confirmacion al GameBoy
+    send_package(package, server_socket);
+
     switch(headerStruct -> type){
 
         case APPEARED_POK:
@@ -703,31 +752,45 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
 void appeared_pokemon(t_list* paquete){
 
+    // Id del mensaje, nunca lo usamos
+    int id = *(int*)list_get(paquete, 0);
+
+    // Contenido del appeared
+    void* appeared_void = list_get(paquete, 1);
+
+    // Paso el void* recibido a t_appeared_pokemon
+    t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(appeared_void);
+
+    // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+    pokemon->especie = appearedPokemon->nombre_pokemon;
+    pokemon->coordenada.pos_x = appearedPokemon->pos_x;
+    pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 
-   //TODO: ver de pasar los parametro con un memcpy y despues liberar y destruir todo el paquete
-    pokemon->especie = (char*) list_get(paquete,0);
-    pokemon->coordenada.pos_x = *(int*) list_get(paquete,1);
-    pokemon->coordenada.pos_y = *(int*) list_get(paquete,2);
-
+    // Agrego el pokemon a la lista de pokemones recibidos
     pthread_mutex_lock(&mutex_pokemon);
     list_add(pokemons, pokemon);
     pthread_mutex_unlock(&mutex_pokemon);
-    sem_post(&s_cantidad_pokemons);
 
+    // Hago un signal en el semaforo de pokemones para avisar que hay uno nuevo
+    sem_post(s_cantidad_pokemons);
+
+    // Destruyo el paquete recibido
     list_destroy(paquete);
-    algoritmo_de_cercania(NULL);
+
+    // LLamo al algoritmo de cercania
+    algoritmo_de_cercania();
 }
 
 void algoritmo_de_cercania(){
 
-    sem_wait(&s_cantidad_pokemons);
+    sem_wait(s_cantidad_pokemons);
     //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
     bool puede_ir_ready(void* _entreador){
         Entrenador* entrenador = (Entrenador*) _entreador;
         return (entrenador->cant_stock < entrenador->cant_objetivos) && (entrenador->razon_bloqueo == ESPERANDO_POKEMON);
     }
-    t_list* entrenadores_con_margen = list_filter(estado_block,puede_ir_ready);
+    t_list* entrenadores_con_margen = list_filter(estado_block, puede_ir_ready);
 
     //Pongo todos en una lista asi es mas facil trabajar
     list_add_all(entrenadores_con_margen,estado_new);
@@ -930,7 +993,7 @@ void* message_function(void* message_package){
                 t_list* rta_list = receive_package(broker, buffer_header); // Si llegas a fallar aca despues de todas las comprobaciones, matate
 
                 // Id del mensaje enviado
-                uint32_t id = *(uint32_t *) list_get(rta_list, 0);
+                int id = *(int *) list_get(rta_list, 0);
 
                 // Solo voy a utilizar el id si es un catch para filtrar los mensajes recibidos
                 if (header == CATCH_POK) {
@@ -938,7 +1001,7 @@ void* message_function(void* message_package){
                     // Instancio una cosa y la agrego a la lista de mensajes en espera por una rta
                     WaitingMessage cosa;
                     cosa.tid = tid;
-                    cosa.id_correclativo = id;
+                    cosa.id_correlativo = id;
 
                     pthread_mutex_lock(&mutex_waiting_list);
                     list_add(waiting_list, &cosa);
@@ -976,12 +1039,32 @@ void exec_default(MessageType header, int tid) {
     }
 }
 
-void caught_pokemon(int tid, uint32_t atrapado) {
+void caught_pokemon(int tid, int atrapado) {
 
     // Declaro si y no para hacer las compraraciones
-    uint32_t si = 1;
-    uint32_t no = 0;
-    // TODO: Ir a buscar el entrenador de la lista de bloqueados y confirmarle si lo atrapo o no
+    int si = 1;
+
+    // Busco al entrenador que envio el catch
+    bool encontrador(void* _trainer) {
+        Entrenador* trainer = (Entrenador*) _trainer;
+        return trainer->tid == tid;
+    }
+    Entrenador* entrenador = list_find(estado_block, encontrador);
+
+    // Chequeo si lo atrape
+    if (atrapado == si) {
+
+        //
+
+    // En este caso no pude atrapar el pokemon
+    } else {
+
+        //
+        entrenador->pokemon_objetivo
+    }
+
+    // Ahora el entrenador vuelve al estado block normal
+    sem_post(&block_catch_transition[entrenador->tid]);
 }
 
 int distancia(Coordenada actual, Coordenada siguiente) {
@@ -998,7 +1081,8 @@ int distancia(Coordenada actual, Coordenada siguiente) {
 
 bool objetivos_cumplidos(Entrenador* entrenador){
 
-    //TODO: verificar las cantidades de stock de pokemons y objetivos
+    //TODO: Crear un vector de booleanos del tamanio del diccionario e ir guardando el resultado de dictionary_has_key
+    // -Verificar tambien los valores, se viene un lindo monstruo
 
     //Creo un vector de booleanos del tamanio del diccionario de objetivos
     int tamanio_dic = dictionary_size(entrenador->objetivos_particular);
@@ -1011,7 +1095,7 @@ bool objetivos_cumplidos(Entrenador* entrenador){
     }else{
         //Le asgino al vector de booleanos el resultado de dictionary_has_key
         void iterador(char* key, void* value){
-           objetivos[count] =  dictionary_has_key(entrenador->stock_pokemons, key) && dictionary_get(entrenador->stock_pokemons,key) == *(int*) value;
+           objetivos[count] =  dictionary_has_key(entrenador->stock_pokemons, key) && (*(int*)dictionary_get(entrenador->stock_pokemons,key) == *(uint32_t*) value);
            count++;
         }
         dictionary_iterator(entrenador->objetivos_particular,iterador);
@@ -1021,7 +1105,5 @@ bool objetivos_cumplidos(Entrenador* entrenador){
             if(objetivos[i] == false)
                 return false;
         }
-
     }
-
 }

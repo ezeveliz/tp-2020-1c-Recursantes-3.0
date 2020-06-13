@@ -113,7 +113,7 @@ typedef struct tEntrenador{
  */
 typedef struct {
     void* message; // Mensaje a enviar
-    int size; // Tamaño del mensaje a enviar
+    uint32_t size; // Tamaño del mensaje a enviar
     MessageType header; // Tipo de mensaje a enviar
     int tid; // Tid del entrenador que envia el mensaje, si es -1, el mensaje no fue solicitado por un entrenador, p/ej: el get_pok
 } t_new_message;
@@ -124,7 +124,7 @@ typedef struct {
  */
 typedef struct {
     int tid;
-    uint32_t id_correclativo;
+    int id_correlativo;
 } WaitingMessage;
 
 #endif //TEAM_TEAMSTRUCTURES_H

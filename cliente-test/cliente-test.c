@@ -23,37 +23,45 @@ int main(int argc, char **argv) {
         log_info(logger, "Se subscribio bien a LOCALIZED");
     }
 
-    // Mando un NEW_POK
-    t_new_pokemon* new_pok = malloc(sizeof(t_new_pokemon));
-    new_pok->nombre_pokemon = "Mamame las bolas";
-    new_pok->nombre_pokemon_length = string_length("Mamame las bolas");
-    new_pok->cantidad = 1;
-    new_pok->pos_x = 2;
-    new_pok->pos_y = 3;
-    t_paquete* paquete = create_package(NEW_POK);
-    size_t tam = sizeof(uint32_t)*4 + new_pok->nombre_pokemon_length;
-    add_to_package(paquete, new_pokemon_a_void(new_pok), tam);
-    send_package(paquete, broker_fd);
-    log_info(logger, "Mando el mensaje de New Pokemon");
+    pthread_t server_thread;
+    pthread_create(&server_thread, NULL, server, NULL);
+    pthread_detach(server_thread);
 
-    // Trato de recibir el encabezado de la respuesta
-    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
-    if(receive_header(broker_fd, buffer_header) <= 0) {
-        log_info(logger, "No recibi un header");
-        return false;
+    for (int i = 0; i < 10; ++i) {
+        // Mando un NEW_POK
+        t_new_pokemon* new_pok = malloc(sizeof(t_new_pokemon));
+        new_pok = create_new_pokemon("Mamame las bolas", 1, 2, 3);
+        t_paquete* paquete = create_package(NEW_POK);
+        size_t tam = sizeof(uint32_t)*4 + new_pok->nombre_pokemon_length;
+        add_to_package(paquete, new_pokemon_a_void(new_pok), tam);
+        send_package(paquete, broker_fd);
+        log_info(logger, "Mando el mensaje de New Pokemon");
+
+        // Trato de recibir el encabezado de la respuesta
+        MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+        if(receive_header(broker_fd, buffer_header) <= 0) {
+            log_info(logger, "No recibi un header");
+            return false;
+        }
+        if(buffer_header->type == NEW_POK){
+            log_info(logger, "Estoy por recibir el id del mensaje, todo piola");
+        } else {
+            exit(-1);
+        }
+
+        // Recibo el id mensaje
+        t_list* rta_list = receive_package(broker_fd, buffer_header);
+        int id_mensaje_new_pokemon = *(int*) list_get(rta_list, 0);
+        log_info(logger, "Tengo el id de mensaje: %d", id_mensaje_new_pokemon);
     }
-    if(buffer_header->type == NEW_POK){
-        log_info(logger, "Estoy por recibir el id del mensaje, todo piola");
-    } else {
-        exit(-1);
-    }
-
-    // Recibo el id mensaje
-    t_list* rta_list = receive_package(broker_fd, buffer_header);
-    int id_mensaje_new_pokemon = *(int*) list_get(rta_list, 0);
-    log_info(logger, "Tengo el id de mensaje: %d", id_mensaje_new_pokemon);
 
 
+    char x;
+    scanf("%c", &x);
+    x == '1' ? (close(broker_fd) == 0 ? log_info(logger, "chau") : log_info(logger, "error closing connection")) : log_info(logger, "keep connected");
+}
+
+void server(){
     bool xd = true;
     while(xd){
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
@@ -78,19 +86,13 @@ int main(int argc, char **argv) {
                 default:
                     log_warning(logger, "Operacion desconocida. No quieras meter la pata\n");
             }
-
-            free(buffer_header);
         }
         else {
             log_info(logger, "El if me dio falso");
         }
+        free(buffer_header);
     }
-
-    char x;
-    scanf("%c", &x);
-    x == '1' ? (close(broker_fd) == 0 ? log_info(logger, "chau") : log_info(logger, "error closing connection")) : log_info(logger, "keep connected");
 }
-
 
 
 bool set_config(){
@@ -125,23 +127,6 @@ int subscribir_cola(MessageType cola){
     int* id = malloc(sizeof(int));
     *id = 69; // Numero cualquiera
     add_to_package(paquete, (void*) id, sizeof(int));
-
-//    t_localized_pokemon* localized_pok = malloc(sizeof(t_localized_pokemon));
-//    localized_pok->nombre_pokemon = "A";
-//    localized_pok->nombre_pokemon_length = strlen(localized_pok->nombre_pokemon+1);
-//    localized_pok->cantidad_coordenas = 1;
-//    uint32_t* coor[2] = {1,1};
-//    localized_pok->coordenadas-> = coor;
-//    add_to_package(paquete, localized_pokemon_a_void(localized_pok), sizeof())
-
-//    if(cola == SUB_APPEARED){
-//        t_appeared_pokemon* app_pok = malloc(sizeof(t_appeared_pokemon));
-//        app_pok->nombre_pokemon = "A";
-//        app_pok->nombre_pokemon_length = strlen(app_pok->nombre_pokemon+1);
-//        app_pok->pos_x = 0;
-//        app_pok->pos_y = 1;
-//        add_to_package(paquete, appeared_pokemon_a_void(app_pok), sizeof(uint32_t)*3 + app_pok->nombre_pokemon_length);
-//    }
 
     // Envio el paquete, si no se puede enviar retorno false
     if(send_package(paquete, broker_fd)  == -1){

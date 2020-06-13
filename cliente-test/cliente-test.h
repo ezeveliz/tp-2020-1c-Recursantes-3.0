@@ -30,6 +30,7 @@ int broker_fd;
 int connect_to_broker();
 bool set_config();
 int subscribir_cola(MessageType cola);
+void server();
 
 
 #endif //BROKER_CLIENTE_TEST_H

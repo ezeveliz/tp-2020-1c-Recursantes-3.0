@@ -195,6 +195,10 @@ void* subscribe_to_queue_thread(void* arg) {
     int broker = connect_and_subscribe(cola);
     log_info(logger, "Subscribed to queue");
 
+    // Reservo cachito de memoria para confirmar los mensajes que le envio al Broker
+    int* confirmacion = malloc(sizeof(int));
+    *confirmacion = ACK;
+
     // Me quedo en un loop infinito esperando a recibir cosas
     bool a = true;// Uso esto solo para que desaparezca la sombra amarilla
     while (a) {
@@ -234,7 +238,7 @@ void* subscribe_to_queue_thread(void* arg) {
                     // Obtengo el nombre de pokemon
                     pokName = localizedPokemon->nombre_pokemon;
 
-                    // Verifico que no haya recibido el pokemon ya
+                    // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
                     if (!list_any_satisfy(pokemons_received, encontrador)) {
 
                         // Hallo la cantidad de pokemones recibidos
@@ -258,14 +262,23 @@ void* subscribe_to_queue_thread(void* arg) {
                             pthread_mutex_lock(&mutex_pokemon);
                             list_add(pokemons, pokemon);
                             pthread_mutex_unlock(&mutex_pokemon);
+
+                            // Hago signal en el semaforo que cuenta la cantidad de pokemones libres a entregar
                             sem_post(s_cantidad_pokemons);
                             cant --;
                         }
 
-
+                        // Agrego el pokemon a la lista de pokemones recibidos(solo nombre)
+                        pthread_mutex_lock(&mutex_pokemons_received);
                         list_add(pokemons_received, (void*) pokName);
+                        pthread_mutex_unlock(&mutex_pokemons_received);
 
                         algoritmo_de_cercania();
+
+                        // En este caso ya lo habia recibido, libero la memoria del paquete
+                    } else {
+
+                        // TODO: liberar memoria del paquete
                     }
                     break;
 
@@ -274,15 +287,27 @@ void* subscribe_to_queue_thread(void* arg) {
                     // Obtengo el paquetito de caught
                     t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(list_get(rta_list, 1));
 
+                    // Quito el mensaje que estaba en espera que tenga el mmismo idCorrelacional que el recibido
+                    pthread_mutex_lock(&mutex_waiting_list);
+                    bool hallar_entrenador(void* _mensaje) {
+                        WaitingMessage* mensaje = (WaitingMessage*)_mensaje;
+                        return mensaje->id_correlativo === idCorrelativo;
+                    }
+                    WaitingMessage* mensaje = (WaitingMessage*)list_remove_by_condition(waiting_list, hallar_entrenador);
+                    pthread_mutex_unlock(&mutex_waiting_list);
 
-                    // TODO: Filtrar los mensajes segun el id correlacional recibido y los que tenga guardados
+                    // Llamo a la funcion que resuelve los caughts
+                    caught_pokemon(mensaje->tid, caughtPokemon->atrapado);
                     break;
 
             }
-            // TODO: confirmar la recepcion con un send que mande un ACK como contenido
 
-            // Limpieza
-            free(buffer_header);
+            // Creo paquete para confirmar recepcion de mesaje al Broker
+            t_paquete *package = create_package(cola);
+            add_to_package(package, confirmacion, sizeof(int));
+
+            // Envio confirmacion al Broker
+            send_package(package, broker);
 
         // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
@@ -290,7 +315,12 @@ void* subscribe_to_queue_thread(void* arg) {
             broker = connect_and_subscribe(cola);
             log_info(logger, "Resubscribed to queue\n");
         }
+
+        // Limpieza
+        free(buffer_header);
     }
+
+    free(confirmacion);
     // TODO: si eventualmente se sale del while, hacerle free al arg recibido por parametro
     return null;
 }
@@ -394,6 +424,9 @@ void initialize_structures() {
 
     // Inicializo semaforo mutex que protege la lista de espera
     pthread_mutex_init(&mutex_waiting_list, NULL);
+
+    // Inicializo semaforo mutex que protege la lista de pokemones recibidos(solo nombre)
+    pthread_mutex_init(&mutex_pokemons_received, NULL);
 
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {

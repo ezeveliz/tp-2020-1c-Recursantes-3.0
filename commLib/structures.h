@@ -11,6 +11,7 @@
 typedef enum _MessageType {
     // Enum de prueba
     ABC,
+    ACK,
     // PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
     // Suscripcion a colas globales Team-Broker
     SUB_NEW,

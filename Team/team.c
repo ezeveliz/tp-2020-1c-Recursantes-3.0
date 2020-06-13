@@ -296,8 +296,12 @@ void* subscribe_to_queue_thread(void* arg) {
                     WaitingMessage* mensaje = (WaitingMessage*)list_remove_by_condition(waiting_list, hallar_entrenador);
                     pthread_mutex_unlock(&mutex_waiting_list);
 
-                    // Llamo a la funcion que resuelve los caughts
-                    caught_pokemon(mensaje->tid, caughtPokemon->atrapado);
+                    // Verifico que exista el mensaje en la lista ya que el id que me trae el Broker podria no existir en la lista
+                    if (mensaje != null) {
+
+                        // Llamo a la funcion que resuelve los caughts
+                        caught_pokemon(mensaje->tid, caughtPokemon->atrapado);
+                    }
                     break;
 
             }

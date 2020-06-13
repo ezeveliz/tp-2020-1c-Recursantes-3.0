@@ -968,16 +968,40 @@ void free_resources(){
 
 void algoritmo_deadlock(){
 
-
+    //Hago un sleep para que el algoritmo corra cada cierto tiempo
     sleep(config.tiempo_reconexion);
 
+    //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
         return entrenador->cant_objetivos == entrenador->cant_stock;
     }
     t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
 
+    //Agarro el primer entrenador bloqueado
+    Entrenador* entrenador_primero = (Entrenador*) list_get(entrenadores_sin_margen,0);
 
+    int cont = 1;
+    int tamanio_ent = list_size(entrenadores_sin_margen);
+
+    while(cont < tamanio_ent ){
+        Entrenador* entrenador_segundo = (Entrenador*) list_get(entrenadores_sin_margen,cont);
+
+        //TODO: Ver si esta asquerosidad se puede achicar
+        if(dictionary_contains(entrenador_primero->objetivos_particular, entrenador_segundo->stock_pokemons &&
+        dictionary_contains(entrenador_segundo->objetivos_particular, entrenador_primero->stock_pokemons)){
+            //Quiere decir que el segundo entrenador tiene en stock un pokemon objetivo del primer entrenador y visceversa
+
+        }else{
+            //No se cumplen alguna de las dos condiciones, por lo que no hay espera circular.
+            cont++;
+        }
+    }
+
+}
+
+bool dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary){
+    return true;
 }
 
 //----------------------------------------HELPERS----------------------------------------

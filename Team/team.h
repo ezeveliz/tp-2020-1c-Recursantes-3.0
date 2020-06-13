@@ -197,6 +197,14 @@ void free_resources();
  */
 void algoritmo_deadlock();
 
+/**
+ * Devuelve true si algun elemento del segundo diccionario esta en el primero
+ * @param first_dictionary
+ * @param second_dictionary
+ * @return true o false
+ */
+bool dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary);
+
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

@@ -10,15 +10,38 @@ char* carpeta_montaje;
 
 int main(){
     montar("..");
-    t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
-    char* palabra = "aaaaaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
-    write_tall_grass(archivo, palabra , strlen(palabra), 0);
-    palabra = "bbbbbbb";// No tiene que agregar ninguno
-    write_tall_grass(archivo, palabra , strlen(palabra), 5);
-    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
-    delet_tall_grass(archivo, 9, 26);
-    printf("\n------------ \n");
-    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
+    //New Pikachu
+    char* path_pikachu = concatenar_strings(obtener_path_file(),"/Pikachu");
+    create_tall_grass(path_pikachu);
+    t_file* archivo_pikachu = open_tall_grass(path_pikachu) ;
+    write_tall_grass(archivo_pikachu, "2-5=1\n" , strlen("2-5=1") + 1, 0);
+
+    //crear varios archivos y agregarles datos
+    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
+    write_tall_grass(archivo_pikachu, "2-5=10\n" , strlen("2-5=10") + 1, 6);
+    create_tall_grass(path_charmander);
+    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
+    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
+    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
+    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
+    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
+    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
+
+    //Eliminar un pedaso de memoria del archivo
+    delet_tall_grass(archivo_charmander,0,5);
+
+    close_tall_grass(archivo_charmander);
+    close_tall_grass(archivo_pikachu);
+    //
+//    t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
+//    char* palabra = "aaaaaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
+//    write_tall_grass(archivo, palabra , strlen(palabra), 0);
+//    palabra = "bbbbbbb";// No tiene que agregar ninguno
+//    write_tall_grass(archivo, palabra , strlen(palabra), 5);
+//    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
+//    delet_tall_grass(archivo, 9, 26);
+//    printf("\n------------ \n");
+//    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
 //    char* algo = read_tall_grass(archivo,5,2);
 //    printf("%s",algo);
 //    free(algo);
@@ -153,9 +176,9 @@ int crear_file(char* path){
 
     mkdir_tall_grass(path_file);
     /* EStooo hay que sacarlo */
-    char* algo = concatenar_strings(path_file,"/pikachu");
-    create_tall_grass(algo);
-    free(algo);
+//    char* algo = concatenar_strings(path_file,"/pikachu");
+//    create_tall_grass(algo);
+//    free(algo);
     /* Hasta aca */
     free(path_file);
     return 0;
@@ -319,14 +342,15 @@ int create_tall_grass(char* path){
 }
 
 t_file* open_tall_grass(char* path){
+    char* path_archivo_metadata = concatenar_strings(path,"/Metadata.bin");
     t_file * retorno = malloc(sizeof(t_file));
     retorno->pos = 0;
-    retorno->path = malloc(strlen(path)+1);
-    retorno->metadata = obtener_metadata_archivo(path);
+    retorno->path = malloc(strlen(path_archivo_metadata)+1);
+    retorno->metadata = obtener_metadata_archivo(path_archivo_metadata);
 
     //r+ lectura-escritura || w+ archivo en blanco
-    FILE* archivo = fopen(path,"r+");
-    memcpy(retorno->path, path,strlen(path)+1);
+    FILE* archivo = fopen(path_archivo_metadata,"r+");
+    memcpy(retorno->path, path_archivo_metadata,strlen(path_archivo_metadata)+1);
 
 //    LOCK_EX es para que sea bloque exclusivo
 //    LOCK_NB es para que sea no bloqueante si esta bloqueado
@@ -338,13 +362,18 @@ t_file* open_tall_grass(char* path){
         fclose(archivo);
         return NULL;
     }
+
+    free(path_archivo_metadata);
 }
 
 int close_tall_grass(t_file * fd ){
+    t_config* metadata = config_create(fd->path);
+//    char* n = malloc(2);
+//    memcpy(n,"N",2);
+    config_set_value(metadata,"OPEN", "N");
+    config_save(metadata);
+    config_destroy(metadata);
     FILE* archivo = fopen(fd->path,"r+");
-    if(set_estado_archivo(archivo,'N') == -1){
-        return -1;
-    };
 
     if(flock(archivo->_fileno, LOCK_UN) != 0){
         return -1;

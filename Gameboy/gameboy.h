@@ -18,6 +18,15 @@
 #include "structures.h"
 #endif //TEAM_GAMEBOY_H
 
+typedef struct{
+    char* ip_broker;
+    int puerto_broker;
+    char* ip_team;
+    int puerto_team;
+    char* ip_gamecard;
+    int puerto_gamecard;
+    int mac;
+} config_struct;
 
 #define PARAMETROS_BROKER_NEW 7
 #define PARAMETROS_BROKER_APPEARED 7
@@ -83,6 +92,7 @@ void timer(int);
 /*
  * Funciones para suscribirme
  */
+void leer_configuracion();
 
 void logear_mensaje( MessageHeader*, t_list* );
 

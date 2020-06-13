@@ -53,6 +53,9 @@ t_list* waiting_list;
 // Lista de los pokemons(Los recibidos por Appeared o Localized)
 t_list* pokemons;
 
+// Lista de pokemons para filtrar los que ya el broker nos envio
+t_list* pokemons_localized;
+
 // Semaforo Mutex para proteger la lista de pokemones
 pthread_mutex_t mutex_pokemon;
 
@@ -326,9 +329,10 @@ void* server_function(void* arg) {
 
 void initialize_structures() {
 
-    //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa
+    //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa y los que el broker ya nos envio
     pthread_mutex_init(&mutex_pokemon, NULL);
     pokemons = list_create();
+    pokemons_localized = list_create();
 
     // Inicializo las listas de estados y otras cosas
     char **ptr = config.posiciones_entrenadores;
@@ -482,7 +486,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
         }
     }
 
-    // Itero la lista de pokemones que posee un ent    renador dado, para restarle al objetivo global
+    // Itero la lista de pokemones que posee un entrenador dado, para restarle al objetivo global
     for (char* pokemon = *pokemon_entrenador; pokemon ; pokemon = *++pokemon_entrenador) {
 
         // Verifico si ya existia la necesidad de este pokemon, si existe le resto uno

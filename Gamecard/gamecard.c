@@ -12,6 +12,7 @@ t_log *logger;
 int main() {
     logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
     leer_opciones_configuracion();
+
     return 0;
 }
 

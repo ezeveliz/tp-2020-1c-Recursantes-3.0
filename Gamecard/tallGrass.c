@@ -10,45 +10,43 @@ char* carpeta_montaje;
 
 int main(){
     montar("..");
+    /*
+     * PRUEBA 1
+     */
     //New Pikachu
+
     char* path_pikachu = concatenar_strings(obtener_path_file(),"/Pikachu");
     create_tall_grass(path_pikachu);
     t_file* archivo_pikachu = open_tall_grass(path_pikachu) ;
-    write_tall_grass(archivo_pikachu, "2-5=1\n" , strlen("2-5=1") + 1, 0);
+    write_tall_grass(archivo_pikachu, "5-5=5\n" , strlen("5-5=5") + 1, 0);
 
+    /*
+     * PRUEBA 2
+     */
     //crear varios archivos y agregarles datos
-    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
-    write_tall_grass(archivo_pikachu, "2-5=10\n" , strlen("2-5=10") + 1, 6);
-    create_tall_grass(path_charmander);
-    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
-    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
-    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
-    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
-    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
-    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
 
+//    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
+//    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
+//    create_tall_grass(path_charmander);
+//    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
+//    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
+//    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
+//    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
+//    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
+//    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
+
+    /*
+     * PRUEBA 3
+     */
     //Eliminar un pedaso de memoria del archivo
-    delet_tall_grass(archivo_charmander,0,5);
 
-    close_tall_grass(archivo_charmander);
+    delet_tall_grass(archivo_pikachu,0,6);
+
+//    close_tall_grass(archivo_charmander);
+//    free(path_charmander);
+
     close_tall_grass(archivo_pikachu);
-    //
-//    t_file * archivo = open_tall_grass("../Tall_Grass/Files/pikachu/Metadata.bin");
-//    char* palabra = "aaaaaaaaaaaaaaaaaaaaaaaaaa";//Usar 5 bloques
-//    write_tall_grass(archivo, palabra , strlen(palabra), 0);
-//    palabra = "bbbbbbb";// No tiene que agregar ninguno
-//    write_tall_grass(archivo, palabra , strlen(palabra), 5);
-//    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
-//    delet_tall_grass(archivo, 9, 26);
-//    printf("\n------------ \n");
-//    printf("Tamanio:%d\nBloques:%s\n",archivo->metadata->size,archivo->metadata->bloques);
-//    char* algo = read_tall_grass(archivo,5,2);
-//    printf("%s",algo);
-//    free(algo);
-//    free(archivo->path);
-//    free(archivo->metadata->bloques);
-//    free(archivo->metadata);
-//    free(archivo);
+    free(path_pikachu);
 
 }
 

@@ -524,7 +524,7 @@ void initialize_structures() {
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
-    pthread_create(&thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
+    pthread_create(thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
 }
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
@@ -961,7 +961,6 @@ void free_resources(){
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);
 }
-
 
 void algoritmo_deadlock(){
 

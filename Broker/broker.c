@@ -11,6 +11,9 @@ int main(int argc, char **argv) {
     } else {
         cfg_path = strdup(argv[1]);
     }
+
+    signal(SIGUSR1, dump_cache);
+
     // Logs que piden en el TP
     tp_logger = log_create("broker.log", "BROKER", 1, LOG_LEVEL_TRACE);
 
@@ -751,5 +754,13 @@ void mergear_particiones_libres(){
             free(siguiente_particion);
         }
     }
+    return;
+}
+
+void dump_cache(int sig){
+    log_info(tp_logger, "Se solicito un Dump de cache");
+    FILE* archivo_dump = txt_open_for_append("dump.txt");
+    txt_write_in_file(archivo_dump, "Hola Dump:\n");
+    txt_close_file(archivo_dump);
     return;
 }

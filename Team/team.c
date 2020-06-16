@@ -67,11 +67,6 @@ pthread_mutex_t mutex_waiting_list;
 // Semaforo mutex para proteger la lista de pokemones recibidos(solo nombre)
 pthread_mutex_t mutex_pokemons_received;
 
-// TODO: falta una lista mas, esta lista solo va  tener los pokemones
-//  recibidos(nombre, no estructura) por Localized, ya que segun el enunciado una vez
-//  que se recibe un pokemon no hay que seguir aceptando pokemones de
-//  la misma especie. https://docs.google.com/document/d/1be91Gn93O2Vp8frZoV1i5CmtOG0scE1PS8dMHsCP314/edit#heading=h.46r0co2
-
 int main() {
     pthread_t server_thread;
 
@@ -151,6 +146,8 @@ int start_log() {
     return 1;
 }
 
+//----------------------------------------COLAS GLOBALES----------------------------------------//
+
 void subscribe_to_queues() {
 
     // Levanto 3 hilos y en cada uno realizo una conexion al broker para cada una de las colas
@@ -168,24 +165,6 @@ void subscribe_to_queues() {
     *caught = SUB_CAUGHT;
     pthread_create(&caught_thread, NULL, &subscribe_to_queue_thread, (void*)caught);
     pthread_detach(caught_thread);
-}
-
-int connect_to_broker(){
-
-    int client_socket;
-    if((client_socket = create_socket()) == -1) {
-        log_error(logger, "Error al crear el socket de cliente");
-        return -1;
-    }
-    if(connect_socket(client_socket, config.ip_broker, config.puerto_broker) == -1){
-        log_error(logger, "Error al conectarse al Broker");
-        return -1;
-    }
-    return client_socket;
-}
-
-void disconnect_from_broker(int broker_socket) {
-    close_socket(broker_socket);
 }
 
 void* subscribe_to_queue_thread(void* arg) {
@@ -353,6 +332,24 @@ int connect_and_subscribe(MessageType cola) {
     return broker;
 }
 
+int connect_to_broker(){
+
+    int client_socket;
+    if((client_socket = create_socket()) == -1) {
+        log_error(logger, "Error al crear el socket de cliente");
+        return -1;
+    }
+    if(connect_socket(client_socket, config.ip_broker, config.puerto_broker) == -1){
+        log_error(logger, "Error al conectarse al Broker");
+        return -1;
+    }
+    return client_socket;
+}
+
+void disconnect_from_broker(int broker_socket) {
+    close_socket(broker_socket);
+}
+
 bool subscribe_to_queue(int broker, MessageType cola) {
 
     // Creo un paquete para la suscripcion a una cola
@@ -390,6 +387,8 @@ bool subscribe_to_queue(int broker, MessageType cola) {
     return rta == 1;
 }
 
+//----------------------------------------SERVIDOR----------------------------------------//
+
 void* server_function(void* arg) {
 
     start_log_server();
@@ -407,6 +406,64 @@ void* server_function(void* arg) {
 
     return null;
 }
+
+void start_log_server() {
+
+    //Cambiar 1 por 0?
+    logger_server=log_create("../servidor.log", "servidor", 1, LOG_LEVEL_TRACE);
+}
+
+int initialize_server(){
+
+    int server_socket;
+    int port = config.puerto_team;
+
+    if((server_socket = create_socket()) == -1) {
+        log_error(logger_server, "Error creating server socket");
+        return -1;
+    }
+    if((bind_socket(server_socket, port)) == -1) {
+        log_error(logger_server, "Error binding server socket");
+        return -1;
+    }
+
+    return server_socket;
+}
+
+void new(int server_socket, char * ip, int port){
+    log_info(logger_server,"Nueva conexion: Socket %d, Puerto: %d", server_socket, port);
+}
+
+void lost(int server_socket, char * ip, int port){
+    log_info(logger_server, "Conexion perdida");
+}
+
+void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
+
+    t_list* paquete_recibido = receive_package(server_socket, headerStruct);
+
+    // Si desaprobamos por esto es culpa de Emi
+    int confirmacion = 1;
+
+    // Creo paquete para responderle al GameBoy
+    t_paquete *package = create_package(headerStruct->type);
+    add_to_package(package, &confirmacion, sizeof(int));
+
+    // Envio confirmacion al GameBoy
+    send_package(package, server_socket);
+
+    switch(headerStruct -> type){
+
+        case APPEARED_POK:
+            appeared_pokemon(paquete_recibido);
+            break;
+        default:
+            printf("la estas cagando compa\n");
+            break;
+    }
+}
+
+//----------------------------------------ENTRENADORES----------------------------------------//
 
 void initialize_structures() {
 
@@ -754,6 +811,187 @@ void* trainer_thread(void* arg){
     return null;
 }
 
+bool objetivos_cumplidos(Entrenador* entrenador){
+
+    bool todosCumplen = true;
+
+    // Itero el diccionario de objetivos particular
+    void iterador(char* key, void* value){
+
+        // Por cada iteracion verifico que se cumplan las condiciones, si alguna vez no se cumplen, va a dar false para siempre jua jua jua(risa maligna)
+        todosCumplen &= (dictionary_has_key(entrenador->stock_pokemons, key) && (*(int*)dictionary_get(entrenador->stock_pokemons,key) == *(uint32_t*) value));
+    }
+    dictionary_iterator(entrenador->objetivos_particular, iterador);
+
+    return todosCumplen;
+}
+
+//----------------------------------------COMUNICACION ENTRENADORES----------------------------------------//
+
+void send_message_thread(void* message, int size, MessageType header, int tid) {
+
+    // Creo un paquete con el mensaje, su tamaño y el header para poderselo pasar al thread
+    void* message_package = create_message_package(message, size, header, tid);
+
+    // Levanto un hilo detacheable para poder enviar el mensaje
+    pthread_t message_thread;
+    pthread_create(&message_thread, NULL, message_function, message_package);
+    pthread_detach(message_thread);
+}
+
+void* create_message_package(void* message, int size, MessageType header, int tid) {
+    t_new_message* message_package = malloc(sizeof(t_new_message));
+    message_package->message = message;
+    message_package->size = size;
+    message_package->header = header;
+    message_package->tid = tid;
+
+    return (void*)message_package;
+}
+
+void* message_function(void* message_package){
+
+    // Desarmo la estructura que me pasaron
+    t_new_message* new_message_package = (t_new_message*)message_package;
+    void* message = new_message_package->message;
+    int size = new_message_package->size;
+    MessageType header = new_message_package->header;
+    int tid = new_message_package->tid;
+
+    // Me conecto al Broker
+    int broker = connect_to_broker();
+
+    // Chequeo si me pude conectar al Broker
+    if (broker == -1) {
+
+        // Ejecuto accion por default
+        exec_default(header,tid);
+
+    } else {
+
+        // Creo y envio paquete
+        t_paquete *package = create_package(header);
+        add_to_package(package, message, size);
+
+        // Chequeo si pude enviar la solicitud
+        if (send_package(package, broker) == -1) {
+
+            // Ejecuto accion por default
+            exec_default(header, tid);
+
+        } else {
+
+            // Me quedo esperando hasta que me respondan el id correlacional o la confirmacion, si falla al recibir
+            // el header significa que algo en el Broker se rompio, ejecuto la accion por default
+            MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+            if(receive_header(broker, buffer_header) <= 0) {
+
+                // Ejecuto accion por default
+                exec_default(header, tid);
+
+                // Pude recibir el header, intento recibir el resto de la respuesta
+            } else {
+
+                // Recibo el id correlacional/ confirmacion
+                t_list* rta_list = receive_package(broker, buffer_header); // Si llegas a fallar aca despues de todas las comprobaciones, matate
+
+                // Id del mensaje enviado
+                int id = *(int *) list_get(rta_list, 0);
+
+                // Solo voy a utilizar el id si es un catch para filtrar los mensajes recibidos
+                if (header == CATCH_POK) {
+
+                    // Instancio una cosa y la agrego a la lista de mensajes en espera por una rta
+                    WaitingMessage cosa;
+                    cosa.tid = tid;
+                    cosa.id_correlativo = id;
+
+                    pthread_mutex_lock(&mutex_waiting_list);
+                    list_add(waiting_list, &cosa);
+                    pthread_mutex_unlock(&mutex_waiting_list);
+                }
+
+                // TODO: loggear los mensajes enviados?
+                // TODO: Limpieza
+            }
+        }
+
+        // Me desconecto del Broker
+        disconnect_from_broker(broker);
+    }
+}
+
+void exec_default(MessageType header, int tid) {
+    switch (header) {
+
+        // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
+        case GET_POK:;
+
+            // No existen locaciones para el pokemon solicitado, no tendria que hacer nada
+            break;
+
+            // Accion a realizar por default cuando hago un CATCH_POK y no funciona la comunicacion con el Broker
+        case CATCH_POK:;
+
+            // El Pokemon ha sido atrapado
+            caught_pokemon(tid, 1);
+            break;
+        default:
+            printf("Chupame la pija\n");
+            break;
+    }
+}
+
+void caught_pokemon(int tid, int atrapado) {
+
+    // Declaro si y no para hacer las compraraciones
+    int si = 1;
+
+    // Busco al entrenador que envio el catch
+    bool encontrador(void* _trainer) {
+        Entrenador* trainer = (Entrenador*) _trainer;
+        return trainer->tid == tid;
+    }
+    Entrenador* entrenador = list_find(estado_block, encontrador);
+
+    // Chequeo si lo atrape
+    if (atrapado == si) {
+
+        // Le aumento el stock en uno al entrenador
+        entrenador->cant_stock += 1;
+
+        char* pok_name = entrenador->pokemon_objetivo->especie;
+
+        // Verifico si existe el pokemon en el stock del entrenador
+        if (dictionary_has_key(entrenador->stock_pokemons, pok_name)) {
+
+            // En este caso existia, le sumo
+            *(int*)dictionary_get(entrenador->stock_pokemons, pok_name) += 1;
+
+            // Si el pokemon no existia en el diccionario, lo agrego
+        } else {
+
+            int* necesidad = (int*)malloc(sizeof(int));
+            *necesidad = 1;
+            dictionary_put(entrenador->stock_pokemons, pok_name, (void*) necesidad);
+        }
+
+        // En este caso no pude atrapar el pokemon
+    } else {
+
+        // Obtengo el pokemon y libero la memoria?
+        Pokemon* pok = entrenador->pokemon_objetivo;
+
+    }
+
+    // TODO: decidir que hacer con el pokemon aca
+
+    // Ahora el entrenador vuelve al estado block normal
+    sem_post(&block_catch_transition[entrenador->tid]);
+}
+
+//----------------------------------------PLANIFICACION----------------------------------------//
+
 void call_planner() {
 
     switch (config.algoritmo_planificacion) {
@@ -808,62 +1046,6 @@ void sjf_sd_planner() {}
 void sjf_cd_planner() {}
 
 void rr_planner() {}
-
-void start_log_server() {
-
-    //Cambiar 1 por 0?
-    logger_server=log_create("../servidor.log", "servidor", 1, LOG_LEVEL_TRACE);
-}
-
-int initialize_server(){
-
-    int server_socket;
-    int port = config.puerto_team;
-
-    if((server_socket = create_socket()) == -1) {
-        log_error(logger_server, "Error creating server socket");
-        return -1;
-    }
-    if((bind_socket(server_socket, port)) == -1) {
-        log_error(logger_server, "Error binding server socket");
-        return -1;
-    }
-
-    return server_socket;
-}
-
-void new(int server_socket, char * ip, int port){
-    log_info(logger_server,"Nueva conexion: Socket %d, Puerto: %d", server_socket, port);
-}
-
-void lost(int server_socket, char * ip, int port){
-    log_info(logger_server, "Conexion perdida");
-}
-
-void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
-
-    t_list* paquete_recibido = receive_package(server_socket, headerStruct);
-
-    // Si desaprobamos por esto es culpa de Emi
-    int confirmacion = 1;
-
-    // Creo paquete para responderle al GameBoy
-    t_paquete *package = create_package(headerStruct->type);
-    add_to_package(package, &confirmacion, sizeof(int));
-
-    // Envio confirmacion al GameBoy
-    send_package(package, server_socket);
-
-    switch(headerStruct -> type){
-
-        case APPEARED_POK:
-            appeared_pokemon(paquete_recibido);
-            break;
-        default:
-            printf("la estas cagando compa\n");
-            break;
-    }
-}
 
 void appeared_pokemon(t_list* paquete){
 
@@ -981,13 +1163,6 @@ void algoritmo_de_cercania(){
 
 }
 
-void free_resources(){
-
-    config_destroy(config_file);
-    log_destroy(logger);
-    pthread_mutex_destroy(&mutex_pokemon);
-}
-
 void algoritmo_deadlock(){
 
     //Hago un sleep para que el algoritmo corra cada cierto tiempo
@@ -1026,7 +1201,7 @@ bool dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_di
     return true;
 }
 
-//----------------------------------------HELPERS----------------------------------------
+//----------------------------------------HELPERS----------------------------------------//
 
 void free_list(t_list* received, void(*element_destroyer)(void*)){
     list_destroy_and_destroy_elements(received, element_destroyer);
@@ -1080,168 +1255,6 @@ void time_diff(struct timespec* start, struct timespec* end, struct timespec* di
     }
 }
 
-void send_message_thread(void* message, int size, MessageType header, int tid) {
-
-    // Creo un paquete con el mensaje, su tamaño y el header para poderselo pasar al thread
-    void* message_package = create_message_package(message, size, header, tid);
-
-    // Levanto un hilo detacheable para poder enviar el mensaje
-    pthread_t message_thread;
-    pthread_create(&message_thread, NULL, message_function, message_package);
-    pthread_detach(message_thread);
-}
-
-void* create_message_package(void* message, int size, MessageType header, int tid) {
-    t_new_message* message_package = malloc(sizeof(t_new_message));
-    message_package->message = message;
-    message_package->size = size;
-    message_package->header = header;
-    message_package->tid = tid;
-
-    return (void*)message_package;
-}
-
-void* message_function(void* message_package){
-
-    // Desarmo la estructura que me pasaron
-    t_new_message* new_message_package = (t_new_message*)message_package;
-    void* message = new_message_package->message;
-    int size = new_message_package->size;
-    MessageType header = new_message_package->header;
-    int tid = new_message_package->tid;
-
-    // Me conecto al Broker
-    int broker = connect_to_broker();
-
-    // Chequeo si me pude conectar al Broker
-    if (broker == -1) {
-
-        // Ejecuto accion por default
-        exec_default(header,tid);
-
-    } else {
-
-        // Creo y envio paquete
-        t_paquete *package = create_package(header);
-        add_to_package(package, message, size);
-
-        // Chequeo si pude enviar la solicitud
-        if (send_package(package, broker) == -1) {
-
-            // Ejecuto accion por default
-            exec_default(header, tid);
-
-        } else {
-
-            // Me quedo esperando hasta que me respondan el id correlacional o la confirmacion, si falla al recibir
-            // el header significa que algo en el Broker se rompio, ejecuto la accion por default
-            MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
-            if(receive_header(broker, buffer_header) <= 0) {
-
-                // Ejecuto accion por default
-                exec_default(header, tid);
-
-            // Pude recibir el header, intento recibir el resto de la respuesta
-            } else {
-
-                // Recibo el id correlacional/ confirmacion
-                t_list* rta_list = receive_package(broker, buffer_header); // Si llegas a fallar aca despues de todas las comprobaciones, matate
-
-                // Id del mensaje enviado
-                int id = *(int *) list_get(rta_list, 0);
-
-                // Solo voy a utilizar el id si es un catch para filtrar los mensajes recibidos
-                if (header == CATCH_POK) {
-
-                    // Instancio una cosa y la agrego a la lista de mensajes en espera por una rta
-                    WaitingMessage cosa;
-                    cosa.tid = tid;
-                    cosa.id_correlativo = id;
-
-                    pthread_mutex_lock(&mutex_waiting_list);
-                    list_add(waiting_list, &cosa);
-                    pthread_mutex_unlock(&mutex_waiting_list);
-                }
-
-                // TODO: loggear los mensajes enviados?
-                // TODO: Limpieza
-            }
-        }
-
-        // Me desconecto del Broker
-        disconnect_from_broker(broker);
-    }
-}
-
-void exec_default(MessageType header, int tid) {
-    switch (header) {
-
-        // Accion a realizar por default cuando hago un GET_POK y no funciona la comunicacion con el Broker
-        case GET_POK:;
-
-            // No existen locaciones para el pokemon solicitado, no tendria que hacer nada
-            break;
-
-        // Accion a realizar por default cuando hago un CATCH_POK y no funciona la comunicacion con el Broker
-        case CATCH_POK:;
-
-            // El Pokemon ha sido atrapado
-            caught_pokemon(tid, 1);
-            break;
-        default:
-            printf("Chupame la pija\n");
-            break;
-    }
-}
-
-void caught_pokemon(int tid, int atrapado) {
-
-    // Declaro si y no para hacer las compraraciones
-    int si = 1;
-
-    // Busco al entrenador que envio el catch
-    bool encontrador(void* _trainer) {
-        Entrenador* trainer = (Entrenador*) _trainer;
-        return trainer->tid == tid;
-    }
-    Entrenador* entrenador = list_find(estado_block, encontrador);
-
-    // Chequeo si lo atrape
-    if (atrapado == si) {
-
-        // Le aumento el stock en uno al entrenador
-        entrenador->cant_stock += 1;
-
-        char* pok_name = entrenador->pokemon_objetivo->especie;
-
-        // Verifico si existe el pokemon en el stock del entrenador
-        if (dictionary_has_key(entrenador->stock_pokemons, pok_name)) {
-
-            // En este caso existia, le sumo
-            *(int*)dictionary_get(entrenador->stock_pokemons, pok_name) += 1;
-
-            // Si el pokemon no existia en el diccionario, lo agrego
-        } else {
-
-            int* necesidad = (int*)malloc(sizeof(int));
-            *necesidad = 1;
-            dictionary_put(entrenador->stock_pokemons, pok_name, (void*) necesidad);
-        }
-
-    // En este caso no pude atrapar el pokemon
-    } else {
-
-        // Obtengo el pokemon y libero la memoria?
-        Pokemon* pok = entrenador->pokemon_objetivo;
-
-    }
-
-    // TODO: decidir que hacer con el pokemon aca
-
-    // Ahora el entrenador vuelve al estado block normal
-    sem_post(&block_catch_transition[entrenador->tid]);
-}
-
 int distancia(Coordenada actual, Coordenada siguiente) {
 
     int pos_actual_x = actual.pos_x;
@@ -1254,17 +1267,9 @@ int distancia(Coordenada actual, Coordenada siguiente) {
     return dist_en_x + dist_en_y;
 }
 
-bool objetivos_cumplidos(Entrenador* entrenador){
+void free_resources(){
 
-    bool todosCumplen = true;
-
-    // Itero el diccionario de objetivos particular
-    void iterador(char* key, void* value){
-
-        // Por cada iteracion verifico que se cumplan las condiciones, si alguna vez no se cumplen, va a dar false para siempre jua jua jua(risa maligna)
-        todosCumplen &= (dictionary_has_key(entrenador->stock_pokemons, key) && (*(int*)dictionary_get(entrenador->stock_pokemons,key) == *(uint32_t*) value));
-    }
-    dictionary_iterator(entrenador->objetivos_particular, iterador);
-
-    return todosCumplen;
+    config_destroy(config_file);
+    log_destroy(logger);
+    pthread_mutex_destroy(&mutex_pokemon);
 }

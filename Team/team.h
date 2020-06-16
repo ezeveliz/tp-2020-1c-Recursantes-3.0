@@ -31,23 +31,13 @@ int read_config_options();
  */
 int start_log();
 
+//----------------------------------------COLAS GLOBALES----------------------------------------//
+
 /**
  * Esta funcion intenta suscribirse a las 3 colas globales: appeared_pokemon, localized_pokemon y caught_pokemon,
  * creando 3 hilos los cuales se van a ocupar de conectarse al Broker y mantener la conexion abierta
  */
 void subscribe_to_queues();
-
-/**
- * Me conecto al servidor del Broker
- * @return -1 en caso de error o el socket del servidor
- */
-int connect_to_broker();
-
-/**
- * Me desconecto del Broker
- * @param broker_socket
- */
-void disconnect_from_broker(int broker_socket);
 
 /**
  * Hilo en el que manejo la conexion/reconexion al servidor y la suscripcion a una cola dada
@@ -64,6 +54,18 @@ void* subscribe_to_queue_thread(void* arg);
 int connect_and_subscribe(MessageType cola);
 
 /**
+ * Me conecto al servidor del Broker
+ * @return -1 en caso de error o el socket del servidor
+ */
+int connect_to_broker();
+
+/**
+ * Me desconecto del Broker
+ * @param broker_socket
+ */
+void disconnect_from_broker(int broker_socket);
+
+/**
  * Intento suscribirme a la cola dada del Broker dado
  * @param int broker
  * @param MessageType cola
@@ -71,71 +73,14 @@ int connect_and_subscribe(MessageType cola);
  */
 bool subscribe_to_queue(int broker, MessageType cola);
 
+//----------------------------------------SERVIDOR----------------------------------------//
+
 /**
  * Funcion que va a correr en el hilo del servidor para escuchar los mensajes del gameboy
  * @param arg
  * @return
  */
 void* server_function(void* arg);
-
-/**
- * Inicializo cosas:
- *  -   Listas de estados
- *  -   Diccionario de objetivos globales
- *  -   Semaforos para proteccion de listas
- *  -   Entrenadores, con su ubicacion, objetivos particulares, el estado inicial, un tid falso(el contador en un for)
- *  -   Semaforos para sincronizacion de entrenadores
- *  -   Mando los mensajes de get_pok segun las necesidades globales
- */
-void initialize_structures();
-
-/**
- * Agrego elementos a un diccionario
- * @param cosas_agregar
- * @param diccionario
- * @return diccionario con los elementos agregados
- */
-void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario);
-
-/**
- * Agrego objetivos a los objetivos globales
- * @param objetivos_entrenador, los objetivos de un entrenador dado, se agregan a los ya existentes
- * @param pokemon_entrenador, pokemones que poseen los entrenadores actualmente, restan a los objetivos globales
- */
-
-void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador);
-
-/**
- * Funcion en la que van a ir los hilos inicializados de los entrenadores
- * @param arg
- * @return
- */
-void* trainer_thread(void* arg);
-
-/**
- * Llamo al planificador correspondiente al pasado por configuracion
- */
-void call_planner();
-
-/**
- * Algoritmo de planificacion FIFO
- */
-void fifo_planner();
-
-/**
- * Algoritmo de planificaion SJF sin desalojo
- */
-void sjf_sd_planner();
-
-/**
- * Algoritmo de planificaion SJF con desalojo
- */
-void sjf_cd_planner();
-
-/**
- * Algoritmo de planificaion RR
- */
-void rr_planner();
 
 /**
  * Inicializo el log del servidor para pruebas
@@ -174,6 +119,121 @@ void lost(int socket_server, char * ip, int port);
  */
 void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruct);
 
+//----------------------------------------ENTRENADORES----------------------------------------//
+
+/**
+ * Inicializo cosas:
+ *  -   Listas de estados
+ *  -   Diccionario de objetivos globales
+ *  -   Semaforos para proteccion de listas
+ *  -   Entrenadores, con su ubicacion, objetivos particulares, el estado inicial, un tid falso(el contador en un for)
+ *  -   Semaforos para sincronizacion de entrenadores
+ *  -   Mando los mensajes de get_pok segun las necesidades globales
+ */
+void initialize_structures();
+
+/**
+ * Agrego elementos a un diccionario
+ * @param cosas_agregar
+ * @param diccionario
+ * @return diccionario con los elementos agregados
+ */
+void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario);
+
+/**
+ * Agrego objetivos a los objetivos globales
+ * @param objetivos_entrenador, los objetivos de un entrenador dado, se agregan a los ya existentes
+ * @param pokemon_entrenador, pokemones que poseen los entrenadores actualmente, restan a los objetivos globales
+ */
+void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenador);
+
+/**
+ * Funcion en la que van a ir los hilos inicializados de los entrenadores
+ * @param arg
+ * @return
+ */
+void* trainer_thread(void* arg);
+
+/**
+ * Verifica si el entrenador cumplio todos sus objetivos respecto al stock de pokemons
+ * @param entrenador
+ * @return true o false
+ */
+bool objetivos_cumplidos(Entrenador* entrenador);
+
+//----------------------------------------COMUNICACION ENTRENADORES----------------------------------------//
+
+/**
+ * Creo un hilo para mandarle una solicitud al Broker
+ *
+ * @param message
+ * @param size, tamanio del mensaje a enviar
+ * @param header del mensaje a enviar
+ * @param tid del entrenador, si me pasan -1, el tid no importa(en el caso de un GET por ejemplo), si no lo tomo en cuenta
+ */
+void send_message_thread(void* message, int size, MessageType header, int tid);
+
+/**
+ * Creo un paquetito para pasarle informacion al hilo que se va a encargar de mandarle una solicitud al Broker
+ *
+ * @param message
+ * @param size, tamanio del mensaje a enviar
+ * @param header del mensaje a enviar
+ * @param tid del entrenador que envio el mensaje
+ * @return paquete void* que le voy a pasar al hilo encargado de enviar el mensaje
+ */
+void* create_message_package(void* message, int size, MessageType header, int tid);
+
+/**
+ * Funcion encarga de mandarle una solicitud al Broker, responderle con una confirmacion y ejecutar el caso por default en caso de que no se pueda comunicar
+ *
+ * @param response_package
+ * @return nada
+ */
+void* message_function(void* message_package);
+
+/**
+ * Funcion por default a ejecutarse segun el tipo de mensaje enviado
+ *
+ * @param header, tipo de solicitud enviada
+ * @param tid, tid del entrenador que solicito el mensaje, si es -1 no utilizar
+ */
+void exec_default(MessageType header, int tid);
+
+/**
+ * Funcion que se ejecuta cuando recibo la respuesta de un catch, le avisa al entrenador si atrapo al pokemon o no
+ * @param tid, tid del entrenador que mando originalmente el mensaje
+ * @param atrapado, respuesta que me mando el Broker, un 0 es no atrapado y un 1 es atrapado
+ */
+void caught_pokemon(int tid, int atrapado);
+
+//----------------------------------------PLANIFICACION----------------------------------------//
+
+/**
+ * Llamo al planificador correspondiente al pasado por configuracion
+ */
+void call_planner();
+
+/**
+ * Algoritmo de planificacion FIFO
+ */
+void fifo_planner();
+
+/**
+ * Algoritmo de planificaion SJF sin desalojo
+ */
+void sjf_sd_planner();
+
+/**
+ * Algoritmo de planificaion SJF con desalojo
+ */
+void sjf_cd_planner();
+
+/**
+ * Algoritmo de planificaion RR
+ */
+void rr_planner();
+
 /**
  * Se llama a esta funcion cuando el servidor recibe un APPEARED
  * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
@@ -186,11 +246,6 @@ void appeared_pokemon(t_list* paquete );
  * de ejecutar un entrenador.
  */
 void algoritmo_de_cercania();
-
-/**
- * Libero los recursos cuando todos los hilos terminaron de ejecutar
- */
-void free_resources();
 
 /**
  * Algoritmo de deadlock
@@ -242,50 +297,6 @@ long timespec_to_us(struct timespec* timespec);
 void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff);
 
 /**
- * Creo un hilo para mandarle una solicitud al Broker
- *
- * @param message
- * @param size, tamanio del mensaje a enviar
- * @param header del mensaje a enviar
- * @param tid del entrenador, si me pasan -1, el tid no importa(en el caso de un GET por ejemplo), si no lo tomo en cuenta
- */
-void send_message_thread(void* message, int size, MessageType header, int tid);
-
-/**
- * Creo un paquetito para pasarle informacion al hilo que se va a encargar de mandarle una solicitud al Broker
- *
- * @param message
- * @param size, tamanio del mensaje a enviar
- * @param header del mensaje a enviar
- * @param tid del entrenador que envio el mensaje
- * @return paquete void* que le voy a pasar al hilo encargado de enviar el mensaje
- */
-void* create_message_package(void* message, int size, MessageType header, int tid);
-
-/**
- * Funcion encarga de mandarle una solicitud al Broker, responderle con una confirmacion y ejecutar el caso por default en caso de que no se pueda comunicar
- *
- * @param response_package
- * @return nada
- */
-void* message_function(void* message_package);
-
-/**
- * Funcion por default a ejecutarse segun el tipo de mensaje enviado
- *
- * @param header, tipo de solicitud enviada
- * @param tid, tid del entrenador que solicito el mensaje, si es -1 no utilizar
- */
-void exec_default(MessageType header, int tid);
-
-/**
- * Funcion que se ejecuta cuando recibo la respuesta de un catch, le avisa al entrenador si atrapo al pokemon o no
- * @param tid, tid del entrenador que mando originalmente el mensaje
- * @param atrapado, respuesta que me mando el Broker, un 0 es no atrapado y un 1 es atrapado
- */
-void caught_pokemon(int tid, int atrapado);
-
-/**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.
  * @param actual
  * @param siguiente
@@ -294,10 +305,8 @@ void caught_pokemon(int tid, int atrapado);
 int distancia(Coordenada actual, Coordenada siguiente);
 
 /**
- * Verifica si el entrenador cumplio todos sus objetivos respecto al stock de pokemons
- * @param entrenador
- * @return true o false
+ * Libero los recursos cuando todos los hilos terminaron de ejecutar
  */
-bool objetivos_cumplidos(Entrenador* entrenador);
+void free_resources();
 
 #endif //TEAM_TEAM_H

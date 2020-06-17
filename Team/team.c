@@ -8,7 +8,7 @@
 TEAMConfig config;
 t_config *config_file;
 
-// Logger de Team
+// Logger de Team y su mutex
 t_log* logger;
 
 // Logger del server de Team
@@ -25,7 +25,8 @@ t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
 
-pthread_t* thread_deadlock;
+// Hilo sobre el que va a correr el algoritmo de deteccion de Deadlock
+pthread_t thread_deadlock;
 
 // Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
@@ -178,6 +179,46 @@ void* subscribe_to_queue_thread(void* arg) {
     int* confirmacion = malloc(sizeof(int));
     *confirmacion = ACK;
 
+    // Creo mensaje para loguear la perdida de conexion con el Broker
+    char* conexionPerdida = string_new();
+    string_append(&conexionPerdida, "La cola encargada de recibir los mensajes ");
+
+    switch (cola) {
+        case (APPEARED_POK):;
+            string_append(&conexionPerdida, "Appeared ");
+            break;
+        case (LOCALIZED_POK):;
+            string_append(&conexionPerdida, "Localized ");
+            break;
+        case (CAUGHT_POK):;
+            string_append(&conexionPerdida, "Caught ");
+            break;
+        default:;
+            string_append(&conexionPerdida, "(mensaje no soportado) ");
+            break;
+    }
+    string_append(&conexionPerdida, "ha perdido la conexion con el Broker, a continuacion se reintentara la subscripcion.");
+
+    // Creo mensaje para loguear la reconexion con el Broker
+    char* conexionReestablecida = string_new();
+    string_append(&conexionReestablecida, "La cola encargada de recibir los mensajes ");
+
+    switch (cola) {
+        case (APPEARED_POK):;
+            string_append(&conexionReestablecida, "Appeared ");
+            break;
+        case (LOCALIZED_POK):;
+            string_append(&conexionReestablecida, "Localized ");
+            break;
+        case (CAUGHT_POK):;
+            string_append(&conexionReestablecida, "Caught ");
+            break;
+        default:;
+            string_append(&conexionReestablecida, "(mensaje no soportado) ");
+            break;
+    }
+    string_append(&conexionReestablecida, "se ha podido reconectar con el Broker.");
+
     // Me quedo en un loop infinito esperando a recibir cosas
     bool a = true;// Uso esto solo para que desaparezca la sombra amarilla
     while (a) {
@@ -294,16 +335,19 @@ void* subscribe_to_queue_thread(void* arg) {
 
         // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
-            log_info(logger, "Connection to queue lost\n");
+            log_info(logger, conexionPerdida);
             broker = connect_and_subscribe(cola);
-            log_info(logger, "Resubscribed to queue\n");
+            log_info(logger, conexionReestablecida);
         }
 
         // Limpieza
         free(buffer_header);
     }
 
+    // Libero la memoria reservada con anterioridad
     free(confirmacion);
+    free(conexionPerdida);
+    free(conexionReestablecida);
     // TODO: si eventualmente se sale del while, hacerle free al arg recibido por parametro
     return null;
 }
@@ -588,11 +632,8 @@ void initialize_structures() {
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
-    // Reservo memoria para el algoritmo de Deadlock
-    thread_deadlock = malloc(sizeof(pthread_t));
-
     // Levanto el hilo del algoritmo de Deadlock
-    pthread_create(thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
+    pthread_create(&thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
 }
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
@@ -702,6 +743,35 @@ void* trainer_thread(void* arg){
             distancia_a_viajar--;
         }
 
+        // Ya viaje, seteo la posicion actual
+        switch(entrenador->razon_movimiento) {
+            case (CATCH):;
+
+                entrenador->pos_actual.pos_x = entrenador->pokemon_objetivo->coordenada.pos_x;
+                entrenador->pos_actual.pos_y = entrenador->pokemon_objetivo->coordenada.pos_y;
+                break;
+            case (RESOLUCION_DEADLOCK):;
+
+                entrenador->pos_actual.pos_x = entrenador->entrenador_objetivo->pos_actual.pos_x;
+                entrenador->pos_actual.pos_y = entrenador->entrenador_objetivo->pos_actual.pos_y;
+                break;
+        }
+
+        // Logueo la posicion del entrenador luego del viaje
+        char* viaje = string_new();
+
+        string_append(&viaje, "El entrenador: ");
+        string_append(&viaje, string_itoa(entrenador->tid));
+        string_append(&viaje, ", ha viajado hasta: (");
+        string_append(&viaje, string_itoa(entrenador->pos_actual.pos_x));
+        string_append(&viaje, ", ");
+        string_append(&viaje, string_itoa(entrenador->pos_actual.pos_y));
+        string_append(&viaje, ").");
+
+        log_info(logger, viaje);
+
+        free(viaje);
+
         // Ya viaje a destino, ahora tengo que solicitar el catch o realizar el intercambio
         switch (entrenador->razon_movimiento) {
 
@@ -727,6 +797,23 @@ void* trainer_thread(void* arg){
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
                 send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
+
+                // Logueo el catch
+                char* catch = string_new();
+
+                string_append(&catch, "El entrenador: ");
+                string_append(&catch, string_itoa(entrenador->tid));
+                string_append(&catch, ", ha solicitado atrapar al pokemon: ");
+                string_append(&catch, entrenador->pokemon_objetivo->especie);
+                string_append(&catch, " en la posicion: (");
+                string_append(&catch, string_itoa(entrenador->pos_actual.pos_x));
+                string_append(&catch, ", ");
+                string_append(&catch, string_itoa(entrenador->pos_actual.pos_y));
+                string_append(&catch, ").");
+
+                log_info(logger, catch);
+
+                free(catch);
 
                 // Me bloqueo esperando la rta del Broker
                 sem_wait(&block_catch_transition[entrenador->tid]);
@@ -858,11 +945,30 @@ void* message_function(void* message_package){
     MessageType header = new_message_package->header;
     int tid = new_message_package->tid;
 
+    // Construyo mensaje a loguear en caso de que falle la comunicacion con el Broker
+    char* mensajeError = string_new();
+    string_append(&mensajeError, "Ha fallado la conexion con el Broker al intentar un ");
+    switch (header) {
+        case (GET_POK):;
+            string_append(&mensajeError, "get, ");
+            break;
+        case (CATCH_POK):;
+            string_append(&mensajeError, "catch, ");
+            break;
+        default:;
+            string_append(&mensajeError, "(mensaje no soportado), ");
+            break;
+    }
+    string_append(&mensajeError, "se realizara la opcion por default.");
+
     // Me conecto al Broker
     int broker = connect_to_broker();
 
     // Chequeo si me pude conectar al Broker
     if (broker == -1) {
+
+        // Logueo mensaje de error
+        log_info(logger, mensajeError);
 
         // Ejecuto accion por default
         exec_default(header,tid);
@@ -876,6 +982,9 @@ void* message_function(void* message_package){
         // Chequeo si pude enviar la solicitud
         if (send_package(package, broker) == -1) {
 
+            // Logueo mensaje de error
+            log_info(logger, mensajeError);
+
             // Ejecuto accion por default
             exec_default(header, tid);
 
@@ -885,6 +994,9 @@ void* message_function(void* message_package){
             // el header significa que algo en el Broker se rompio, ejecuto la accion por default
             MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
             if(receive_header(broker, buffer_header) <= 0) {
+
+                // Logueo mensaje de error
+                log_info(logger, mensajeError);
 
                 // Ejecuto accion por default
                 exec_default(header, tid);
@@ -919,6 +1031,8 @@ void* message_function(void* message_package){
         // Me desconecto del Broker
         disconnect_from_broker(broker);
     }
+
+    free(mensajeError);
 }
 
 void exec_default(MessageType header, int tid) {
@@ -990,7 +1104,7 @@ void caught_pokemon(int tid, int atrapado) {
     sem_post(&block_catch_transition[entrenador->tid]);
 }
 
-//----------------------------------------PLANIFICACION----------------------------------------//
+//----------------------------------------PLANIFICACION Y DEADLOCK----------------------------------------//
 
 void call_planner() {
 

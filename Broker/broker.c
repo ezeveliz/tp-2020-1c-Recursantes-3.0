@@ -34,7 +34,10 @@ int main(int argc, char **argv) {
     MENSAJES = list_create();
     MENSAJE_SUBSCRIPTORE = list_create();
     PARTICIONES = list_create();
-
+    log_debug(logger, "Creo la particin inicial del tamanio total de la memoria");
+    particion* principal = particion_create(0, config.mem_size, true);
+    list_add(PARTICIONES, principal);
+    printPartList();
 
 
 
@@ -46,20 +49,96 @@ int main(int argc, char **argv) {
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
     //tests_broker();
-    particion* nueva_particion = particion_create(0, 3, false);
-    particion* nueva_particion1 = particion_create(3, 4, false);
-    particion* nueva_particion2 = particion_create(7, 2, false);
-    particion* nueva_particion4 = particion_create(9, 2, false);
-    particion* nueva_particion3 = particion_create(11, 7, false);
-    particion* particion_inicial = particion_create(18, 2, true);
-
-    particion_delete(0);
-    particion_delete(7);
-
+    //    particion* nueva_particion1 = particion_create(3, 4, false);
+//    particion* nueva_particion2 = particion_create(7, 2, false);
+//    particion* nueva_particion4 = particion_create(9, 2, false);
+//    particion* nueva_particion3 = particion_create(11, 7, false);
+//    particion* particion_inicial = particion_create(18, 2, true);
+    log_debug(logger, "NEW_POKEMON");
+    t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
+    size_t partition_size = sizeof_new_pokemon(new_pika);
+    int base = asignar_particion(partition_size);
+    log_debug(logger, "Base: %d", base);
     printPartList();
-    particion* encontrada = buscar_particion_libre(2);
-    log_info(logger, "%d", encontrada->base);
-    pthread_join(server_thread, NULL);
+    /*
+     *
+     *
+     *
+     */
+
+    log_debug(logger, "GET_POKEMON");
+    t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
+    size_t partition_size1 = sizeof_get_pokemon(get_pika);
+    int base1 = asignar_particion(partition_size1);
+    log_debug(logger, "Base: %d", base1);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
+    int base2 = asignar_particion(partition_size2);
+    log_debug(logger, "Base: %d", base2);
+    printPartList();
+
+    /*
+  *
+  *
+  *
+  *
+  */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
+    int base3 = asignar_particion(partition_size3);
+    log_debug(logger, "Base: %d", base3);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
+    int base4 = asignar_particion(partition_size4);
+    log_debug(logger, "Base: %d", base4);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
+    int base5= asignar_particion(partition_size5);
+    log_debug(logger, "Base: %d", base5);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "Eliminamos GET_POKEMON(base:%d)", 24);
+    particion_delete(24);
+    printPartList();
+    particion_delete(56);
+    printPartList();
+
+//    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
+//    particion_delete(36);
+//    printPartList();
+//    pthread_join(server_thread, NULL);
+    compactar_particiones();
+    printPartList();
 
     return EXIT_SUCCESS;
 }
@@ -84,7 +163,7 @@ void set_config(){
     config.broker_port = config_get_int_value(cfg_file, "PUERTO_BROKER");
     config.compactation_freq = config_get_int_value(cfg_file, "FRECUENCIA_COMPACTACION");
     config.log_file= config_get_string_value(cfg_file, "LOG_FILE");
-   }
+}
 /*
 * Configuration ends
 */
@@ -630,8 +709,6 @@ particion* particion_create(int base, int tam, bool is_free){
     nueva_particion->libre = is_free;
     nueva_particion->ultimo_uso = unix_epoch();
 
-    list_add(PARTICIONES, nueva_particion);
-
     return nueva_particion;
 }
 
@@ -643,15 +720,16 @@ void particion_delete(int base){
             log_info(tp_logger, "Se elimina la particion con base %d", x->base);
         }
     }
+    ordenar_particiones();
 }
 
 particion* buscar_particion_libre(int tam){
     if(strcmp(config.free_partition_algorithm, "FF") == 0){
-            log_debug(logger, "First fit search starts...");
-            return first_fit_search(tam);
+        log_debug(logger, "First fit search starts...");
+        return first_fit_search(tam);
     }else if (strcmp(config.free_partition_algorithm, "BF") == 0){
-            log_debug(logger, "Best fit search starts...");
-            return best_fit_search(tam);
+        log_debug(logger, "Best fit search starts...");
+        return best_fit_search(tam);
     }else{
         log_error(logger, "Unexpected algorithm");
     }
@@ -677,6 +755,7 @@ particion* best_fit_search(tam){
         particion* x = list_get(PARTICIONES, i);
         if(x->libre == true && tam <= x->tam){
             log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
+            if(tam == x->tam){log_info(logger, "Best fit partition found!(base:%d)", x->base);return x;}
             list_add(candidatos, x);
         }
     }
@@ -716,19 +795,46 @@ particion* best_fit_search(tam){
  * El valor -1 indicará compactar solamente cuando se hayan eliminado todas las particiones.
  */
 
-/*
-void asignar_particion(particion* nueva_particion){
-    particion* encontrado = buscar_particion_libre();
-    if(encontrado){
-        cambiar la base y el tamaño de la particion libre
-        list_add(PARTICIONES, nueva_particion);
-        ordenar_particiones();//mergear_particiones_libres()
+int asignar_particion(size_t tam) {
+    particion *particion_libre = buscar_particion_libre(tam);
+    if (particion_libre != NULL) {
+        log_info(logger, "Doing the job..");
+        //Si la particion libre encontrada es de igual tamanio a la particion a alojar no es necesario ordenar
+        if (particion_libre->tam == tam) {
+
+            //Cambio el estado de la libre a falso y actualiza su ultimo uso.
+            particion_libre->libre = false;
+            particion_libre->ultimo_uso = unix_epoch();
+
+
+            log_info(logger, "Partition assigned(base: %d)", particion_libre->base);
+            return particion_libre->base;
+        }
+            //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
+        else {
+            particion* nueva_particion = particion_create(particion_libre->base, tam, false);
+            list_add(PARTICIONES, nueva_particion);
+            //actualizo base y tamanio de particion libre.
+            particion_libre->base += tam;
+            particion_libre->tam -= tam;
+
+
+            //Finalmente, ordeno la lista PARTICIONES por base en orden ASC
+
+
+            log_info(logger, "Partition assigned(base: %d)", nueva_particion->base);
+            log_info(logger, "Rearranging partitions...");
+            ordenar_particiones();
+            log_info(logger, "Ready");
+            return nueva_particion->base;
+        }
     } else {
+        log_warning(logger, "It was not possible to assign partition!");
+        return -1;
 //        INTENTOS++;
     }
-}
- */
 
+}
 // Ordena las particiones y mergea las particiones libres
 void ordenar_particiones(){
     bool particion_anterior(particion* particion_antes, particion* particion_despues) {
@@ -744,15 +850,20 @@ void ordenar_particiones(){
 // Recorro la tabla, si encuentro dos particiones libres consecutivas las mergeo
 void mergear_particiones_libres(){
     int size = list_size(PARTICIONES);
-    for(int i=0; i<size; i++){
+    for(int i=0; i<size-1; i++){
+
         particion* una_particion = list_get(PARTICIONES, i);
         particion* siguiente_particion = list_get(PARTICIONES, i + 1);
 
         if (una_particion->libre && siguiente_particion->libre){
+
             una_particion->tam += siguiente_particion->tam;
             list_remove(PARTICIONES, i+1);
             free(siguiente_particion);
+            size = list_size(PARTICIONES);
+            i = 0;
         }
+
     }
     return;
 }
@@ -764,3 +875,29 @@ void dump_cache(int sig){
     txt_close_file(archivo_dump);
     return;
 }
+
+void compactar_particiones(){
+    int size = list_size(PARTICIONES);
+    for(int i=0; i<size;i++){
+        particion* una_particion = list_get(PARTICIONES, i);
+        if(una_particion->libre){
+            for(int z=i;z<size;z++){
+                particion* otra_particion = list_get(PARTICIONES, z);
+                if(!otra_particion->libre){
+                    uint64_t ult_uso_libre = una_particion->ultimo_uso;
+                    una_particion->ultimo_uso = otra_particion->ultimo_uso;
+                    otra_particion->ultimo_uso = ult_uso_libre;
+                    otra_particion->base = una_particion->base;
+                    una_particion->base += otra_particion->tam;
+                    mergear_particiones_libres();
+                    ordenar_particiones();
+                    printPartList();
+                    size = list_size(PARTICIONES);
+                    break;
+                }
+            }
+        }
+    }
+    return;
+}
+

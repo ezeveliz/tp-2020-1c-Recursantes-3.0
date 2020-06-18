@@ -125,5 +125,5 @@ particion* best_fit_search(int tam);
 void ordenar_particiones();
 void mergear_particiones_libres();
 void dump_cache(int sig);
-
+void compactar_particiones();
 #endif //TEAM_BROKER_H

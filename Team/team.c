@@ -173,7 +173,6 @@ void* subscribe_to_queue_thread(void* arg) {
 
     // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre
     int broker = connect_and_subscribe(cola);
-    log_info(logger, "Subscribed to queue");
 
     // Reservo cachito de memoria para confirmar los mensajes que le envio al Broker
     int* confirmacion = malloc(sizeof(int));
@@ -197,7 +196,7 @@ void* subscribe_to_queue_thread(void* arg) {
             string_append(&conexionPerdida, "(mensaje no soportado) ");
             break;
     }
-    string_append(&conexionPerdida, "ha perdido la conexion con el Broker, a continuacion se reintentara la subscripcion.");
+    string_append(&conexionPerdida, "ha perdido la conexion con el Broker, a continuacion se intentara la resubscripcion.");
 
     // Creo mensaje para loguear la reconexion con el Broker
     char* conexionReestablecida = string_new();
@@ -246,7 +245,7 @@ void* subscribe_to_queue_thread(void* arg) {
 
                 case (APPEARED_POK):;
 
-                    appeared_pokemon(rta_list);
+                    appeared_pokemon(rta_list); // El logueo del nuevo mensaje se realiza adentro asi puedo diferenciar el broker del gameboy
 
                     break;
 
@@ -254,6 +253,40 @@ void* subscribe_to_queue_thread(void* arg) {
 
                     // Obtengo el paquetito de appeared
                     t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 1));
+
+                    // Logueo la llegada del localized
+                    char* localized = string_new();
+
+                    string_append(&localized, "Ha llegado un nuevo mensaje Localized indicando que ");
+                    if (localizedPokemon->cantidad_coordenas > 1) {
+
+                        string_append(&localized, "llegaron ");
+                        string_append(&localized, string_itoa(localizedPokemon->cantidad_coordenas));
+                        string_append(&localized, " instancias del pokemon ");
+                    } else {
+
+                        string_append(&localized, "llego una instancia del pokemon ");
+                    }
+                    string_append(&localized, localizedPokemon->nombre_pokemon);
+                    string_append(&localized, " en: [");
+
+                    int i = localizedPokemon->cantidad_coordenas;
+
+                    int* coords = localizedPokemon->coordenadas;
+
+                    while (i > 0) {
+
+                        string_append(&localized, "(");
+                        string_append(&localized, string_itoa(coords[i*2]));
+                        string_append(&localized, ", ");
+                        string_append(&localized, string_itoa(coords[(i*2) + 1]));
+                        string_append(&localized, ")");
+
+                        i--;
+                    }
+                    string_append(&localized, "]");
+                    log_info(logger, localized);
+                    free(localized);
 
                     // Obtengo el nombre de pokemon
                     pokName = localizedPokemon->nombre_pokemon;
@@ -321,6 +354,13 @@ void* subscribe_to_queue_thread(void* arg) {
 
                         // Llamo a la funcion que resuelve los caughts
                         caught_pokemon(mensaje->tid, caughtPokemon->atrapado);
+                    } else {
+
+                        // Logueo el mensaje catch que no era para nosotros
+                        char* caught = string_new();
+                        string_append(&caught, "Ha llegado un mensaje Caught que no correspondia con ninguno de los Catch enviados por nosotros.");
+                        log_info(logger, caught);
+                        free(caught);
                     }
                     break;
 
@@ -380,11 +420,11 @@ int connect_to_broker(){
 
     int client_socket;
     if((client_socket = create_socket()) == -1) {
-        log_error(logger, "Error al crear el socket de cliente");
+
         return -1;
     }
     if(connect_socket(client_socket, config.ip_broker, config.puerto_broker) == -1){
-        log_error(logger, "Error al conectarse al Broker");
+
         return -1;
     }
     return client_socket;
@@ -445,7 +485,6 @@ void* server_function(void* arg) {
         sleep(config.tiempo_reconexion);
     }
 
-    log_info(logger_server, "Server initiated");
     start_server(server_socket, &new, &lost, &incoming);
 
     return null;
@@ -475,11 +514,11 @@ int initialize_server(){
 }
 
 void new(int server_socket, char * ip, int port){
-    log_info(logger_server,"Nueva conexion: Socket %d, Puerto: %d", server_socket, port);
+
 }
 
 void lost(int server_socket, char * ip, int port){
-    log_info(logger_server, "Conexion perdida");
+
 }
 
 void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruct){
@@ -698,6 +737,17 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
 void* trainer_thread(void* arg){
     Entrenador* entrenador = (Entrenador*) arg;
+
+    // Logueo la entrada del entrenador en la cola New
+    char* new = string_new();
+
+    string_append(&new, "El entrenador ");
+    string_append(&new, string_itoa(entrenador->tid));
+    string_append(&new, " ha entrado en New");
+
+    log_info(logger, new);
+
+    free(new);
 
     // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
     sem_wait( &new_ready_transition[entrenador->tid] );
@@ -950,10 +1000,10 @@ void* message_function(void* message_package){
     string_append(&mensajeError, "Ha fallado la conexion con el Broker al intentar un ");
     switch (header) {
         case (GET_POK):;
-            string_append(&mensajeError, "get, ");
+            string_append(&mensajeError, "Get, ");
             break;
         case (CATCH_POK):;
-            string_append(&mensajeError, "catch, ");
+            string_append(&mensajeError, "Catch, ");
             break;
         default:;
             string_append(&mensajeError, "(mensaje no soportado), ");
@@ -1068,8 +1118,16 @@ void caught_pokemon(int tid, int atrapado) {
     }
     Entrenador* entrenador = list_find(estado_block, encontrador);
 
+    // Logueo el mensaje caught recibido
+    char* caught = string_new();
+
+    string_append(&caught, "Ha llegado un mensaje Caught indicando que un pokemon ");
+    string_append(&caught, entrenador->pokemon_objetivo->especie);
+
     // Chequeo si lo atrape
     if (atrapado == si) {
+
+        string_append(&caught, " ha sido atrapado por el entrenador ");
 
         // Le aumento el stock en uno al entrenador
         entrenador->cant_stock += 1;
@@ -1090,13 +1148,21 @@ void caught_pokemon(int tid, int atrapado) {
             dictionary_put(entrenador->stock_pokemons, pok_name, (void*) necesidad);
         }
 
+        // TODO: falta restarlo de los pokemons globales
+
         // En este caso no pude atrapar el pokemon
     } else {
 
+        string_append(&caught, " no ha sido atrapado por el entrenador ");
         // Obtengo el pokemon y libero la memoria?
         Pokemon* pok = entrenador->pokemon_objetivo;
 
     }
+
+    string_append(&caught, string_itoa(entrenador->tid));
+    log_info(logger, caught);
+
+    free(caught);
 
     // TODO: decidir que hacer con el pokemon aca
 
@@ -1163,7 +1229,6 @@ void rr_planner() {}
 
 void appeared_pokemon(t_list* paquete){
 
-    // TODO: implementar validaciones locas
 
     // Id del mensaje, nunca lo usamos
     int id = *(int*)list_get(paquete, 0); // Si es -1, el mensaje viene del GameBoy, sino del Broker
@@ -1174,25 +1239,58 @@ void appeared_pokemon(t_list* paquete){
     // Paso el void* recibido a t_appeared_pokemon
     t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(appeared_void);
 
-    // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
-    Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
-    pokemon->especie = appearedPokemon->nombre_pokemon;
-    pokemon->coordenada.pos_x = appearedPokemon->pos_x;
-    pokemon->coordenada.pos_y = appearedPokemon->pos_y;
+    // Logueo la llegada de un mensaje appeared
+    char* appeared = string_new();
 
-    // Agrego el pokemon a la lista de pokemones recibidos
-    pthread_mutex_lock(&mutex_pokemon);
-    list_add(pokemons, pokemon);
-    pthread_mutex_unlock(&mutex_pokemon);
+    string_append(&appeared, "Ha llegado un mensaje Appeared del ");
+    if (id == -1) {
+        string_append(&appeared, "Gameboy ");
+    } else {
+        string_append(&appeared, "Broker ");
+    }
+    string_append(&appeared, "indicando que llego un ");
+    string_append(&appeared, appearedPokemon->nombre_pokemon);
+    string_append(&appeared, " en la posicion (");
+    string_append(&appeared, string_itoa(appearedPokemon->pos_x));
+    string_append(&appeared, ", ");
+    string_append(&appeared, string_itoa(appearedPokemon->pos_y));
+    string_append(&appeared, ").");
 
-    // Hago un signal en el semaforo de pokemones para avisar que hay uno nuevo
-    sem_post(s_cantidad_pokemons);
+    log_info(logger, appeared);
+
+    free(appeared);
+
+    // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
+
+    // Chequeo si el pokemon se encuentra en el diccionario de objetivos
+    if (dictionary_has_key(objetivo_global, appearedPokemon->nombre_pokemon)) {
+
+        // Chequeo si la necesidad de pokemones de la especie recibida es mayor a 0
+        if (*((int*)dictionary_get(objetivo_global, appearedPokemon->nombre_pokemon)) > 0) {
+
+            // Se cumplio tod.o
+
+            // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
+            Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+            pokemon->especie = appearedPokemon->nombre_pokemon;
+            pokemon->coordenada.pos_x = appearedPokemon->pos_x;
+            pokemon->coordenada.pos_y = appearedPokemon->pos_y;
+
+            // Agrego el pokemon a la lista de pokemones recibidos
+            pthread_mutex_lock(&mutex_pokemon);
+            list_add(pokemons, pokemon);
+            pthread_mutex_unlock(&mutex_pokemon);
+
+            // Hago un signal en el semaforo de pokemones para avisar que hay uno nuevo
+            sem_post(s_cantidad_pokemons);
+
+            // Llamo al algoritmo de cercania
+            algoritmo_de_cercania();
+        }
+    }
 
     // Destruyo el paquete recibido
     list_destroy(paquete);
-
-    // LLamo al algoritmo de cercania
-    algoritmo_de_cercania();
 }
 
 void algoritmo_de_cercania(){

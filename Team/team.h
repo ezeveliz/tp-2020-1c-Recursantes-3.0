@@ -309,4 +309,11 @@ int distancia(Coordenada actual, Coordenada siguiente);
  */
 void free_resources();
 
+/**
+ * Libero la memoria de los arrays spliteados del archivo de configuracion
+ * @param elements
+ * @param cant
+ */
+void free_splitted_arrays(char ** elements, int cant);
+
 #endif //TEAM_TEAM_H

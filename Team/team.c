@@ -261,7 +261,9 @@ void* subscribe_to_queue_thread(void* arg) {
                     if (localizedPokemon->cantidad_coordenas > 1) {
 
                         string_append(&localized, "llegaron ");
-                        string_append(&localized, string_itoa(localizedPokemon->cantidad_coordenas));
+                        char* cant = string_itoa(localizedPokemon->cantidad_coordenas);
+                        string_append(&localized, cant);
+                        free(cant);
                         string_append(&localized, " instancias del pokemon ");
                     } else {
 
@@ -277,9 +279,13 @@ void* subscribe_to_queue_thread(void* arg) {
                     while (i > 0) {
 
                         string_append(&localized, "(");
-                        string_append(&localized, string_itoa(coords[i*2]));
+                        char* pos_x = string_itoa(coords[i*2]);
+                        string_append(&localized, pos_x);
+                        free(pos_x);
                         string_append(&localized, ", ");
-                        string_append(&localized, string_itoa(coords[(i*2) + 1]));
+                        char* pos_y = string_itoa(coords[(i*2) + 1]);
+                        string_append(&localized, pos_y);
+                        free(pos_y);
                         string_append(&localized, ")");
 
                         i--;
@@ -622,6 +628,11 @@ void initialize_structures() {
         // Agrego al entrenador a New
         list_add(estado_new, (void *) entrenador);
         pos++;
+
+        // Limpieza
+        free_splitted_arrays(objetivos_entrenador, contador_objetivos);
+        free_splitted_arrays(pokemon_entrenador, contador_stock);
+        free_splitted_arrays(posiciones, 2);
     }
 
     //Obtengo la cantidad de entrenadores nuevos
@@ -742,7 +753,9 @@ void* trainer_thread(void* arg){
     char* new = string_new();
 
     string_append(&new, "El entrenador ");
-    string_append(&new, string_itoa(entrenador->tid));
+    char* trainer = string_itoa(entrenador->tid);
+    string_append(&new, trainer);
+    free(trainer);
     string_append(&new, " ha entrado en New");
 
     log_info(logger, new);
@@ -811,11 +824,17 @@ void* trainer_thread(void* arg){
         char* viaje = string_new();
 
         string_append(&viaje, "El entrenador: ");
-        string_append(&viaje, string_itoa(entrenador->tid));
+        trainer = string_itoa(entrenador->tid);
+        string_append(&viaje, trainer);
+        free(trainer);
         string_append(&viaje, ", ha viajado hasta: (");
-        string_append(&viaje, string_itoa(entrenador->pos_actual.pos_x));
+        char* pos_x = string_itoa(entrenador->pos_actual.pos_x);
+        string_append(&viaje, pos_x);
+        free(pos_x);
         string_append(&viaje, ", ");
-        string_append(&viaje, string_itoa(entrenador->pos_actual.pos_y));
+        char* pos_y = string_itoa(entrenador->pos_actual.pos_y);
+        string_append(&viaje, pos_x);
+        free(pos_y);
         string_append(&viaje, ").");
 
         log_info(logger, viaje);
@@ -852,13 +871,19 @@ void* trainer_thread(void* arg){
                 char* catch = string_new();
 
                 string_append(&catch, "El entrenador: ");
-                string_append(&catch, string_itoa(entrenador->tid));
+                trainer = string_itoa(entrenador->tid);
+                string_append(&catch, trainer);
+                free(trainer);
                 string_append(&catch, ", ha solicitado atrapar al pokemon: ");
                 string_append(&catch, entrenador->pokemon_objetivo->especie);
                 string_append(&catch, " en la posicion: (");
-                string_append(&catch, string_itoa(entrenador->pos_actual.pos_x));
+                pos_x = string_itoa(entrenador->pos_actual.pos_x);
+                string_append(&catch, pos_x);
+                free(pos_x);
                 string_append(&catch, ", ");
-                string_append(&catch, string_itoa(entrenador->pos_actual.pos_y));
+                pos_y = string_itoa(entrenador->pos_actual.pos_y);
+                string_append(&catch, pos_y);
+                free(pos_y);
                 string_append(&catch, ").");
 
                 log_info(logger, catch);
@@ -1083,6 +1108,8 @@ void* message_function(void* message_package){
     }
 
     free(mensajeError);
+    free(message);
+    free(message_package);
 }
 
 void exec_default(MessageType header, int tid) {
@@ -1158,8 +1185,9 @@ void caught_pokemon(int tid, int atrapado) {
         Pokemon* pok = entrenador->pokemon_objetivo;
 
     }
-
-    string_append(&caught, string_itoa(entrenador->tid));
+    char* trainer = string_itoa(entrenador->tid);
+    string_append(&caught, trainer);
+    free(trainer);
     log_info(logger, caught);
 
     free(caught);
@@ -1251,9 +1279,13 @@ void appeared_pokemon(t_list* paquete){
     string_append(&appeared, "indicando que llego un ");
     string_append(&appeared, appearedPokemon->nombre_pokemon);
     string_append(&appeared, " en la posicion (");
-    string_append(&appeared, string_itoa(appearedPokemon->pos_x));
+    char* pos_x = string_itoa(appearedPokemon->pos_x);
+    string_append(&appeared, pos_x);
+    free(pos_x);
     string_append(&appeared, ", ");
-    string_append(&appeared, string_itoa(appearedPokemon->pos_y));
+    char* pos_y = string_itoa(appearedPokemon->pos_y);
+    string_append(&appeared, pos_y);
+    free(pos_y);
     string_append(&appeared, ").");
 
     log_info(logger, appeared);
@@ -1484,4 +1516,10 @@ void free_resources(){
     config_destroy(config_file);
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);
+}
+
+void free_splitted_arrays(char ** elements, int cant) {
+    for(int i = 0; i < cant; i++)
+        free(elements[i]);
+    free(elements);
 }

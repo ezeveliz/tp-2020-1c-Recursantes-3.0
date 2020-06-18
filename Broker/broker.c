@@ -140,6 +140,7 @@ int main(int argc, char **argv) {
     compactar_particiones();
     printPartList();
 
+    pthread_join(server_thread, NULL);
     return EXIT_SUCCESS;
 }
 
@@ -869,10 +870,36 @@ void mergear_particiones_libres(){
 }
 
 void dump_cache(int sig){
+    // Loggeo y abro el archivo
     log_info(tp_logger, "Se solicito un Dump de cache");
-    FILE* archivo_dump = txt_open_for_append("dump.txt");
-    txt_write_in_file(archivo_dump, "Hola Dump:\n");
-    txt_close_file(archivo_dump);
+    FILE* archivo_dump = fopen("dump.txt", "w");
+
+    // Printeo la fecha y hora
+    time_t t = time(NULL);
+    struct tm tm = *localtime(&t);
+    fprintf(archivo_dump, "Dump: %02d/%02d/%d %02d:%02d:%02d\n", tm.tm_mday, tm.tm_mon + 1, tm.tm_year + 1900, tm.tm_hour, tm.tm_min, tm.tm_sec);
+    fflush(archivo_dump);
+
+    // Printeo el contenido de la cache
+    int size = list_size(PARTICIONES);
+    for(int i=0; i<size; i++) {
+        particion *s = list_get(PARTICIONES, i);
+        fprintf(archivo_dump, "Particion %d: %d-%d\t"
+                              "[%s]\t"
+                              "Size: %db\t"
+                              "LRU: %" PRIu64 "\t"
+                              "Cola: %s\t"
+                              "ID: %d\n",
+                              i+1, s->base, s->base+s->tam,
+                              s->libre ? "L" : "X",
+                              s->tam,
+                              s->ultimo_uso,
+                              cola_to_string(NEW_POK),
+                              1);
+    }
+
+    // Cierro el archivo y libero la memoria
+    fclose(archivo_dump);
     return;
 }
 
@@ -901,3 +928,21 @@ void compactar_particiones(){
     return;
 }
 
+char* cola_to_string(MessageType cola) {
+    switch (cola) {
+        case NEW_POK:
+            return "NEW_POK";
+        case GET_POK:
+            return "GET_POK";
+        case CATCH_POK:
+            return "CATCH_POK";
+        case APPEARED_POK:
+            return "APPEARED_POK";
+        case LOCALIZED_POK:
+            return "LOCALIZED_POK";
+        case CAUGHT_POK:
+            return "CAUGHT_POK";
+        default:
+            return "No es una cola";
+    }
+}

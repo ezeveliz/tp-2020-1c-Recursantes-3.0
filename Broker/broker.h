@@ -95,6 +95,7 @@ typedef struct particion {
     int tam;
     bool libre;
     uint64_t ultimo_uso;
+    mensaje* mensaje; // esto es para el dump
 } particion;
 t_list* PARTICIONES;
 
@@ -126,4 +127,7 @@ void ordenar_particiones();
 void mergear_particiones_libres();
 void dump_cache(int sig);
 void compactar_particiones();
+char* cola_to_string(MessageType cola);
+char* cola_to_string(MessageType cola);
+
 #endif //TEAM_BROKER_H

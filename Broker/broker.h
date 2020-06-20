@@ -10,10 +10,12 @@
 #include <stdarg.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <signal.h>
 
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
+#include <commons/txt.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 
@@ -93,6 +95,7 @@ typedef struct particion {
     int tam;
     bool libre;
     uint64_t ultimo_uso;
+    mensaje* mensaje; // esto es para el dump
 } particion;
 t_list* PARTICIONES;
 
@@ -122,5 +125,8 @@ particion* first_fit_search(int tam);
 particion* best_fit_search(int tam);
 void ordenar_particiones();
 void mergear_particiones_libres();
+void dump_cache(int sig);
+void compactar_particiones();
+char* cola_to_string(MessageType cola);
 
 #endif //TEAM_BROKER_H

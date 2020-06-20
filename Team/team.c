@@ -233,7 +233,9 @@ void* subscribe_to_queue_thread(void* arg) {
             // El resto del mensajes usa las estructuras locas del Broker(detalladas en la commLib)
 
             // En la posicion 0 viene el id de mensaje correlativo
-            int idCorrelativo = *(int*) list_get(rta_list, 0);
+            int idMensaje = *(int*) list_get(rta_list, 0);
+
+            int idCorrelativo = *(int*) list_get(rta_list, 1);
 
             bool encontrador(void* _nombre) {
                 return string_equals_ignore_case(pokName, (char*)_nombre);
@@ -251,7 +253,7 @@ void* subscribe_to_queue_thread(void* arg) {
                 case (LOCALIZED_POK):;
 
                     // Obtengo el paquetito de appeared
-                    t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 1));
+                    t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
 
                     // Logueo la llegada del localized
                     char* localized = string_new();
@@ -343,7 +345,7 @@ void* subscribe_to_queue_thread(void* arg) {
                 case (CAUGHT_POK):;
 
                     // Obtengo el paquetito de caught
-                    t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(list_get(rta_list, 1));
+                    t_caught_pokemon* caughtPokemon = void_a_caught_pokemon(list_get(rta_list, 2));
 
                     // Quito el mensaje que estaba en espera que tenga el mmismo idCorrelacional que el recibido
                     pthread_mutex_lock(&mutex_waiting_list);
@@ -372,11 +374,12 @@ void* subscribe_to_queue_thread(void* arg) {
             }
 
             // Creo paquete para confirmar recepcion de mesaje al Broker
-            t_paquete *package = create_package(cola);
-            add_to_package(package, confirmacion, sizeof(int));
+            t_paquete* paquete = create_package(ACK);
+            add_to_package(paquete,  (void*)&(config.team_id), sizeof(int));
+            add_to_package(paquete, (void*) &idMensaje, sizeof(int));
 
             // Envio confirmacion al Broker
-            send_package(package, broker);
+            send_package(paquete, broker);
 
         // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
@@ -585,6 +588,7 @@ void initialize_structures() {
         entrenador->estado = NEW;
         entrenador->objetivos_particular = dictionary_create();
         entrenador->stock_pokemons = dictionary_create();
+        entrenador->acumulado_total = 0;
         entrenador->acumulado_actual = 0;
         entrenador->ultima_ejecucion = 0;
         entrenador->ultimo_estimado = 0;
@@ -846,7 +850,8 @@ void* trainer_thread(void* arg){
 
                 // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
 
-                // Seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                // Actualizo el acumulado total con los nuevos ciclos, seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                entrenador->acumulado_total += entrenador->acumulado_actual;
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
@@ -908,7 +913,8 @@ void* trainer_thread(void* arg){
                     retardo_simulacion--;
                 }
 
-                // Seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                // Actualizo el acumulado total con los nuevos ciclos, seteo la ultima ejecucion y reinicio el contador de ejecucion actual
+                entrenador->acumulado_total += entrenador->acumulado_actual;
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
@@ -1267,12 +1273,13 @@ void rr_planner() {}
 
 void appeared_pokemon(t_list* paquete){
 
+    // TODO: avisarle a emi, que tiene que cambiar el orden de los cositos que me envia
 
     // Id del mensaje, nunca lo usamos
     int id = *(int*)list_get(paquete, 0); // Si es -1, el mensaje viene del GameBoy, sino del Broker
 
     // Contenido del appeared
-    void* appeared_void = list_get(paquete, 1);
+    void* appeared_void = list_get(paquete, 2);
 
     // Paso el void* recibido a t_appeared_pokemon
     t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(appeared_void);
@@ -1332,7 +1339,7 @@ void appeared_pokemon(t_list* paquete){
     }
 
     // Destruyo el paquete recibido
-    list_destroy(paquete);
+    //list_destroy(paquete); Si lo destruyo despues no voy a tener el id para confirmarle la recepcion al Broker
 }
 
 void algoritmo_de_cercania(){

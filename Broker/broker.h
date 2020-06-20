@@ -128,6 +128,5 @@ void mergear_particiones_libres();
 void dump_cache(int sig);
 void compactar_particiones();
 char* cola_to_string(MessageType cola);
-char* cola_to_string(MessageType cola);
 
 #endif //TEAM_BROKER_H

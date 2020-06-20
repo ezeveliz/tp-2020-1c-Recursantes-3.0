@@ -387,6 +387,16 @@ void *server_function(void *arg) {
                     break;
                 }
 
+            case ACK:;
+                {
+                    int id_subscriptor = *(int*) list_get(cosas, 0);
+                    int id_mensaje = *(int*) list_get(cosas, 1);
+                    flag_ack(id_subscriptor, id_mensaje);
+                    log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d",
+                             id_mensaje, id_subscriptor);
+                    break;
+                }
+
             default: {
                 log_warning(logger, "Operacion desconocida. No quieras meter la pata\n");
                 break;
@@ -500,6 +510,7 @@ void printPartList() {
     }
     printf("-------------------------------------------->\n");
 }
+
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
 
@@ -599,6 +610,7 @@ void mandar_mensaje(void* cosito){
     mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
 
     t_paquete* paquete = create_package(un_mensaje->tipo);
+    add_to_package(paquete, (void*) &un_mensaje->id, sizeof(int));
     add_to_package(paquete, (void*) &un_mensaje->id_correlacional, sizeof(int));
     add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
 
@@ -606,24 +618,6 @@ void mandar_mensaje(void* cosito){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
     }
-
-    // Trato de recibir el ACK
-    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
-    if(receive_header(un_subscriptor->socket, buffer_header) <= 0) {
-        log_error(logger, "No recibimos el ACK");
-        return;
-    }
-
-    if (buffer_header->type == ACK){
-        flag_ack(coso->id_subscriptor, coso->id_mensaje);
-        log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
-    } else{
-        log_info(logger, "NO AMIGO LPM TE LLEGO ALGO QUE NO ERA UN ACK LISTO CERRAMO ACA");
-        exit(-1);
-    }
-
-    printMenSubList();
-
 }
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub){
     void* stream = malloc(sizeof(uint32_t)*2 + sizeof(bool)*2);
@@ -884,7 +878,7 @@ void dump_cache(int sig){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++) {
         particion *s = list_get(PARTICIONES, i);
-        fprintf(archivo_dump, "Particion %d: %d-%d\t"
+        fprintf(archivo_dump, "Particion %d: %06p-%06p\t"
                               "[%s]\t"
                               "Size: %db\t"
                               "LRU: %" PRIu64 "\t"

@@ -25,9 +25,6 @@ t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
 
-// Hilo sobre el que va a correr el algoritmo de deteccion de Deadlock
-pthread_t thread_deadlock;
-
 // Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
 
@@ -83,14 +80,16 @@ int main() {
         return -1;
     }
 
+    // Inicializo estructuras, semaforos e hilos
+    initialize_structures();
+
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
 
     //Creo 3 hilos para suscribirme a las colas globales
     subscribe_to_queues();
 
-    // Inicializo estructuras, semaforos e hilos
-    initialize_structures();
+    //TODO: Hacer los gets aca en el main y no en inicializar estructuras
 
     // TODO: joinear hilos de entrenadores
 
@@ -682,8 +681,6 @@ void initialize_structures() {
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
-    // Levanto el hilo del algoritmo de Deadlock
-    pthread_create(&thread_deadlock,NULL, (void*) algoritmo_deadlock,NULL);
 }
 
 void add_to_dictionary(char** cosas_agregar, t_dictionary* diccionario){
@@ -920,7 +917,6 @@ void* trainer_thread(void* arg){
         }
 
         // Verifico si el entrenador completo sus objetivos
-        //bool objetivos_cumplidos = false;
         if (objetivos_cumplidos(entrenador)) {
 
             // Dependiendo de la razon del movimiento me tengo que quitar de una lista distinta
@@ -938,7 +934,7 @@ void* trainer_thread(void* arg){
 
                 // Si estaba resolviendo un DeadLock, me tengo que quita de la lista de ejecucion
                 case (RESOLUCION_DEADLOCK):;
-
+                    //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                     list_remove(estado_exec, 0);
                     break;
             }
@@ -950,20 +946,34 @@ void* trainer_thread(void* arg){
 
         // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
+//
+//            // Chequeo si venia de una resolucion de deadlock
+//            if (entrenador->razon_movimiento == RESOLUCION_DEADLOCK) {
+//
+//                // Me quito de la lista de Ejecucion
+//                list_remove(estado_exec, 0);
+//
+//                // Me agrego a la lista de Bloqueo
+//                list_add(estado_block, entrenador);
+//            }
+//            // Actualizo la razon de bloqueo
+//            entrenador->razon_bloqueo = ESPERANDO_POKEMON;
+//
+//            // Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
+//            sem_wait(&block_ready_transition[entrenador->tid]);
 
-            // Chequeo si venia de una resolucion de deadlock
-            if (entrenador->razon_movimiento == RESOLUCION_DEADLOCK) {
-
-                // Me quito de la lista de Ejecucion
+            if(entrenador->cant_stock < entrenador->cant_objetivos){
+                //Quiere decir que todavia tengo lugar para atrapar pokemons
+                entrenador->razon_bloqueo = ESPERANDO_POKEMON;
+                algoritmo_de_cercania();
+            }else{
+                //No tengo mas lugar para atrapar pokemons
+                //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
-
-                // Me agrego a la lista de Bloqueo
-                list_add(estado_block, entrenador);
+                entrenador->razon_bloqueo = DEADLOCK;
+                algoritmo_deadlock();
             }
-            // Actualizo la razon de bloqueo
-            entrenador->razon_bloqueo = ESPERANDO_POKEMON;
-
-            // Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
+            //Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
             sem_wait(&block_ready_transition[entrenador->tid]);
         }
     }
@@ -1409,9 +1419,6 @@ void algoritmo_de_cercania(){
 
 void algoritmo_deadlock(){
 
-    //Hago un sleep para que el algoritmo corra cada cierto tiempo
-    sleep(config.tiempo_reconexion);
-
     //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
@@ -1419,30 +1426,48 @@ void algoritmo_deadlock(){
     }
     t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
 
-    //Agarro el primer entrenador bloqueado
-    Entrenador* entrenador_primero = (Entrenador*) list_get(entrenadores_sin_margen,0);
-
-    int cont = 1;
     int tamanio_ent = list_size(entrenadores_sin_margen);
 
-    while(cont < tamanio_ent ){
-        Entrenador* entrenador_segundo = (Entrenador*) list_get(entrenadores_sin_margen,cont);
+    // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
+    if(tamanio_ent > 2 ) {
 
-        //TODO: Ver si esta asquerosidad se puede achicar
-        if(dictionary_contains(entrenador_primero->objetivos_particular, entrenador_segundo->stock_pokemons) &&
-        dictionary_contains(entrenador_segundo->objetivos_particular, entrenador_primero->stock_pokemons)){
-            //Quiere decir que el segundo entrenador tiene en stock un pokemon objetivo del primer entrenador y visceversa
+        //Agarro el primer entrenador bloqueado
+        Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, 0);
 
-        }else{
-            //No se cumplen alguna de las dos condiciones, por lo que no hay espera circular.
-            cont++;
+        int cont = 1;
+
+        while (cont < tamanio_ent) {
+            Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont);
+
+            if ((Pokemon* pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular)) != null)
+            {
+                //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
+
+            } else {
+                //No se cumplen alguna de las dos condiciones, por lo que no hay espera circular.
+                cont++;
+            }
         }
     }
-
 }
 
-bool dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary){
-    return true;
+Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary){
+
+    Pokemon* pokemon = (Pokemon*) malloc(sizeof(Pokemon) * dictionary_size(second_dictionary));
+    int count = 0;
+
+    //TODO: Sacar la clave cuando el value es 0
+    void* iterador(char* key, void* _value){
+        if(dictionary_has_key(first_dictionary,key)){
+            pokemon->especie = key;
+            count++;
+            pokemon++;
+        }
+    }
+    dictionary_iterator(second_dictionary,iterador);
+
+    //Me da el listado de pokemons que se repiten
+    return pokemon;
 }
 
 //----------------------------------------HELPERS----------------------------------------//

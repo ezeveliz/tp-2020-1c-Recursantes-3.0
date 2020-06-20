@@ -75,11 +75,15 @@ if(receive_header(broker_fd, buffer_header) > 0) {
     if (buffer_header->type == NEW_POK) {
 
         // Deserealizo el stream
-        int id_correlacional = *(int*) list_get(rta_list, 0);
-        t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(rta_list,1));
+        int id_mensaje = *(int*) list_get(rta_list, 0);
+        int id_correlativo = *(int*) list_get(rta_list, 1);
+        t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(rta_list,2));
 
-        // Mando el ACK
+
+        // Mando el ACK(id_cliente, id_mensaje)
         t_paquete* paquete = create_package(ACK);
+        add_to_package(paquete, (void*) &config.id_cliente, sizeof(int));
+        add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
         send_package(paquete, broker_fd);
 
         // Hacer algo con el pokemon

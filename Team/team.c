@@ -552,6 +552,18 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
             printf("la estas cagando compa\n");
             break;
     }
+
+    // Confirmacion para responderle al Gameboy
+    int* rta = malloc(sizeof(int));
+    *rta = 1;
+
+    t_paquete* paquete = create_package(ACK);
+    add_to_package(paquete,  (void*)rta, sizeof(int));
+
+    // Envio confirmacion al Gameboy
+    send_package(paquete, server_socket);
+
+    free(rta);
 }
 
 //----------------------------------------ENTRENADORES----------------------------------------//
@@ -1272,8 +1284,6 @@ void sjf_cd_planner() {}
 void rr_planner() {}
 
 void appeared_pokemon(t_list* paquete){
-
-    // TODO: avisarle a emi, que tiene que cambiar el orden de los cositos que me envia
 
     // Id del mensaje, nunca lo usamos
     int id = *(int*)list_get(paquete, 0); // Si es -1, el mensaje viene del GameBoy, sino del Broker

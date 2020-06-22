@@ -253,13 +253,21 @@ void algoritmo_de_cercania();
 void algoritmo_deadlock();
 
 /**
- * Devuelve true si algun elemento del segundo diccionario esta en el primero
+ * devuelve un array de pokemons en el que no necesita el entrenador, solo se usa para deadlock
+ * @param entrenador
+ * @param pokemon_array
+ * @return array de pokemon
+ */
+Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array);
+
+/**
+ * Devuelve la lista de pokemons que se repiten
  * @param first_dictionary
  * @param second_dictionary
- * @return true o false
+ * @return array de pokemons repetidos
  */
-bool dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary);
 
+Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary);
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

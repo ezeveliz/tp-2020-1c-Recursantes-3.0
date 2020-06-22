@@ -1455,36 +1455,72 @@ void algoritmo_deadlock(){
 
         while (cont < tamanio_ent) {
             Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont);
+            //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
+            //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
+            Pokemon* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
-            if ((Pokemon* pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular)) != null)
+            if (repeat_pokemon != null)
             {
-                //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
+                //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
+                Pokemon* unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
 
+                if(unnecesary_pokemon != null){
+                    entrenador_primero->entrenador_objetivo = entrenador_segundo;
+                    //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
+                    *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+
+                    //TODO: pasar el entrenador_primero a exec y hacer las simulaciones de mierda
+                }
             } else {
-                //No se cumplen alguna de las dos condiciones, por lo que no hay espera circular.
+                //No hay ningun pokemon
                 cont++;
             }
         }
     }
 }
 
+Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array){
+
+    int i = 0;
+    Pokemon* pokemon;
+
+    //Recorro el array que obtuve hasta que sea vacio por si ninguno cumple la condicion
+    while(pokemon_array[i].especie != null){
+        //Si no esta la key en los objetivos del entrenador entonces lo guardo y lo retorno
+        if((!dictionary_has_key(entrenador->objetivos_particular,pokemon_array->especie)) && (pokemon == null)) {
+            pokemon = (Pokemon *) malloc(sizeof(Pokemon));
+            *pokemon = pokemon_array[i];
+            break;
+        }
+        i++;
+    }
+
+    return pokemon;
+}
+
+
 Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary){
 
-    Pokemon* pokemon = (Pokemon*) malloc(sizeof(Pokemon) * dictionary_size(second_dictionary));
+    //Hago un malloc del tamanio del dictionary que es la cantidad maxima que puedo llegar a tener
+    Pokemon* pokemon_estimado = (Pokemon*) malloc(sizeof(Pokemon) * dictionary_size(second_dictionary));
     int count = 0;
 
     //TODO: Sacar la clave cuando el value es 0
     void* iterador(char* key, void* _value){
         if(dictionary_has_key(first_dictionary,key)){
-            pokemon->especie = key;
+            pokemon_estimado->especie = key;
             count++;
-            pokemon++;
+            pokemon_estimado++;
         }
     }
     dictionary_iterator(second_dictionary,iterador);
 
+    //Vuelvo a asignar la memoria para devolver el array de tamanio real y no retornar uno de mayor tamanio
+    Pokemon* pokemon_real = (Pokemon*) realloc(pokemon_estimado, sizeof(Pokemon) * count);
+
+    free(pokemon_estimado);
     //Me da el listado de pokemons que se repiten
-    return pokemon;
+    return pokemon_real;
 }
 
 //----------------------------------------HELPERS----------------------------------------//

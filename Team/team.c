@@ -1436,6 +1436,10 @@ void algoritmo_de_cercania(){
 
 void algoritmo_deadlock(){
 
+
+    // Logueo el inicio del algoritmo de deteccion de deadlock
+    log_info(logger,"Se ha iniciado el algoritmo de deteccion de deadlock");
+
     //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
@@ -1465,6 +1469,24 @@ void algoritmo_deadlock(){
                 Pokemon* unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
 
                 if(unnecesary_pokemon != null){
+
+                    //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
+                    // Solo hay que cortar y pegar despues de la simulacion.
+                    char* deadlock = string_new();
+
+                    string_append(&deadlock, "El entrenador ");
+                    char* first_trainer = string_itoa(entrenador_primero->tid);
+                    string_append(&deadlock, first_trainer);
+                    free(first_trainer);
+                    string_append(&deadlock, " y el entrenador ");
+                    char* second_trainer = string_itoa(entrenador_segundo->tid);
+                    string_append(&deadlock, second_trainer);
+                    free(second_trainer);
+                    string_append(&deadlock, " van a realizar una operacion de intercambio");
+
+                    log_info(logger, deadlock);
+                    free(deadlock);
+
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
                     //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
                     *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];

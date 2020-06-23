@@ -3,6 +3,7 @@
 
 #define MAX_CONN 40
 #define null NULL
+#define BILLION 1000000000L
 
 #include <arpa/inet.h>
 #include <commons/collections/list.h>
@@ -301,7 +302,7 @@ t_appeared_pokemon* void_a_appeared_pokemon(void* stream);
 /**
  * @return timestamp
  * */
-unsigned long unix_epoch();
+uint64_t unix_epoch();
 
 
 /**

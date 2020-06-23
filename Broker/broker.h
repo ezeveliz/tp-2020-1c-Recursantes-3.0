@@ -8,12 +8,18 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdarg.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <signal.h>
 
 #include <commons/config.h>
 #include <commons/log.h>
 #include <commons/collections/list.h>
+#include <commons/txt.h>
 #include <commLib/connections.h>
 #include <commLib/structures.h>
+
+
 
 /*
  * Configuration starts
@@ -43,8 +49,10 @@ void *server_function(void *arg);
  * Configuration ends
  */
 
+void* MEMORIA_PRINCIPAL;
 
 t_log * logger;
+t_log * tp_logger;
 
 t_list* LIST_NEW_POKEMON;
 t_list* LIST_APPEARED_POKEMON;
@@ -81,6 +89,16 @@ t_list* MENSAJE_SUBSCRIPTORE;
 
 int IDENTIFICADOR_MENSAJE;
 
+
+typedef struct particion {
+    int base;
+    int tam;
+    bool libre;
+    uint64_t ultimo_uso;
+    mensaje* mensaje; // esto es para el dump
+} particion;
+t_list* PARTICIONES;
+
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub);
@@ -100,5 +118,15 @@ mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream);
 void* flag_enviado(uint32_t id_sub, uint32_t id_men);
 void* flag_ack(uint32_t id_sub, uint32_t id_men);
 int send_message_test(t_paquete* paquete, int socket);
+particion* particion_create(int base, int tam, bool is_free);
+void particion_delete(int base);
+particion* buscar_particion_libre(int tam);
+particion* first_fit_search(int tam);
+particion* best_fit_search(int tam);
+void ordenar_particiones();
+void mergear_particiones_libres();
+void dump_cache(int sig);
+void compactar_particiones();
+char* cola_to_string(MessageType cola);
 
 #endif //TEAM_BROKER_H

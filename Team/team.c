@@ -1487,13 +1487,15 @@ void algoritmo_deadlock(){
 
                     log_info(logger, deadlock);
                     free(deadlock);
-
+                    //TODO: Hacer el intercambio en el hilo del entrenador
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
                     //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
                     *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
                     entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
 
-                    //TODO: pasar el entrenador_primero a exec y hacer las simulaciones de mierda
+                    sem_post(&block_ready_transition[entrenador_primero->tid]);
+                    //TODO: Hacer la casuistica de que si el primer entrenador lo comparo con todos los otros y no cumplio
+                    // con las condiciones agarrar al segundo y hacer lo mismo
                 }
             } else {
                 //No hay ningun pokemon

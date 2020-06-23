@@ -136,7 +136,7 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(NEW_POK);
             t_new_pokemon *new_pokemon = create_new_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_new_pokemon(new_pokemon));
 
             //Envio el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
@@ -159,7 +159,7 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
             id = atoi(argv[6]);
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
             //Envio el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
@@ -180,7 +180,7 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(CATCH_POK);
             t_catch_pokemon *catch_pokemon = create_catch_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_catch_pokemon(catch_pokemon));
 
             //Envio el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
@@ -202,7 +202,7 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
             id = atoi(argv[3]);
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_caught_pokemon(caught_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
 
             //Envio el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
@@ -222,7 +222,7 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(GET_POK);
             t_get_pokemon *get_pokemon = create_get_pokemon(argv[3]);
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_get_pokemon(get_pokemon));
 
             //Envio el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
@@ -263,7 +263,7 @@ void team_distribuidor(int argc, char *argv[]) {
             //Agrego el mensaje apear
             t_appeared_pokemon *appeared_pokemon = create_appeared_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
             //Mando el mensaje a su respectiva direccion dependiendo del proceso
             envio_mensaje(paquete, config_params.ip_team, config_params.puerto_team);
@@ -303,7 +303,7 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
             add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_new_pokemon(new_pokemon));
 
             //Mando el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
@@ -329,7 +329,7 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
             add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_catch_pokemon(catch_pokemon));
 
             //Mando el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
@@ -355,7 +355,7 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             //Agrego los datos al paquete
             add_to_package(paquete, &id, sizeof(uint32_t));
             add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_get_pokemon(get_pokemon));
 
             //Mando el mensaje a quien corresponda
             envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
@@ -388,6 +388,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
         close_socket(server_socket);
         return -1;
     }
+
     log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip, puerto);
 
     if (send_package(paquete, server_socket) == -1) {
@@ -407,13 +408,16 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
     // Recibo la confirmacion
     t_list* rta_list = receive_package(server_socket, buffer_header);
     int rta = *(int*) list_get(rta_list, 0);
-    printf("%d\n", rta);
+    printf("Llego mensaje de confirmacion exitoso: %d\n", rta);//TODO:Revisar si estoy hay que logearlo
+
     // Limpieza
     free(buffer_header);
 
     list_destroy_and_destroy_elements(rta_list, free);
+
     /////////////////////////////////////////////////////////
     //log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
+
     close_socket(server_socket);
     return 1;
 
@@ -451,13 +455,25 @@ void suscribir(char *cola_mensaje, char *tiempo) {
 
         bool a = true;// Para que salga la sombra amarrilla
         while (a) {
+
+            //Recino el header y despues recibo los datos del mensaje
             datos_recividos = receive_header(broker, buffer_header);
             rta_list = receive_package(broker, buffer_header);
+
+            //Logeo el mensaje
             logear_mensaje(buffer_header, rta_list);
+            int id_mensaje = *(int*) list_get(rta_list, 0);
+            int id_correlativo = *(int*) list_get(rta_list, 1);
+
+            //Libero la lista
             list_destroy_and_destroy_elements(rta_list, &free);
 
             // Mando el ACK
             t_paquete* paquete = create_package(ACK);
+            add_to_package(paquete, (void*) &config_params.mac, sizeof(int));
+            add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
+            send_package(paquete, broker);
+
             send_package(paquete, broker);
             free_package(paquete);
         }
@@ -637,32 +653,32 @@ void timer_handler(int signum) {
     //config_destroy(archConfig);
     exit(-1);
 }
-
-//a eliminar
-/********************************************************************************
- * Funciones para calcular tamanio de los pokemon
- * Todas las funciones estan armadas como sumas de los atributos de los mensajes
- ********************************************************************************/
-
-int size_t_new_pokemon(t_new_pokemon *new_pokemon) {
-    return sizeof(uint32_t) + new_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t) +
-           sizeof(uint32_t);
-}
-
-int size_t_appeared_pokemon(t_appeared_pokemon *appeared_pokemon) {
-    return sizeof(uint32_t) + appeared_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-}
-
-int size_t_catch_pokemon(t_catch_pokemon *catch_pokemon) {
-    return sizeof(uint32_t) + catch_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-}
-
-int size_t_caught_pokemon(t_caught_pokemon *caught_pokemon) {
-    return sizeof(uint32_t);
-}
-
-int size_t_get_pokemon(t_get_pokemon *get_pokemon) {
-    return sizeof(uint32_t) + get_pokemon->nombre_pokemon_length;
-}
-
-
+//
+////a eliminar
+///********************************************************************************
+// * Funciones para calcular tamanio de los pokemon
+// * Todas las funciones estan armadas como sumas de los atributos de los mensajes
+// ********************************************************************************/
+//
+//int size_t_new_pokemon(t_new_pokemon *new_pokemon) {
+//    return sizeof(uint32_t) + new_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t) +
+//           sizeof(uint32_t);
+//}
+//
+//int size_t_appeared_pokemon(t_appeared_pokemon *appeared_pokemon) {
+//    return sizeof(uint32_t) + appeared_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
+//}
+//
+//int size_t_catch_pokemon(t_catch_pokemon *catch_pokemon) {
+//    return sizeof(uint32_t) + catch_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
+//}
+//
+//int size_t_caught_pokemon(t_caught_pokemon *caught_pokemon) {
+//    return sizeof(uint32_t);
+//}
+//
+//int size_t_get_pokemon(t_get_pokemon *get_pokemon) {
+//    return sizeof(uint32_t) + get_pokemon->nombre_pokemon_length;
+//}
+//
+//

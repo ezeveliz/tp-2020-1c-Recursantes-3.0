@@ -69,15 +69,15 @@ void msj_error();
  * Funciones tamanio
  */
 
-int size_t_new_pokemon( t_new_pokemon* );
-
-int size_t_appeared_pokemon( t_appeared_pokemon* );
-
-int size_t_catch_pokemon( t_catch_pokemon* );
-
-int size_t_caught_pokemon( t_caught_pokemon* );
-
-int size_t_get_pokemon( t_get_pokemon* );
+//int size_t_new_pokemon( t_new_pokemon* );
+//
+//int size_t_appeared_pokemon( t_appeared_pokemon* );
+//
+//int size_t_catch_pokemon( t_catch_pokemon* );
+//
+//int size_t_caught_pokemon( t_caught_pokemon* );
+//
+//int size_t_get_pokemon( t_get_pokemon* );
 
 /*
  * Funciones de tiempo

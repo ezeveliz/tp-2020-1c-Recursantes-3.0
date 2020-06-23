@@ -89,7 +89,22 @@ int main() {
     //Creo 3 hilos para suscribirme a las colas globales
     subscribe_to_queues();
 
-    //TODO: Hacer los gets aca en el main y no en inicializar estructuras
+    //Hacemos los gets aca para que no haya problemas de comunicacion y ya esten todas las estructuras inicializadas,
+    // el servidor levantado y estamos suscriptos a las colas de mensajes correspondientes
+
+    // Itero la lista de pokemons objetivos y realizo todos los gets
+    void iterador_pokemons(char* clave, void* contenido){
+
+        // Creo la estructura de pokemon para mandarle al Broker
+        t_get_pokemon* get_pok = create_get_pokemon(clave);
+
+        // Paso la estructura a void
+        void* pok_void = get_pokemon_a_void(get_pok);
+
+        // Envio el get al Broker con un hilo
+        send_message_thread(pok_void, sizeof_get_pokemon(pok_void), GET_POK, -1);
+    }
+    dictionary_iterator(objetivo_global, iterador_pokemons);
 
     // TODO: joinear hilos de entrenadores
 
@@ -682,20 +697,6 @@ void initialize_structures() {
 
     // Inicializo el semaforo en 0 porque no hay pokemons todavia
     sem_init(s_cantidad_pokemons,0,0);
-
-    // Itero la lista de pokemons objetivos y realizo todos los gets correspondientes
-    void iterador_pokemons(char* clave, void* contenido){
-
-        // Creo la estructura de pokemon para mandarle al Broker
-        t_get_pokemon* get_pok = create_get_pokemon(clave);
-
-        // Paso la estructura a void
-        void* pok_void = get_pokemon_a_void(get_pok);
-
-        // Envio el get al Broker con un hilo
-        send_message_thread(pok_void, sizeof_get_pokemon(pok_void), GET_POK, -1);
-    }
-    dictionary_iterator(objetivo_global, iterador_pokemons);
 
 }
 

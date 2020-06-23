@@ -371,3 +371,48 @@ void* server_function_gamecard(void* arg) {
 
     return null;
 }
+
+//-----------------------Funciones ante la llegada de mensajes ----------------------------------------//
+
+void mensaje_new_pokemon(t_new_pokemon* pokemon){
+    char* path_file = obtener_path_file();
+
+    char* path_archvio = string_new();
+    string_append(&path_archvio, path_file);
+    string_append(&path_archvio, "/");
+    string_append(&path_archvio, pokemon->nombre_pokemon);
+
+    //Verificar si existe pokemon sino crearlo
+    if(!find_tall_grass(pokemon->nombre_pokemon)){
+        create_tall_grass(path_archvio);
+    }
+    //Verificar si el archivo se puede abrir sino intentar en x tiempo
+    t_file* archivo = open_tall_grass(path_archvio);
+    if( archivo == NULL ){
+        sleep(configuracion.tiempo_reoperacion);
+        mensaje_new_pokemon(pokemon);
+    }
+    //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
+
+    //Cerrar el archivo
+    close_tall_grass(archivo);
+    //Enviar mensaje APPEARED_POKEMON
+
+    //Si no se puede conectar informar por log
+}
+
+void mensaje_catch_pokemon(){
+    //Verificar si existe el pokemon, sino informar el error
+    //Verificar si se puede abrir el archivo, sino reintentar
+    //En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
+    //Cerrar el archivo
+    //Mandar un CAUGHT_POKEMON
+}
+
+void mensaje_get_pokemon(){
+    //Fijarte si existe el pokemon
+    //Verificar si se puede abrir
+    //Obtener todas las posiciones y cantidades requeridas
+    //Cerrar archivo
+    // Enviar menaje LOCALIZED_POKEMON al broker
+}

@@ -653,32 +653,3 @@ void timer_handler(int signum) {
     //config_destroy(archConfig);
     exit(-1);
 }
-//
-////a eliminar
-///********************************************************************************
-// * Funciones para calcular tamanio de los pokemon
-// * Todas las funciones estan armadas como sumas de los atributos de los mensajes
-// ********************************************************************************/
-//
-//int size_t_new_pokemon(t_new_pokemon *new_pokemon) {
-//    return sizeof(uint32_t) + new_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t) +
-//           sizeof(uint32_t);
-//}
-//
-//int size_t_appeared_pokemon(t_appeared_pokemon *appeared_pokemon) {
-//    return sizeof(uint32_t) + appeared_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-//}
-//
-//int size_t_catch_pokemon(t_catch_pokemon *catch_pokemon) {
-//    return sizeof(uint32_t) + catch_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-//}
-//
-//int size_t_caught_pokemon(t_caught_pokemon *caught_pokemon) {
-//    return sizeof(uint32_t);
-//}
-//
-//int size_t_get_pokemon(t_get_pokemon *get_pokemon) {
-//    return sizeof(uint32_t) + get_pokemon->nombre_pokemon_length;
-//}
-//
-//

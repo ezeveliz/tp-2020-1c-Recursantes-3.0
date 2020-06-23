@@ -138,9 +138,10 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
             add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
 
-            //Obtener la respuesta.
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
 
-            mensaje_proceso(BROKER, paquete);
+            //Libero
             free(mensaje_serializado);
             free(new_pokemon);
             free_package(paquete);
@@ -160,8 +161,10 @@ void broker_distribuidor(int argc, char *argv[]) {
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
 
+            //Libero
             free(appeared_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -179,7 +182,10 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
             add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
+            //Libero
             free(catch_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -198,7 +204,10 @@ void broker_distribuidor(int argc, char *argv[]) {
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_caught_pokemon(caught_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
+            //Libero
             free(caught_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -215,7 +224,9 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
             add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
             free(get_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -242,17 +253,28 @@ void team_distribuidor(int argc, char *argv[]) {
 
             paquete = create_package(APPEARED_POK);
             //Le tengo que mandar un id de mentira a eze para que pueda usar la misma funcion que usa con el broker
-            int id_para_eze = -1;
+            uint32_t id_para_eze = -1;
+            uint32_t id_correlativo_para_eze = 0;
+
+            //Agrego los ids
             add_to_package(paquete, &id_para_eze,sizeof(uint32_t));
+            add_to_package(paquete, &id_correlativo_para_eze,sizeof(uint32_t));
+
+            //Agrego el mensaje apear
             t_appeared_pokemon *appeared_pokemon = create_appeared_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
             add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
 
-            mensaje_proceso(TEAM, paquete);
+            //Mando el mensaje a su respectiva direccion dependiendo del proceso
+            envio_mensaje(paquete, config_params.ip_team, config_params.puerto_team);
+
+            //Libero
             free(appeared_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
+
             break;
+
         default:
             printf("Error ese mensaje no se puede mandar al broker");
     }
@@ -262,6 +284,9 @@ void gamecard_distribuidor(int argc, char *argv[]) {
     t_paquete *paquete;
     void *mensaje_serializado;
     int id;
+    // Es un id de mentira que lo paso para respetar el formato del broker
+    int id_correlativo = 0;
+
     switch (str2Msj(argv[2])) {
 
         // ./gameboy GAMECARD NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD] [ID_MENSAJE]
@@ -274,11 +299,16 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             t_new_pokemon *new_pokemon = create_new_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
             id = atoi(argv[7]);
+
+            //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
 
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Libero
             free(new_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -295,10 +325,16 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             t_catch_pokemon *catch_pokemon = create_catch_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
             id = atoi(argv[6]);
+
+            //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
+
+            //Libero
             free(catch_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -315,10 +351,16 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
 
             int id = atoi(argv[4]);
+
+            //Agrego los datos al paquete
             add_to_package(paquete, &id, sizeof(uint32_t));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
+
+            //Libero
             free(get_pokemon);
             free(mensaje_serializado);
             free_package(paquete);
@@ -327,30 +369,6 @@ void gamecard_distribuidor(int argc, char *argv[]) {
         default:
             printf("Error ese mensaje no se puede mandar al broker");
     }
-}
-
-/*
- * sirve para mandar a la direccion del proceso correspondiente
- */
-int mensaje_proceso(int proceso, t_paquete *paquete) {
-    int resultado = 0;
-
-    switch (proceso) {
-        case BROKER:
-            resultado = envio_mensaje(paquete, config_params.ip_broker,
-                                      config_params.puerto_broker);
-            break;
-        case TEAM:
-            resultado = envio_mensaje(paquete,config_params.ip_team,
-                                      config_params.puerto_team);
-            break;
-        case GAMECARD:
-            resultado = envio_mensaje(paquete, config_params.ip_gamecard,
-                                      config_params.puerto_gamecard);
-            break;
-    }
-
-    return resultado;
 }
 
 /*
@@ -430,7 +448,9 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     if ( resultado_suscripcion == 1 ) {
 
         timer(atoi(tiempo));
-        while (1) {
+
+        bool a = true;// Para que salga la sombra amarrilla
+        while (a) {
             datos_recividos = receive_header(broker, buffer_header);
             rta_list = receive_package(broker, buffer_header);
             logear_mensaje(buffer_header, rta_list);

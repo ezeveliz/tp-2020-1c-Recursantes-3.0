@@ -52,8 +52,6 @@ void suscribir( char* ,char* );
 
 int envio_mensaje( t_paquete*, char* , uint32_t );
 
-int mensaje_proceso( int, t_paquete* );
-
 /*
  * Funciones auxiliares
  */

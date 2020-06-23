@@ -1491,6 +1491,7 @@ void algoritmo_deadlock(){
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
                     //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
                     *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+                    entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
 
                     //TODO: pasar el entrenador_primero a exec y hacer las simulaciones de mierda
                 }

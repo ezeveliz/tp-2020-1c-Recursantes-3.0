@@ -600,17 +600,17 @@ size_t sizeof_caught_pokemon(t_caught_pokemon* estructura){
 }
 
 
-unsigned long unix_epoch() {
+uint64_t unix_epoch() {
 
-    struct timeval tv;
-    time_t seconds;
-    gettimeofday(&tv, NULL);
-    unsigned long long miliseconds_since_epoch = (unsigned long long)((unsigned long long)(tv.tv_sec) * (unsigned long long)1000 + (unsigned long long)(tv.tv_usec) / (unsigned long long)1000);
+    long int ns;
+    uint64_t all;
+    time_t sec;
+    struct timespec spec;
 
-    seconds = time(NULL);
-    int days_since_epoch = seconds/(60*60*24);
-    unsigned long long midnight_miliseconds_since_epoch = (unsigned long long)days_since_epoch*(24*60*60*1000);
+    clock_gettime(CLOCK_REALTIME, &spec);
+    sec = spec.tv_sec;
+    ns = spec.tv_nsec;
 
-    unsigned long miliseconds_since_midnight = (unsigned long)(miliseconds_since_epoch - midnight_miliseconds_since_epoch);
-    return miliseconds_since_midnight;
+    all = (uint64_t) sec * BILLION + (uint64_t) ns;
+    return all;
 }

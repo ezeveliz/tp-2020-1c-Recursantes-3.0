@@ -389,6 +389,7 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
     if( archivo == NULL ){
+
         free(path_file);
         free(path_archvio);
         sleep(configuracion.tiempo_reoperacion);

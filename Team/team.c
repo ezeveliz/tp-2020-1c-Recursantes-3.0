@@ -926,10 +926,14 @@ void* trainer_thread(void* arg){
                     retardo_simulacion--;
                 }
 
+
+
                 // Actualizo el acumulado total con los nuevos ciclos, seteo la ultima ejecucion y reinicio el contador de ejecucion actual
                 entrenador->acumulado_total += entrenador->acumulado_actual;
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
+
+
 
                 // TODO: ver que carajohacer aca
                 break;
@@ -1476,6 +1480,17 @@ void algoritmo_deadlock(){
 
                     if (unnecesary_pokemon != null) {
 
+                        Pokemon* primero_no_necesita;
+
+                        //Calculo que pokemon no le sirve al entrenador
+                        void no_necesita(char* key, void* value){
+                            if(!dictionary_has_key(entrenador_primero->entrenador_objetivo, key) && primero_no_necesita == null){
+                                primero_no_necesita = (Pokemon*) malloc(sizeof(Pokemon));
+                                primero_no_necesita->especie = key;
+                            }
+                        }
+                        dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
+
                         //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
                         // Solo hay que cortar y pegar despues de la simulacion.
                         char *deadlock = string_new();
@@ -1495,8 +1510,9 @@ void algoritmo_deadlock(){
                         //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
-                        *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+                        entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                        entrenador_segundo->pokemon_objetivo = *primero_no_necesita;
 
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
                     }

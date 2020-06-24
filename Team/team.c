@@ -926,13 +926,18 @@ void* trainer_thread(void* arg){
                     retardo_simulacion--;
                 }
 
-
-
                 // Actualizo el acumulado total con los nuevos ciclos, seteo la ultima ejecucion y reinicio el contador de ejecucion actual
                 entrenador->acumulado_total += entrenador->acumulado_actual;
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
+
+                dictionary_put(entrenador->stock_pokemons,entrenador->pokemon_objetivo,1);
+                dictionary_put(entrenador->entrenador_objetivo->stock_pokemons,entrenador->entrenador_objetivo->pokemon_objetivo,1);
+
+
+                dictionary_remove(entrenador->objetivos_particular,entrenador->pokemon_objetivo);
+                dictionary_remove(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo);
 
 
                 // TODO: ver que carajohacer aca
@@ -1510,9 +1515,9 @@ void algoritmo_deadlock(){
                         //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
-                        entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+                        *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
-                        entrenador_segundo->pokemon_objetivo = *primero_no_necesita;
+                        entrenador_segundo->pokemon_objetivo = primero_no_necesita;
 
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
                     }

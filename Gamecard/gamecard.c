@@ -402,6 +402,12 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
 }
 
 void mensaje_catch_pokemon(){
+    char* path_file = obtener_path_file();
+
+    char* path_archvio = string_new();
+    string_append(&path_archvio, path_file);
+    string_append(&path_archvio, "/");
+    string_append(&path_archvio, pokemon->nombre_pokemon);
     //Verificar si existe el pokemon, sino informar el error
     //Verificar si se puede abrir el archivo, sino reintentar
     //En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
@@ -410,6 +416,12 @@ void mensaje_catch_pokemon(){
 }
 
 void mensaje_get_pokemon(){
+    char* path_file = obtener_path_file();
+
+    char* path_archvio = string_new();
+    string_append(&path_archvio, path_file);
+    string_append(&path_archvio, "/");
+    string_append(&path_archvio, pokemon->nombre_pokemon);
     //Fijarte si existe el pokemon
     //Verificar si se puede abrir
     //Obtener todas las posiciones y cantidades requeridas

@@ -389,6 +389,8 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
     if( archivo == NULL ){
+        free(path_file);
+        free(path_archvio);
         sleep(configuracion.tiempo_reoperacion);
         mensaje_new_pokemon(pokemon);
     }
@@ -401,7 +403,7 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
     //Si no se puede conectar informar por log
 }
 
-void mensaje_catch_pokemon(){
+void mensaje_catch_pokemon(t_catch_pokemon* pokemon){
     char* path_file = obtener_path_file();
 
     char* path_archvio = string_new();
@@ -409,22 +411,49 @@ void mensaje_catch_pokemon(){
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
     //Verificar si existe el pokemon, sino informar el error
-    //Verificar si se puede abrir el archivo, sino reintentar
+    if(!find_tall_grass(pokemon->nombre_pokemon)){
+
+    }
+
+    //Verificar si el archivo se puede abrir sino intentar en x tiempo
+    t_file* archivo = open_tall_grass(path_archvio);
+    if( archivo == NULL ){
+        free(path_file);
+        free(path_archvio);
+        sleep(configuracion.tiempo_reoperacion);
+        mensaje_new_pokemon(pokemon);
+    }
+
     //En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
-    //Cerrar el archivo
+    //Cerrar archivo
+    close_tall_grass(archivo);
     //Mandar un CAUGHT_POKEMON
 }
 
-void mensaje_get_pokemon(){
+void mensaje_get_pokemon(t_get_pokemon* pokemon){
     char* path_file = obtener_path_file();
 
     char* path_archvio = string_new();
     string_append(&path_archvio, path_file);
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
-    //Fijarte si existe el pokemon
-    //Verificar si se puede abrir
+
+    //Verificar si existe el pokemon, sino informar el error
+    if(!find_tall_grass(pokemon->nombre_pokemon)){
+
+    }
+    //Verificar si el archivo se puede abrir sino intentar en x tiempo
+    t_file* archivo = open_tall_grass(path_archvio);
+    if( archivo == NULL ){
+        free(path_file);
+        free(path_archvio);
+        sleep(configuracion.tiempo_reoperacion);
+        mensaje_new_pokemon(pokemon);
+    }
     //Obtener todas las posiciones y cantidades requeridas
+
+
     //Cerrar archivo
+    close_tall_grass(archivo);
     // Enviar menaje LOCALIZED_POKEMON al broker
 }

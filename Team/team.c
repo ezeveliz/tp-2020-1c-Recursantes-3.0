@@ -1453,54 +1453,60 @@ void algoritmo_deadlock(){
     // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
     if(tamanio_ent > 2 ) {
 
-        //Agarro el primer entrenador bloqueado
-        Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, 0);
 
-        int cont = 1;
+        int cont_primero = 0;
+        int cont_segundo = 1;
 
-        while (cont < tamanio_ent) {
-            Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont);
-            //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
-            //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
-            Pokemon* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
+        while(cont_primero < tamanio_ent) {
 
-            if (repeat_pokemon != null)
-            {
-                //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
-                Pokemon* unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
+            //Agarro el primer entrenador bloqueado
+            Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
 
-                if(unnecesary_pokemon != null){
 
-                    //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
-                    // Solo hay que cortar y pegar despues de la simulacion.
-                    char* deadlock = string_new();
+            while (cont_segundo < tamanio_ent) {
+                Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
+                //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
+                //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
+                Pokemon *repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons,
+                                                              entrenador_primero->objetivos_particular);
 
-                    string_append(&deadlock, "El entrenador ");
-                    char* first_trainer = string_itoa(entrenador_primero->tid);
-                    string_append(&deadlock, first_trainer);
-                    free(first_trainer);
-                    string_append(&deadlock, " y el entrenador ");
-                    char* second_trainer = string_itoa(entrenador_segundo->tid);
-                    string_append(&deadlock, second_trainer);
-                    free(second_trainer);
-                    string_append(&deadlock, " van a realizar una operacion de intercambio");
+                if (repeat_pokemon != null) {
+                    //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
+                    Pokemon *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
 
-                    log_info(logger, deadlock);
-                    free(deadlock);
-                    //TODO: Hacer el intercambio en el hilo del entrenador
-                    entrenador_primero->entrenador_objetivo = entrenador_segundo;
-                    //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
-                    *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
-                    entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                    if (unnecesary_pokemon != null) {
 
-                    sem_post(&block_ready_transition[entrenador_primero->tid]);
-                    //TODO: Hacer la casuistica de que si el primer entrenador lo comparo con todos los otros y no cumplio
-                    // con las condiciones agarrar al segundo y hacer lo mismo
+                        //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
+                        // Solo hay que cortar y pegar despues de la simulacion.
+                        char *deadlock = string_new();
+
+                        string_append(&deadlock, "El entrenador ");
+                        char *first_trainer = string_itoa(entrenador_primero->tid);
+                        string_append(&deadlock, first_trainer);
+                        free(first_trainer);
+                        string_append(&deadlock, " y el entrenador ");
+                        char *second_trainer = string_itoa(entrenador_segundo->tid);
+                        string_append(&deadlock, second_trainer);
+                        free(second_trainer);
+                        string_append(&deadlock, " van a realizar una operacion de intercambio");
+
+                        log_info(logger, deadlock);
+                        free(deadlock);
+                        //TODO: Hacer el intercambio en el hilo del entrenador
+                        entrenador_primero->entrenador_objetivo = entrenador_segundo;
+                        //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
+                        *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+                        entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+
+                        sem_post(&block_ready_transition[entrenador_primero->tid]);
+                    }
+                } else {
+                    //No hay ningun pokemon
+                    cont_segundo++;
                 }
-            } else {
-                //No hay ningun pokemon
-                cont++;
             }
+
+            cont_primero;
         }
     }
 }

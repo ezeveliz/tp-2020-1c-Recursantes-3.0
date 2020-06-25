@@ -12,6 +12,22 @@ int main(int argc, char **argv) {
         cfg_path = strdup(argv[1]);
     }
 
+    pthread_mutex_init(&M_MEMORIA_PRINCIPAL, NULL);
+    pthread_mutex_init(&M_LIST_NEW_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_APPEARED_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_GET_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_LOCALIZED_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_CATCH_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_CAUGHT_POKEMON, NULL);
+    pthread_mutex_init(&M_SUBSCRIPTORES, NULL);
+    pthread_mutex_init(&M_MENSAJES, NULL);
+    pthread_mutex_init(&M_MENSAJE_SUBSCRIPTORE, NULL);
+    pthread_mutex_init(&M_IDENTIFICADOR_MENSAJE, NULL);
+    pthread_mutex_init(&M_PARTICIONES, NULL);
+
+    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
+
     signal(SIGUSR1, dump_cache);
 
     // Logs que piden en el TP
@@ -141,6 +157,19 @@ int main(int argc, char **argv) {
     printPartList();
 
     pthread_join(server_thread, NULL);
+
+    pthread_mutex_destroy(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_destroy(&M_LIST_NEW_POKEMON);
+    pthread_mutex_destroy(&M_LIST_APPEARED_POKEMON);
+    pthread_mutex_destroy(&M_LIST_GET_POKEMON);
+    pthread_mutex_destroy(&M_LIST_LOCALIZED_POKEMON);
+    pthread_mutex_destroy(&M_LIST_CATCH_POKEMON);
+    pthread_mutex_destroy(&M_LIST_CAUGHT_POKEMON);
+    pthread_mutex_destroy(&M_SUBSCRIPTORES);
+    pthread_mutex_destroy(&M_MENSAJES);
+    pthread_mutex_destroy(&M_MENSAJE_SUBSCRIPTORE);
+    pthread_mutex_destroy(&M_IDENTIFICADOR_MENSAJE);
+    pthread_mutex_destroy(&M_PARTICIONES);
     return EXIT_SUCCESS;
 }
 

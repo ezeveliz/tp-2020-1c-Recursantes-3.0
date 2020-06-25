@@ -50,16 +50,23 @@ void *server_function(void *arg);
  */
 
 void* MEMORIA_PRINCIPAL;
+pthread_mutex_t M_MEMORIA_PRINCIPAL;
 
 t_log * logger;
 t_log * tp_logger;
 
 t_list* LIST_NEW_POKEMON;
+pthread_mutex_t M_LIST_NEW_POKEMON;
 t_list* LIST_APPEARED_POKEMON;
+pthread_mutex_t M_LIST_APPEARED_POKEMON;
 t_list* LIST_GET_POKEMON;
+pthread_mutex_t M_LIST_GET_POKEMON;
 t_list* LIST_LOCALIZED_POKEMON;
+pthread_mutex_t M_LIST_LOCALIZED_POKEMON;
 t_list* LIST_CATCH_POKEMON;
+pthread_mutex_t M_LIST_CATCH_POKEMON;
 t_list* LIST_CAUGHT_POKEMON;
+pthread_mutex_t M_LIST_CAUGHT_POKEMON;
 
 typedef struct subscriptor {
     int id_subs;
@@ -68,6 +75,7 @@ typedef struct subscriptor {
     int socket;
 } subscriptor;
 t_list* SUBSCRIPTORES;
+pthread_mutex_t M_SUBSCRIPTORES;
 
 typedef struct mensaje {
     int id;
@@ -78,6 +86,7 @@ typedef struct mensaje {
     unsigned long lru;
 } mensaje;
 t_list* MENSAJES;
+pthread_mutex_t M_MENSAJES;
 
 typedef struct mensaje_subscriptor {
     int id_mensaje;
@@ -86,8 +95,10 @@ typedef struct mensaje_subscriptor {
     bool ack;
 } mensaje_subscriptor;
 t_list* MENSAJE_SUBSCRIPTORE;
+pthread_mutex_t M_MENSAJE_SUBSCRIPTORE;
 
 int IDENTIFICADOR_MENSAJE;
+pthread_mutex_t M_IDENTIFICADOR_MENSAJE;
 
 
 typedef struct particion {
@@ -98,6 +109,7 @@ typedef struct particion {
     mensaje* mensaje; // esto es para el dump
 } particion;
 t_list* PARTICIONES;
+pthread_mutex_t M_PARTICIONES;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);

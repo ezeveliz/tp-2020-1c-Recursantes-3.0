@@ -991,3 +991,17 @@ void quitarVictimaFIFO(int base){
         }
     }
 }
+
+particion* get_lru(){
+    uint64_t lru_ts = unix_epoch();
+    particion* lru_p;
+    int size = list_size(PARTICIONES);
+    for(int i=0;i<size;i++){
+        particion* x = list_get(PARTICIONES, i);
+        if(x->ultimo_uso < lru_ts && !x->libre){
+            lru_ts = x->ultimo_uso;
+            lru_p = x;
+        }
+    }
+    return lru_p;
+}

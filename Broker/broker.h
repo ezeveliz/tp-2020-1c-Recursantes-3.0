@@ -143,4 +143,5 @@ void compactar_particiones();
 char* cola_to_string(MessageType cola);
 particion* get_fifo();
 void quitarVictimaFIFO(int base);
+particion* get_lru();
 #endif //TEAM_BROKER_H

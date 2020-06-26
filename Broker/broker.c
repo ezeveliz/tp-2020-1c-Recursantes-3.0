@@ -65,7 +65,12 @@ int main(int argc, char **argv) {
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
     //tests_broker();
-    //    particion* nueva_particion1 = particion_create(3, 4, false);
+    if(strcmp(config.mem_swap_algorithm, "FIFO")==0){
+        PARTICIONES_QUEUE = list_create();
+        log_debug(logger, "Se crea la 'cola' para FIFO");
+    }
+
+//        particion* nueva_particion1 = particion_create(3, 4, false);
 //    particion* nueva_particion2 = particion_create(7, 2, false);
 //    particion* nueva_particion4 = particion_create(9, 2, false);
 //    particion* nueva_particion3 = particion_create(11, 7, false);
@@ -741,6 +746,7 @@ void particion_delete(int base){
         particion* x = list_get(PARTICIONES, i);
         if(x->base == base){
             x->libre = true;
+            if(strcmp(config.mem_swap_algorithm, "FIFO")==0){quitarVictimaFIFO(x->base);};
             log_info(tp_logger, "Se elimina la particion con base %d", x->base);
         }
     }
@@ -838,6 +844,7 @@ int asignar_particion(size_t tam) {
         else {
             particion* nueva_particion = particion_create(particion_libre->base, tam, false);
             list_add(PARTICIONES, nueva_particion);
+            if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nueva_particion);}
             //actualizo base y tamanio de particion libre.
             particion_libre->base += tam;
             particion_libre->tam -= tam;
@@ -941,7 +948,7 @@ void compactar_particiones(){
                     una_particion->base += otra_particion->tam;
                     mergear_particiones_libres();
                     ordenar_particiones();
-                    printPartList();
+                    //  printPartList();
                     size = list_size(PARTICIONES);
                     break;
                 }
@@ -967,5 +974,20 @@ char* cola_to_string(MessageType cola) {
             return "CAUGHT_POK";
         default:
             return "No es una cola";
+    }
+}
+
+particion* get_fifo(){
+    return list_get(PARTICIONES_QUEUE, 0);
+}
+
+void quitarVictimaFIFO(int base){
+    int size = list_size(PARTICIONES_QUEUE);
+    for(int i=0; i<size; i++){
+        particion* x = list_get(PARTICIONES_QUEUE, i);
+        if(x->base == base){
+            list_remove(PARTICIONES_QUEUE, i);
+            break;
+        }
     }
 }

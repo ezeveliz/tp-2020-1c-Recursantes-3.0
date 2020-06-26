@@ -105,11 +105,12 @@ typedef struct particion {
     int base;
     int tam;
     bool libre;
-    uint64_t ultimo_uso;
+    uint64_t ultimo_uso; // para LRU
     mensaje* mensaje; // esto es para el dump
 } particion;
 t_list* PARTICIONES;
 pthread_mutex_t M_PARTICIONES;
+t_list* PARTICIONES_QUEUE;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);
@@ -140,5 +141,6 @@ void mergear_particiones_libres();
 void dump_cache(int sig);
 void compactar_particiones();
 char* cola_to_string(MessageType cola);
-
+particion* get_fifo();
+void quitarVictimaFIFO(int base);
 #endif //TEAM_BROKER_H

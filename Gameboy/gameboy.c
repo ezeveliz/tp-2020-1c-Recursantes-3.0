@@ -1,15 +1,15 @@
 //
 // Created by utnso on 07/04/20.
 //
-
+//TODO: arreglar archivode config
 #include "gameboy.h"
 
-t_config *archConfig;
 t_log *logger;
+config_struct config_params;
 
 int main(int argc, char *argv[]) {
 
-    archConfig = config_create("/home/emi/Documentos/Facultad /Operativos/TP/tp-2020-1c-Recursantes-3.0/Gameboy/gameboy_config");
+    leer_configuracion();
     logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
 
     if (argc > 2) {
@@ -40,10 +40,23 @@ int main(int argc, char *argv[]) {
     //log_destroy(logger);
 }
 
-void msj_error() {
-    printf("Erro en argumentos");
+void leer_configuracion(){
+    t_config * archConfig = config_create("gameboy_config");
+
+    config_params.ip_broker = config_get_string_value(archConfig, "IP_GAMECARD");
+    config_params.puerto_broker = config_get_int_value(archConfig, "PUERTO_BROKER");
+    config_params.ip_team = config_get_string_value(archConfig, "IP_GAMECARD");
+    config_params.puerto_team = config_get_int_value(archConfig, "PUERTO_TEAM");
+    config_params.ip_gamecard = config_get_string_value(archConfig, "IP_GAMECARD");
+    config_params.puerto_gamecard = config_get_int_value(archConfig, "PUERTO_GAMECARD");
+    config_params.mac = config_get_int_value(archConfig, "MAC");
+
+    //config_destroy(archConfig);
 }
 
+void msj_error() {
+    printf("Erro en argumentos\n");
+}
 
 /**********************************
  * Funciones de convercion
@@ -107,8 +120,6 @@ int okFailToInt(char *resultado) {
  * @params un vector de char* que tiene todos los argumentos que le pasaron al main
  */
 void broker_distribuidor(int argc, char *argv[]) {
-    char *ip = config_get_string_value(archConfig, "IP_BROKER");
-    char *puerto = config_get_string_value(archConfig, "PUERTO_BROKER");
     t_paquete *paquete;
     void *mensaje_serializado;
     int id;
@@ -125,11 +136,15 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(NEW_POK);
             t_new_pokemon *new_pokemon = create_new_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_new_pokemon(new_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
+            //Libero
             free(mensaje_serializado);
             free(new_pokemon);
+            free_package(paquete);
             break;
 
         // ./gameboy BROKER APPEARED_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE_CORRELATIVO]
@@ -144,12 +159,15 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
             id = atoi(argv[6]);
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
 
+            //Libero
             free(appeared_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         // ./gameboy BROKER CATCH_POKEMON [POKEMON] [POSX] [POSY]
@@ -162,11 +180,15 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(CATCH_POK);
             t_catch_pokemon *catch_pokemon = create_catch_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_catch_pokemon(catch_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
+            //Libero
             free(catch_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         //  ./gameboy BROKER CAUGHT_POKEMON [ID_MENSAJE_CORRELATIVO] [OK/FAIL]
@@ -180,11 +202,15 @@ void broker_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
             id = atoi(argv[3]);
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_caught_pokemon(caught_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
+            //Libero
             free(caught_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         // ./gameboy BROKER GET_POKEMON [POKEMON]
@@ -196,24 +222,23 @@ void broker_distribuidor(int argc, char *argv[]) {
             paquete = create_package(GET_POK);
             t_get_pokemon *get_pokemon = create_get_pokemon(argv[3]);
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_get_pokemon(get_pokemon));
 
-            mensaje_proceso(BROKER, paquete);
+            //Envio el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_broker, config_params.puerto_broker);
+
             free(get_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         default:
             printf("Error ese mensaje no se puede mandar al broker");
     }
 
-    free(ip);
-    //free_package(paquete);
 }
 
 void team_distribuidor(int argc, char *argv[]) {
-    char *ip = config_get_string_value(archConfig, "IP_TEAM");
-    char *puerto = config_get_string_value(archConfig, "PUERTO_TEAM");
     t_paquete *paquete;
     void *mensaje_serializado;
 
@@ -227,28 +252,41 @@ void team_distribuidor(int argc, char *argv[]) {
             }
 
             paquete = create_package(APPEARED_POK);
+            //Le tengo que mandar un id de mentira a eze para que pueda usar la misma funcion que usa con el broker
+            uint32_t id_para_eze = -1;
+            uint32_t id_correlativo_para_eze = 0;
+
+            //Agrego los ids
+            add_to_package(paquete, &id_para_eze,sizeof(uint32_t));
+            add_to_package(paquete, &id_correlativo_para_eze,sizeof(uint32_t));
+
+            //Agrego el mensaje apear
             t_appeared_pokemon *appeared_pokemon = create_appeared_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
-            add_to_package(paquete, mensaje_serializado, size_t_appeared_pokemon(appeared_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
-            mensaje_proceso(TEAM, paquete);
+            //Mando el mensaje a su respectiva direccion dependiendo del proceso
+            envio_mensaje(paquete, config_params.ip_team, config_params.puerto_team);
+
+            //Libero
             free(appeared_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
+
             break;
+
         default:
             printf("Error ese mensaje no se puede mandar al broker");
     }
-    free(ip);
-    free(puerto);
-    free_package(paquete);
 }
 
 void gamecard_distribuidor(int argc, char *argv[]) {
-    char *ip = config_get_string_value(archConfig, "IP_GAMECARD");
-    char *puerto = config_get_string_value(archConfig, "PUERTO_GAMECARD");
     t_paquete *paquete;
     void *mensaje_serializado;
     int id;
+    // Es un id de mentira que lo paso para respetar el formato del broker
+    int id_correlativo = 0;
+
     switch (str2Msj(argv[2])) {
 
         // ./gameboy GAMECARD NEW_POKEMON [POKEMON] [POSX] [POSY] [CANTIDAD] [ID_MENSAJE]
@@ -261,13 +299,19 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             t_new_pokemon *new_pokemon = create_new_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]), atoi(argv[6]));
             mensaje_serializado = new_pokemon_a_void(new_pokemon);
             id = atoi(argv[7]);
+
+            //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_new_pokemon(new_pokemon));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
+            add_to_package(paquete, mensaje_serializado, sizeof_new_pokemon(new_pokemon));
 
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Libero
             free(new_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         // ./gameboy GAMECARD CATCH_POKEMON [POKEMON] [POSX] [POSY] [ID_MENSAJE]
@@ -281,12 +325,19 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             t_catch_pokemon *catch_pokemon = create_catch_pokemon(argv[3], atoi(argv[4]), atoi(argv[5]));
             mensaje_serializado = catch_pokemon_a_void(catch_pokemon);
             id = atoi(argv[6]);
-            add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_catch_pokemon(catch_pokemon));
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Agrego los datos al paquete
+            add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
+            add_to_package(paquete, mensaje_serializado, sizeof_catch_pokemon(catch_pokemon));
+
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
+
+            //Libero
             free(catch_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         // ./gameboy GAMECARD GET_POKEMON [POKEMON] [ID_MENSAJE]
@@ -300,44 +351,24 @@ void gamecard_distribuidor(int argc, char *argv[]) {
             mensaje_serializado = get_pokemon_a_void(get_pokemon);
 
             int id = atoi(argv[4]);
-            add_to_package(paquete, &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, size_t_get_pokemon(get_pokemon));
 
-            mensaje_proceso(GAMECARD, paquete);
+            //Agrego los datos al paquete
+            add_to_package(paquete, &id, sizeof(uint32_t));
+            add_to_package(paquete, (void *) &id_correlativo, sizeof(uint32_t));
+            add_to_package(paquete, mensaje_serializado, sizeof_get_pokemon(get_pokemon));
+
+            //Mando el mensaje a quien corresponda
+            envio_mensaje(paquete, config_params.ip_gamecard, config_params.puerto_gamecard);
+
+            //Libero
             free(get_pokemon);
             free(mensaje_serializado);
+            free_package(paquete);
             break;
 
         default:
             printf("Error ese mensaje no se puede mandar al broker");
     }
-    free(ip);
-    free(puerto);
-    free_package(paquete);
-}
-
-/*
- * sirve para mandar a la direccion del proceso correspondiente
- */
-int mensaje_proceso(int proceso, t_paquete *paquete) {
-    int resultado = 0;
-
-    switch (proceso) {
-        case BROKER:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_BROKER"),
-                                      config_get_int_value(archConfig, "PUERTO_BROKER"));
-            break;
-        case TEAM:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_TEAM"),
-                                      config_get_int_value(archConfig, "PUERTO_TEAM"));
-            break;
-        case GAMECARD:
-            resultado = envio_mensaje(paquete, config_get_string_value(archConfig, "IP_GAMECARD"),
-                                      config_get_int_value(archConfig, "PUERTO_GAMECARD"));
-            break;
-    }
-
-    return resultado;
 }
 
 /*
@@ -357,6 +388,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
         close_socket(server_socket);
         return -1;
     }
+
     log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip, puerto);
 
     if (send_package(paquete, server_socket) == -1) {
@@ -365,7 +397,27 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
         return -1;
     }
 
+    // Trato de recibir el encabezado de la respuesta
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(server_socket, buffer_header) <= 0) {
+        log_info(logger, "No recibi un header");
+        return false;
+    }
+
+    //Esto solo si es el proceso broker creo
+    // Recibo la confirmacion
+    t_list* rta_list = receive_package(server_socket, buffer_header);
+    int rta = *(int*) list_get(rta_list, 0);
+    printf("Llego mensaje de confirmacion exitoso: %d\n", rta);//TODO:Revisar si estoy hay que logearlo
+
+    // Limpieza
+    free(buffer_header);
+
+    list_destroy_and_destroy_elements(rta_list, free);
+
+    /////////////////////////////////////////////////////////
     //log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
+
     close_socket(server_socket);
     return 1;
 
@@ -393,9 +445,6 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     }
     int resultado_suscripcion = suscribir_broker( broker , cola_mensaje );
 
-
-    //t_paquete* ack;
-
     MessageHeader *buffer_header = malloc(sizeof(MessageHeader));
     t_list *rta_list;
     int datos_recividos;
@@ -403,26 +452,32 @@ void suscribir(char *cola_mensaje, char *tiempo) {
     if ( resultado_suscripcion == 1 ) {
 
         timer(atoi(tiempo));
-        while (1) {
+
+        bool a = true;// Para que salga la sombra amarrilla
+        while (a) {
+
+            //Recino el header y despues recibo los datos del mensaje
             datos_recividos = receive_header(broker, buffer_header);
             rta_list = receive_package(broker, buffer_header);
+
+            //Logeo el mensaje
             logear_mensaje(buffer_header, rta_list);
+            int id_mensaje = *(int*) list_get(rta_list, 0);
+            int id_correlativo = *(int*) list_get(rta_list, 1);
+
+            //Libero la lista
             list_destroy_and_destroy_elements(rta_list, &free);
 
             // Mando el ACK
             t_paquete* paquete = create_package(ACK);
+            add_to_package(paquete, (void*) &config_params.mac, sizeof(int));
+            add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
             send_package(paquete, broker);
-            /*ack = create_package(ACK);
-            id_correlativo = *(int*)list_get(rta_list,0);
-            add_to_package(ack,(void *)&id, sizeof(int));
-            send_package(ack, broker);
 
-            free(ack);
-*/
+            send_package(paquete, broker);
+            free_package(paquete);
         }
     }
-
-
 }
 
 /*
@@ -431,11 +486,10 @@ void suscribir(char *cola_mensaje, char *tiempo) {
  */
 
 int crear_broker_socket(){
-    //Genera el socket para enviar al broker
     int broker = create_socket();
 
-    char *ip_broker = config_get_string_value(archConfig, "IP_BROKER");
-    int puerto_broker = config_get_int_value(archConfig, "PUERTO_BROKER");
+    char *ip_broker = config_params.ip_broker;
+    int puerto_broker = config_params.puerto_broker;
 
     //Reviso si el socket se creo
     if (broker == -1) {
@@ -452,8 +506,6 @@ int crear_broker_socket(){
 
     log_info(logger, "Se logro conexion con ip: %s, puerto: %d\n", ip_broker, puerto_broker);
 
-    //Libero la ip del broker- no la necesito mas
-    free(ip_broker);
 
     return broker;
 }
@@ -470,7 +522,7 @@ int suscribir_broker(int broker_socket,char *cola_mensaje){
     //Creo un paquete para suscribirme a la cola pedida
     t_paquete *paquete = create_package(str2Queue(cola_mensaje));
 
-    int mac = config_get_int_value(archConfig, "MAC");
+    int mac = config_params.mac;
     add_to_package(paquete,(void*) &mac, sizeof(int));//Mi Identificador
 
     //Mando el mensaje de suscripcion al broker
@@ -512,12 +564,12 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     switch (buffer_header->type) {
         case NEW_POK: {
             //TODO: Ver esto mañana
-            //t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
-//            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
-//                     id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
-//                     newPokemon->pos_y);
-//            free(newPokemon->nombre_pokemon);
-//            free(newPokemon);
+            t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
+            log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
+                     id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
+                     newPokemon->pos_y);
+            free(newPokemon->nombre_pokemon);
+            free(newPokemon);
             printf("Llego un mensaje new_pok\n");
             break;
         }
@@ -598,35 +650,6 @@ void timer(int tiempo) {
 void timer_handler(int signum) {
     printf("\nTermino el tiempo!\n");
     log_destroy(logger);
-    config_destroy(archConfig);
+    //config_destroy(archConfig);
     exit(-1);
 }
-
-
-/********************************************************************************
- * Funciones para calcular tamanio de los pokemon
- * Todas las funciones estan armadas como sumas de los atributos de los mensajes
- ********************************************************************************/
-
-int size_t_new_pokemon(t_new_pokemon *new_pokemon) {
-    return sizeof(uint32_t) + new_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t) +
-           sizeof(uint32_t);
-}
-
-int size_t_appeared_pokemon(t_appeared_pokemon *appeared_pokemon) {
-    return sizeof(uint32_t) + appeared_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-}
-
-int size_t_catch_pokemon(t_catch_pokemon *catch_pokemon) {
-    return sizeof(uint32_t) + catch_pokemon->nombre_pokemon_length + sizeof(uint32_t) + sizeof(uint32_t);
-}
-
-int size_t_caught_pokemon(t_caught_pokemon *caught_pokemon) {
-    return sizeof(uint32_t);
-}
-
-int size_t_get_pokemon(t_get_pokemon *get_pokemon) {
-    return sizeof(uint32_t) + get_pokemon->nombre_pokemon_length;
-}
-
-

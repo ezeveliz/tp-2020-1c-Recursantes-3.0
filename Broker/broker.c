@@ -12,6 +12,22 @@ int main(int argc, char **argv) {
         cfg_path = strdup(argv[1]);
     }
 
+    pthread_mutex_init(&M_MEMORIA_PRINCIPAL, NULL);
+    pthread_mutex_init(&M_LIST_NEW_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_APPEARED_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_GET_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_LOCALIZED_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_CATCH_POKEMON, NULL);
+    pthread_mutex_init(&M_LIST_CAUGHT_POKEMON, NULL);
+    pthread_mutex_init(&M_SUBSCRIPTORES, NULL);
+    pthread_mutex_init(&M_MENSAJES, NULL);
+    pthread_mutex_init(&M_MENSAJE_SUBSCRIPTORE, NULL);
+    pthread_mutex_init(&M_IDENTIFICADOR_MENSAJE, NULL);
+    pthread_mutex_init(&M_PARTICIONES, NULL);
+
+    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
+
     signal(SIGUSR1, dump_cache);
 
     // Logs que piden en el TP
@@ -48,8 +64,13 @@ int main(int argc, char **argv) {
     LIST_LOCALIZED_POKEMON = list_create();
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
-    //tests_broker();
-    //    particion* nueva_particion1 = particion_create(3, 4, false);
+    tests_broker();
+    if(strcmp(config.mem_swap_algorithm, "FIFO")==0){
+        PARTICIONES_QUEUE = list_create();
+        log_debug(logger, "Se crea la 'cola' para FIFO");
+    }
+
+//        particion* nueva_particion1 = particion_create(3, 4, false);
 //    particion* nueva_particion2 = particion_create(7, 2, false);
 //    particion* nueva_particion4 = particion_create(9, 2, false);
 //    particion* nueva_particion3 = particion_create(11, 7, false);
@@ -141,6 +162,19 @@ int main(int argc, char **argv) {
     printPartList();
 
     pthread_join(server_thread, NULL);
+
+    pthread_mutex_destroy(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_destroy(&M_LIST_NEW_POKEMON);
+    pthread_mutex_destroy(&M_LIST_APPEARED_POKEMON);
+    pthread_mutex_destroy(&M_LIST_GET_POKEMON);
+    pthread_mutex_destroy(&M_LIST_LOCALIZED_POKEMON);
+    pthread_mutex_destroy(&M_LIST_CATCH_POKEMON);
+    pthread_mutex_destroy(&M_LIST_CAUGHT_POKEMON);
+    pthread_mutex_destroy(&M_SUBSCRIPTORES);
+    pthread_mutex_destroy(&M_MENSAJES);
+    pthread_mutex_destroy(&M_MENSAJE_SUBSCRIPTORE);
+    pthread_mutex_destroy(&M_IDENTIFICADOR_MENSAJE);
+    pthread_mutex_destroy(&M_PARTICIONES);
     return EXIT_SUCCESS;
 }
 
@@ -253,7 +287,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, 0, NEW_POK, sizeof_new_pokemon(new_pokemon));
-                    un_mensaje->puntero_a_memoria = new_pokemon_a_void(new_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, new_pokemon_a_void(new_pokemon), sizeof_new_pokemon(new_pokemon));
 
                     // Cargamos el un_mensaje a la lista de New_pokemon
                     cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
@@ -277,7 +313,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, APPEARED_POK, sizeof_appeared_pokemon(appeared_pokemon));
-                    un_mensaje->puntero_a_memoria = appeared_pokemon_a_void(appeared_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, appeared_pokemon_a_void(appeared_pokemon), sizeof_appeared_pokemon(appeared_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Appeared_pokemon
                     cargar_mensaje(LIST_APPEARED_POKEMON, un_mensaje);
@@ -301,7 +339,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, LOCALIZED_POK, sizeof_localized_pokemon(localized_pokemon));
-                    un_mensaje->puntero_a_memoria = localized_pokemon_a_void(localized_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, localized_pokemon_a_void(localized_pokemon), sizeof_localized_pokemon(localized_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Localized_pokemon
                     cargar_mensaje(LIST_LOCALIZED_POKEMON, un_mensaje);
@@ -325,7 +365,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, CAUGHT_POK, sizeof_caught_pokemon(caught_pokemon));
-                    un_mensaje->puntero_a_memoria = caught_pokemon_a_void(caught_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, caught_pokemon_a_void(caught_pokemon), sizeof_caught_pokemon(caught_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Caught_pokemon
                     cargar_mensaje(LIST_CAUGHT_POKEMON, un_mensaje);
@@ -348,7 +390,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, 0, GET_POK, sizeof_get_pokemon(get_pokemon));
-                    un_mensaje->puntero_a_memoria = get_pokemon_a_void(get_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, get_pokemon_a_void(get_pokemon), sizeof_get_pokemon(get_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Get_pokemon
                     cargar_mensaje(LIST_GET_POKEMON, un_mensaje);
@@ -371,7 +415,9 @@ void *server_function(void *arg) {
 
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, 0, CATCH_POK, sizeof_catch_pokemon(catch_pokemon));
-                    un_mensaje->puntero_a_memoria = catch_pokemon_a_void(catch_pokemon);
+
+                    // Guardamos el contenido del mensaje en la memoria principal
+                    memcpy(un_mensaje->puntero_a_memoria, catch_pokemon_a_void(catch_pokemon), sizeof_catch_pokemon(catch_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Catch_pokemon
                     cargar_mensaje(LIST_CATCH_POKEMON, un_mensaje);
@@ -414,7 +460,10 @@ void tests_broker(){
     t_log* test_logger = log_create("memory_tests.log", "MEM", true, LOG_LEVEL_TRACE);
     int tests_run = 0;
     int tests_fail = 0;
-    
+
+    // 1+1 = 2
+    int tmp = 2;
+    test_assert("1+1=2", tmp == (1+1));
 
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
@@ -433,19 +482,17 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     nuevo_mensaje->id_correlacional = id_correlacional;
     nuevo_mensaje->tipo = tipo;
     nuevo_mensaje->tam = tam;
-    nuevo_mensaje->puntero_a_memoria = asignar_puntero_a_memoria();
     nuevo_mensaje->lru = unix_epoch();
+
+    particion* particion_libre = asignar_particion(tam);
+    particion_libre->mensaje = nuevo_mensaje;
+    nuevo_mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
 
     list_add(MENSAJES, nuevo_mensaje);
 
     return nuevo_mensaje;
 }
 
-
-void* asignar_puntero_a_memoria(){
-    // proximamente
-    return NULL;
-}
 
 subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
     subscriptor* nuevo_subscriptor = malloc(sizeof(subscriptor));
@@ -671,19 +718,6 @@ void* flag_ack(uint32_t id_sub, uint32_t id_men){
     }
 }
 
-/* TODO
- * Cuando los subscriptores reciban todos los mensajes borrar el mensaje de la memoria (hay que borrarlo tambien de la estrutura ?)
- 
- * Ver lo de kill -SIGUSR1 [proceso]
-
-    El kill se envía desde consola. Ustedes deben implementar la función que maneje esa señal en el código.
-    Estamos en tratativas de armar un vídeo explicando señales. 
-    De base pueden usar esta presentación vieja que se entiende bastante el funcionamiento de la función.
-    http://faq.utnso.com.ar/signals
-
- * Copiar y pegar funciones de la memoria principal de tps pasados
- */
-
 /*
 ███╗   ███╗███████╗███╗   ███╗ ██████╗ ██████╗ ██╗ █████╗
 ████╗ ████║██╔════╝████╗ ████║██╔═══██╗██╔══██╗██║██╔══██╗
@@ -693,8 +727,6 @@ void* flag_ack(uint32_t id_sub, uint32_t id_men){
 ╚═╝     ╚═╝╚══════╝╚═╝     ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═╝
 */
 
-// TODO: luego buscar como se usa el list_sort
-// https://github.com/sisoputnfrba/so-commons-library/blob/master/tests/unit-tests/test_list.c
 
 particion* particion_create(int base, int tam, bool is_free){
     particion* nueva_particion = malloc(sizeof(particion));
@@ -712,6 +744,7 @@ void particion_delete(int base){
         particion* x = list_get(PARTICIONES, i);
         if(x->base == base){
             x->libre = true;
+            if(strcmp(config.mem_swap_algorithm, "FIFO")==0){quitarVictimaFIFO(x->base);};
             log_info(tp_logger, "Se elimina la particion con base %d", x->base);
         }
     }
@@ -790,7 +823,7 @@ particion* best_fit_search(tam){
  * El valor -1 indicará compactar solamente cuando se hayan eliminado todas las particiones.
  */
 
-int asignar_particion(size_t tam) {
+particion* asignar_particion(size_t tam) {
     particion *particion_libre = buscar_particion_libre(tam);
     if (particion_libre != NULL) {
         log_info(logger, "Doing the job..");
@@ -803,12 +836,13 @@ int asignar_particion(size_t tam) {
 
 
             log_info(logger, "Partition assigned(base: %d)", particion_libre->base);
-            return particion_libre->base;
+            return particion_libre;
         }
             //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
         else {
             particion* nueva_particion = particion_create(particion_libre->base, tam, false);
             list_add(PARTICIONES, nueva_particion);
+            if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nueva_particion);}
             //actualizo base y tamanio de particion libre.
             particion_libre->base += tam;
             particion_libre->tam -= tam;
@@ -821,11 +855,11 @@ int asignar_particion(size_t tam) {
             log_info(logger, "Rearranging partitions...");
             ordenar_particiones();
             log_info(logger, "Ready");
-            return nueva_particion->base;
+            return nueva_particion;
         }
     } else {
-        log_warning(logger, "It was not possible to assign partition!");
-        return -1;
+        log_error(logger, "It was not possible to assign partition!");
+        exit(EXIT_FAILURE);
 //        INTENTOS++;
     }
 
@@ -912,7 +946,7 @@ void compactar_particiones(){
                     una_particion->base += otra_particion->tam;
                     mergear_particiones_libres();
                     ordenar_particiones();
-                    printPartList();
+                    //  printPartList();
                     size = list_size(PARTICIONES);
                     break;
                 }
@@ -939,4 +973,33 @@ char* cola_to_string(MessageType cola) {
         default:
             return "No es una cola";
     }
+}
+
+particion* get_fifo(){
+    return list_get(PARTICIONES_QUEUE, 0);
+}
+
+void quitarVictimaFIFO(int base){
+    int size = list_size(PARTICIONES_QUEUE);
+    for(int i=0; i<size; i++){
+        particion* x = list_get(PARTICIONES_QUEUE, i);
+        if(x->base == base){
+            list_remove(PARTICIONES_QUEUE, i);
+            break;
+        }
+    }
+}
+
+particion* get_lru(){
+    uint64_t lru_ts = unix_epoch();
+    particion* lru_p;
+    int size = list_size(PARTICIONES);
+    for(int i=0;i<size;i++){
+        particion* x = list_get(PARTICIONES, i);
+        if(x->ultimo_uso < lru_ts && !x->libre){
+            lru_ts = x->ultimo_uso;
+            lru_p = x;
+        }
+    }
+    return lru_p;
 }

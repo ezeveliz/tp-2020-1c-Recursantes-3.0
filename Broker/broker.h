@@ -144,4 +144,5 @@ char* cola_to_string(MessageType cola);
 particion* get_fifo();
 void quitarVictimaFIFO(int base);
 particion* get_lru();
+particion* asignar_particion(size_t tam);
 #endif //TEAM_BROKER_H

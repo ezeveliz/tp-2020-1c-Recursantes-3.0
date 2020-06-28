@@ -56,7 +56,6 @@ int main(int argc, char **argv) {
     printPartList();
 
 
-
     // Inicializamos las colas
     LIST_NEW_POKEMON = list_create();
     LIST_APPEARED_POKEMON = list_create();
@@ -64,102 +63,12 @@ int main(int argc, char **argv) {
     LIST_LOCALIZED_POKEMON = list_create();
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
-    tests_broker();
     if(strcmp(config.mem_swap_algorithm, "FIFO")==0){
         PARTICIONES_QUEUE = list_create();
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
 
-//        particion* nueva_particion1 = particion_create(3, 4, false);
-//    particion* nueva_particion2 = particion_create(7, 2, false);
-//    particion* nueva_particion4 = particion_create(9, 2, false);
-//    particion* nueva_particion3 = particion_create(11, 7, false);
-//    particion* particion_inicial = particion_create(18, 2, true);
-    log_debug(logger, "NEW_POKEMON");
-    t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
-    size_t partition_size = sizeof_new_pokemon(new_pika);
-    int base = asignar_particion(partition_size);
-    log_debug(logger, "Base: %d", base);
-    printPartList();
-    /*
-     *
-     *
-     *
-     */
-
-    log_debug(logger, "GET_POKEMON");
-    t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
-    size_t partition_size1 = sizeof_get_pokemon(get_pika);
-    int base1 = asignar_particion(partition_size1);
-    log_debug(logger, "Base: %d", base1);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
-    int base2 = asignar_particion(partition_size2);
-    log_debug(logger, "Base: %d", base2);
-    printPartList();
-
-    /*
-  *
-  *
-  *
-  *
-  */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
-    int base3 = asignar_particion(partition_size3);
-    log_debug(logger, "Base: %d", base3);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
-    int base4 = asignar_particion(partition_size4);
-    log_debug(logger, "Base: %d", base4);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
-    int base5= asignar_particion(partition_size5);
-    log_debug(logger, "Base: %d", base5);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "Eliminamos GET_POKEMON(base:%d)", 24);
-    particion_delete(24);
-    printPartList();
-    particion_delete(56);
-    printPartList();
-
-//    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
-//    particion_delete(36);
-//    printPartList();
-//    pthread_join(server_thread, NULL);
-    compactar_particiones();
-    printPartList();
+//    tests_broker();
 
     pthread_join(server_thread, NULL);
 
@@ -464,6 +373,98 @@ void tests_broker(){
     // 1+1 = 2
     int tmp = 2;
     test_assert("1+1=2", tmp == (1+1));
+
+    //        particion* nueva_particion1 = particion_create(3, 4, false);
+//    particion* nueva_particion2 = particion_create(7, 2, false);
+//    particion* nueva_particion4 = particion_create(9, 2, false);
+//    particion* nueva_particion3 = particion_create(11, 7, false);
+//    particion* particion_inicial = particion_create(18, 2, true);
+    log_debug(logger, "NEW_POKEMON");
+    t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
+    size_t partition_size = sizeof_new_pokemon(new_pika);
+    int base = asignar_particion(partition_size);
+    log_debug(logger, "Base: %d", base);
+    printPartList();
+    /*
+     *
+     *
+     *
+     */
+
+    log_debug(logger, "GET_POKEMON");
+    t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
+    size_t partition_size1 = sizeof_get_pokemon(get_pika);
+    int base1 = asignar_particion(partition_size1);
+    log_debug(logger, "Base: %d", base1);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
+    int base2 = asignar_particion(partition_size2);
+    log_debug(logger, "Base: %d", base2);
+    printPartList();
+
+    /*
+  *
+  *
+  *
+  *
+  */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
+    int base3 = asignar_particion(partition_size3);
+    log_debug(logger, "Base: %d", base3);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
+    int base4 = asignar_particion(partition_size4);
+    log_debug(logger, "Base: %d", base4);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
+    int base5= asignar_particion(partition_size5);
+    log_debug(logger, "Base: %d", base5);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "Eliminamos GET_POKEMON(base:%d)", 24);
+    particion_delete(24);
+    printPartList();
+    particion_delete(56);
+    printPartList();
+
+//    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
+//    particion_delete(36);
+//    printPartList();
+//    pthread_join(server_thread, NULL);
+    compactar_particiones();
+    printPartList();
+
 
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
@@ -914,16 +915,17 @@ void dump_cache(int sig){
         particion *s = list_get(PARTICIONES, i);
         fprintf(archivo_dump, "Particion %d: %06p-%06p\t"
                               "[%s]\t"
-                              "Size: %db\t"
-                              "LRU: %" PRIu64 "\t"
-                              "Cola: %s\t"
-                              "ID: %d\n",
+                              "Size: %db",
                               i+1, s->base, s->base+s->tam,
                               s->libre ? "L" : "X",
-                              s->tam,
-                              s->ultimo_uso,
-                              cola_to_string(NEW_POK),
-                              1);
+                              s->tam);
+        if(!s->libre){
+            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
+                    s->ultimo_uso,
+                    cola_to_string(s->mensaje->tipo),
+                    s->mensaje->id);
+        }
+        fprintf(archivo_dump, "\n");
     }
 
     // Cierro el archivo y libero la memoria

@@ -111,6 +111,18 @@ typedef struct particion {
 t_list* PARTICIONES;
 pthread_mutex_t M_PARTICIONES;
 t_list* PARTICIONES_QUEUE;
+pthread_mutex_t M_PARTICIONES_QUEUE;
+
+typedef struct t_nodo {
+    particion* particion;
+    struct t_nodo* izq;
+    struct t_nodo* der;
+    struct t_nodo* padre;
+    struct t_nodo* buddy;
+    bool es_hoja;
+} t_nodo;
+t_nodo* ARBOL_BUDDY;
+pthread_mutex_t M_ARBOL_BUDDY;
 
 void tests_broker();
 mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t tam);

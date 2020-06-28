@@ -24,6 +24,8 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_MENSAJE_SUBSCRIPTORE, NULL);
     pthread_mutex_init(&M_IDENTIFICADOR_MENSAJE, NULL);
     pthread_mutex_init(&M_PARTICIONES, NULL);
+    pthread_mutex_init(&M_PARTICIONES_QUEUE, NULL);
+    pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
 
     pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
     pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
@@ -777,7 +779,7 @@ particion* first_fit_search(tam){
     return NULL;
 }
 
-particion* best_fit_search(tam){
+particion* best_fit_search(int tam){
     int size = list_size(PARTICIONES);
     t_list* candidatos = list_create();
     for(int i=0; i<size; i++){
@@ -1004,4 +1006,39 @@ particion* get_lru(){
         }
     }
     return lru_p;
+}
+
+/*
+██████╗ ██╗   ██╗██████╗ ██████╗ ██╗   ██╗
+██╔══██╗██║   ██║██╔══██╗██╔══██╗╚██╗ ██╔╝
+██████╔╝██║   ██║██║  ██║██║  ██║ ╚████╔╝
+██╔══██╗██║   ██║██║  ██║██║  ██║  ╚██╔╝
+██████╔╝╚██████╔╝██████╔╝██████╔╝   ██║
+╚═════╝  ╚═════╝ ╚═════╝ ╚═════╝    ╚═╝
+*/
+
+t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam){
+    // Si es null devuelvo null
+    if(nodo == NULL){
+        return NULL;
+    }
+    // si no es una hoja devuelvo null
+    if(!nodo->es_hoja){
+        return NULL;
+    }
+    // Si la particion esta libre y hay espacio devuelvo ese nodo
+    particion* una_particion = nodo->particion;
+    if(una_particion->tam > tam && una_particion->libre){
+        return nodo;
+    }
+    // Si no busco a izquierda
+    t_nodo* res_izq = buscar_nodo_libre(nodo->izq, tam);
+    if(res_izq){
+        return res_izq;
+    }
+    // Si no busco a derecha
+    t_nodo* res_der = buscar_nodo_libre(nodo->der, tam);
+    if(res_der){
+        return res_der;
+    }
 }

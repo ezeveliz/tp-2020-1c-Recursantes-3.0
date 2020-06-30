@@ -75,7 +75,8 @@ void server(){
             }
         }
         else {
-            log_info(logger, "El if me dio falso");
+            log_info(logger, "No hay conexion con el Broker");
+            exit(EXIT_SUCCESS);
         }
         free(buffer_header);
     }

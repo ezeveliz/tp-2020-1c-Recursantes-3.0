@@ -57,3 +57,5 @@ dkms.conf
 /.clang-format
 /Team/log_team1.txt
 dump.txt
+*/CMake*
+*/cmake*

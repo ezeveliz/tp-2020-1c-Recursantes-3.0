@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_MENSAJE_SUBSCRIPTORE, NULL);
     pthread_mutex_init(&M_IDENTIFICADOR_MENSAJE, NULL);
     pthread_mutex_init(&M_PARTICIONES, NULL);
+    pthread_mutex_init(&M_PARTICIONES_QUEUE, NULL);
+    pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
+    pthread_mutex_init(&M_INTENTOS, NULL);
 
     pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
     pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
@@ -42,9 +45,11 @@ int main(int argc, char **argv) {
 
     pthread_t server_thread;
     pthread_create(&server_thread, NULL, server_function, NULL);
+
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
-
+    INTENTOS = 0;
+    MIN_PART_LEN = config.min_partition_size;
     MEMORIA_PRINCIPAL = malloc(config.mem_size);
     SUBSCRIPTORES = list_create();
     MENSAJES = list_create();
@@ -56,7 +61,6 @@ int main(int argc, char **argv) {
     printPartList();
 
 
-
     // Inicializamos las colas
     LIST_NEW_POKEMON = list_create();
     LIST_APPEARED_POKEMON = list_create();
@@ -64,102 +68,12 @@ int main(int argc, char **argv) {
     LIST_LOCALIZED_POKEMON = list_create();
     LIST_CATCH_POKEMON = list_create();
     LIST_CAUGHT_POKEMON = list_create();
-    tests_broker();
     if(strcmp(config.mem_swap_algorithm, "FIFO")==0){
         PARTICIONES_QUEUE = list_create();
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
 
-//        particion* nueva_particion1 = particion_create(3, 4, false);
-//    particion* nueva_particion2 = particion_create(7, 2, false);
-//    particion* nueva_particion4 = particion_create(9, 2, false);
-//    particion* nueva_particion3 = particion_create(11, 7, false);
-//    particion* particion_inicial = particion_create(18, 2, true);
-    log_debug(logger, "NEW_POKEMON");
-    t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
-    size_t partition_size = sizeof_new_pokemon(new_pika);
-    int base = asignar_particion(partition_size);
-    log_debug(logger, "Base: %d", base);
-    printPartList();
-    /*
-     *
-     *
-     *
-     */
-
-    log_debug(logger, "GET_POKEMON");
-    t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
-    size_t partition_size1 = sizeof_get_pokemon(get_pika);
-    int base1 = asignar_particion(partition_size1);
-    log_debug(logger, "Base: %d", base1);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
-    int base2 = asignar_particion(partition_size2);
-    log_debug(logger, "Base: %d", base2);
-    printPartList();
-
-    /*
-  *
-  *
-  *
-  *
-  */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
-    int base3 = asignar_particion(partition_size3);
-    log_debug(logger, "Base: %d", base3);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
-    int base4 = asignar_particion(partition_size4);
-    log_debug(logger, "Base: %d", base4);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
-    size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
-    int base5= asignar_particion(partition_size5);
-    log_debug(logger, "Base: %d", base5);
-    printPartList();
-    /*
-     *
-     *
-     *
-     *
-     */
-    log_debug(logger, "Eliminamos GET_POKEMON(base:%d)", 24);
-    particion_delete(24);
-    printPartList();
-    particion_delete(56);
-    printPartList();
-
-//    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
-//    particion_delete(36);
-//    printPartList();
-//    pthread_join(server_thread, NULL);
-    compactar_particiones();
-    printPartList();
+//    tests_broker();
 
     pthread_join(server_thread, NULL);
 
@@ -465,6 +379,98 @@ void tests_broker(){
     int tmp = 2;
     test_assert("1+1=2", tmp == (1+1));
 
+    //        particion* nueva_particion1 = particion_create(3, 4, false);
+//    particion* nueva_particion2 = particion_create(7, 2, false);
+//    particion* nueva_particion4 = particion_create(9, 2, false);
+//    particion* nueva_particion3 = particion_create(11, 7, false);
+//    particion* particion_inicial = particion_create(18, 2, true);
+    log_debug(logger, "NEW_POKEMON");
+    t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
+    size_t partition_size = sizeof_new_pokemon(new_pika);
+    int base = asignar_particion(partition_size);
+    log_debug(logger, "Base: %d", base);
+    printPartList();
+    /*
+     *
+     *
+     *
+     */
+
+    log_debug(logger, "GET_POKEMON");
+    t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
+    size_t partition_size1 = sizeof_get_pokemon(get_pika);
+    int base1 = asignar_particion(partition_size1);
+    log_debug(logger, "Base: %d", base1);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
+    int base2 = asignar_particion(partition_size2);
+    log_debug(logger, "Base: %d", base2);
+    printPartList();
+
+    /*
+  *
+  *
+  *
+  *
+  */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
+    int base3 = asignar_particion(partition_size3);
+    log_debug(logger, "Base: %d", base3);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
+    int base4 = asignar_particion(partition_size4);
+    log_debug(logger, "Base: %d", base4);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "LOCALIZED_POKEMON");
+    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
+    int base5= asignar_particion(partition_size5);
+    log_debug(logger, "Base: %d", base5);
+    printPartList();
+    /*
+     *
+     *
+     *
+     *
+     */
+    log_debug(logger, "Eliminamos GET_POKEMON(base:%d)", 24);
+    particion_delete(24);
+    printPartList();
+    particion_delete(56);
+    printPartList();
+
+//    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
+//    particion_delete(36);
+//    printPartList();
+//    pthread_join(server_thread, NULL);
+    compactar_particiones();
+    printPartList();
+
+
 
     log_warning(test_logger, "Pasaron %d de %d tests", tests_run-tests_fail, tests_run);
     log_destroy(test_logger);
@@ -559,6 +565,7 @@ void printPartList() {
 }
 
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
+    log_debug(logger, "Se crea una nueva relacion mensaje-subscriptor");
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
 
     nuevo_mensaje_subscriptor->id_mensaje = id_mensaje;
@@ -597,15 +604,38 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     t_paquete* paquete = create_package(tipo);
     add_to_package(paquete, (void*) &respuesta, sizeof(int));
     send_package(paquete, fd);
+
+    // Busque los mensajes antiguos en memoria y se cree las estructuras mensaje_subscriptor
+    for (int i = 0; i < list_size(MENSAJES); ++i) {
+        mensaje* un_mensaje = list_get(MENSAJES, i);
+        if (un_mensaje->tipo == sub_to_men(tipo)){
+            cargar_mensaje(una_cola, un_mensaje);
+        }
+    }
+
+    recursar_operativos();
 }
 
+// Carga mensajes si no estaban antes
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
     int cantidad_subs = list_size(una_cola);
     for (int i = 0; i < cantidad_subs; ++i) {
         subscriptor* un_subscriptor = list_get(una_cola, i);
-        mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        if(!existe_mensaje_subscriptor(un_mensaje->id, un_subscriptor->id_subs)){
+            mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        }
         cantidad_subs = list_size(una_cola);
     }
+}
+
+bool existe_mensaje_subscriptor(int id_mensaje, int id_subs){
+    for (int i = 0; i < list_size(MENSAJE_SUBSCRIPTORE); ++i) {
+        mensaje_subscriptor* relacion = list_get(MENSAJE_SUBSCRIPTORE, i);
+        if (relacion->id_mensaje == id_mensaje && relacion->id_subscriptor){
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -664,8 +694,23 @@ void mandar_mensaje(void* cosito){
     if (send_package(paquete, un_subscriptor->socket) > 0){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
+        // Actualizo el LRU
+        un_mensaje->lru = unix_epoch();
+        particion* una_particion = find_particion_by_id_mensaje(un_mensaje->id);
+        una_particion->ultimo_uso = unix_epoch();
     }
 }
+
+particion* find_particion_by_id_mensaje(int id_mensaje){
+    bool id_search(void* una_part){
+        particion* part_encontrada = (particion*) una_part;
+        return part_encontrada->mensaje->id == id_mensaje;
+    }
+
+    subscriptor* encontrado = list_find(PARTICIONES, id_search);
+    return encontrado;
+}
+
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub){
     void* stream = malloc(sizeof(uint32_t)*2 + sizeof(bool)*2);
     int offset = 0;
@@ -767,7 +812,7 @@ particion* first_fit_search(tam){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++){
         particion* x = list_get(PARTICIONES, i);
-        if(x->libre == true && tam <= x->tam ){
+        if(x->libre == true && tam <= x->tam && x->tam >= MIN_PART_LEN){
             log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
             return x;
         }
@@ -776,12 +821,12 @@ particion* first_fit_search(tam){
     return NULL;
 }
 
-particion* best_fit_search(tam){
+particion* best_fit_search(int tam){
     int size = list_size(PARTICIONES);
     t_list* candidatos = list_create();
     for(int i=0; i<size; i++){
         particion* x = list_get(PARTICIONES, i);
-        if(x->libre == true && tam <= x->tam){
+        if(x->libre == true && tam <= x->tam && x->tam >= MIN_PART_LEN){
             log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
             if(tam == x->tam){log_info(logger, "Best fit partition found!(base:%d)", x->base);return x;}
             list_add(candidatos, x);
@@ -807,6 +852,21 @@ particion* best_fit_search(tam){
         log_warning(logger, "There are not availables partitions :|");
         return NULL;
     }
+}
+
+void algoritmo_de_reemplazo(){
+    particion* una_particion;
+    if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
+        log_debug(logger, "FIFO victim search starts...");
+        una_particion = get_fifo();
+    }else if (strcmp(config.mem_swap_algorithm, "LRU") == 0){
+        log_debug(logger, "LRU victim search starts...");
+        una_particion = get_lru();
+    }else{
+        log_error(logger, "Unexpected algorithm");
+        exit(EXIT_FAILURE);
+    }
+    particion_delete(una_particion->base);
 }
 
 /*
@@ -840,6 +900,7 @@ particion* asignar_particion(size_t tam) {
         }
             //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
         else {
+            tam = tam >= MIN_PART_LEN ? tam : MIN_PART_LEN;
             particion* nueva_particion = particion_create(particion_libre->base, tam, false);
             list_add(PARTICIONES, nueva_particion);
             if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nueva_particion);}
@@ -858,9 +919,16 @@ particion* asignar_particion(size_t tam) {
             return nueva_particion;
         }
     } else {
-        log_error(logger, "It was not possible to assign partition!");
-        exit(EXIT_FAILURE);
-//        INTENTOS++;
+        log_warning(logger, "It was not possible to assign partition!");
+        if((INTENTOS >= config.compactation_freq) && (config.compactation_freq!=-1)){
+            compactar_particiones();
+            INTENTOS = 0;
+        } else{
+            algoritmo_de_reemplazo();
+            INTENTOS++;
+        }
+        // La recursivistica concha de tu hermana como nuestras cursadas de operativos
+        return asignar_particion(tam);
     }
 
 }
@@ -912,18 +980,20 @@ void dump_cache(int sig){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++) {
         particion *s = list_get(PARTICIONES, i);
-        fprintf(archivo_dump, "Particion %d: %06p-%06p\t"
+        //Todo: %06p
+        fprintf(archivo_dump, "Particion %d: %06d-%06d\t"
                               "[%s]\t"
-                              "Size: %db\t"
-                              "LRU: %" PRIu64 "\t"
-                              "Cola: %s\t"
-                              "ID: %d\n",
+                              "Size: %db",
                               i+1, s->base, s->base+s->tam,
                               s->libre ? "L" : "X",
-                              s->tam,
-                              s->ultimo_uso,
-                              cola_to_string(NEW_POK),
-                              1);
+                              s->tam);
+        if(!s->libre){
+            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
+                    s->ultimo_uso,
+                    cola_to_string(s->mensaje->tipo),
+                    s->mensaje->id);
+        }
+        fprintf(archivo_dump, "\n");
     }
 
     // Cierro el archivo y libero la memoria
@@ -975,6 +1045,25 @@ char* cola_to_string(MessageType cola) {
     }
 }
 
+MessageType sub_to_men(MessageType cola) {
+    switch (cola) {
+        case SUB_NEW:
+            return NEW_POK;
+        case SUB_GET:
+            return GET_POK;
+        case SUB_CATCH:
+            return CATCH_POK;
+        case SUB_APPEARED:
+            return APPEARED_POK;
+        case SUB_LOCALIZED:
+            return LOCALIZED_POK;
+        case SUB_CAUGHT:
+            return CAUGHT_POK;
+        default:
+            exit(EXIT_FAILURE);
+    }
+}
+
 particion* get_fifo(){
     return list_get(PARTICIONES_QUEUE, 0);
 }
@@ -1002,4 +1091,39 @@ particion* get_lru(){
         }
     }
     return lru_p;
+}
+
+/*
+██████╗ ██╗   ██╗██████╗ ██████╗ ██╗   ██╗
+██╔══██╗██║   ██║██╔══██╗██╔══██╗╚██╗ ██╔╝
+██████╔╝██║   ██║██║  ██║██║  ██║ ╚████╔╝
+██╔══██╗██║   ██║██║  ██║██║  ██║  ╚██╔╝
+██████╔╝╚██████╔╝██████╔╝██████╔╝   ██║
+╚═════╝  ╚═════╝ ╚═════╝ ╚═════╝    ╚═╝
+*/
+
+t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam){
+    // Si es null devuelvo null
+    if(nodo == NULL){
+        return NULL;
+    }
+    // si no es una hoja devuelvo null
+    if(!nodo->es_hoja){
+        return NULL;
+    }
+    // Si la particion esta libre y hay espacio devuelvo ese nodo
+    particion* una_particion = nodo->particion;
+    if(una_particion->tam > tam && una_particion->libre){
+        return nodo;
+    }
+    // Si no busco a izquierda
+    t_nodo* res_izq = buscar_nodo_libre(nodo->izq, tam);
+    if(res_izq){
+        return res_izq;
+    }
+    // Si no busco a derecha
+    t_nodo* res_der = buscar_nodo_libre(nodo->der, tam);
+    if(res_der){
+        return res_der;
+    }
 }

@@ -301,7 +301,7 @@ t_list *receive_package(int socket_cliente, MessageHeader *header) {
 
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad){
     t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
-    new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     new_pokemon->nombre_pokemon = nombre_pokemon;
     new_pokemon->pos_x = pos_x;
     new_pokemon->pos_y = pos_y;
@@ -355,7 +355,7 @@ t_new_pokemon* void_a_new_pokemon(void* stream){
 
 t_get_pokemon* create_get_pokemon(char* nombre_pokemon){
     t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
-    get_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    get_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     get_pokemon->nombre_pokemon = nombre_pokemon;
     return get_pokemon;
 }
@@ -389,7 +389,7 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
 
 t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
     t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
-    localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
     localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
@@ -476,7 +476,7 @@ t_caught_pokemon* void_a_caught_pokemon(void* stream){
 
 t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y){
     t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
-    catch_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    catch_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     catch_pokemon->nombre_pokemon = nombre_pokemon;
     catch_pokemon->pos_x = pos_x;
     catch_pokemon->pos_y = pos_y;
@@ -524,7 +524,7 @@ t_catch_pokemon* void_a_catch_pokemon(void* stream){
 
 t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y){
     t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
-    appeared_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    appeared_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     appeared_pokemon->nombre_pokemon = nombre_pokemon;
     appeared_pokemon->pos_x = pos_x;
     appeared_pokemon->pos_y = pos_y;

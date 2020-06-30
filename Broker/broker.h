@@ -101,6 +101,8 @@ int IDENTIFICADOR_MENSAJE;
 pthread_mutex_t M_IDENTIFICADOR_MENSAJE;
 
 int MIN_PART_LEN;
+int INTENTOS;
+pthread_mutex_t M_INTENTOS;
 
 typedef struct particion {
     int base;
@@ -158,4 +160,8 @@ particion* get_fifo();
 void quitarVictimaFIFO(int base);
 particion* get_lru();
 particion* asignar_particion(size_t tam);
+void algoritmo_de_reemplazo();
+particion* find_particion_by_id_mensaje(int id_mensaje);
+bool existe_mensaje_subscriptor(int id_mensaje, int id_subs);
+MessageType sub_to_men(MessageType cola);
 #endif //TEAM_BROKER_H

@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_PARTICIONES, NULL);
     pthread_mutex_init(&M_PARTICIONES_QUEUE, NULL);
     pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
+    pthread_mutex_init(&M_INTENTOS, NULL);
 
     pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
     pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
@@ -44,8 +45,10 @@ int main(int argc, char **argv) {
 
     pthread_t server_thread;
     pthread_create(&server_thread, NULL, server_function, NULL);
+
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
+    INTENTOS = 0;
     MIN_PART_LEN = config.min_partition_size;
     MEMORIA_PRINCIPAL = malloc(config.mem_size);
     SUBSCRIPTORES = list_create();
@@ -562,6 +565,7 @@ void printPartList() {
 }
 
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
+    log_debug(logger, "Se crea una nueva relacion mensaje-subscriptor");
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
 
     nuevo_mensaje_subscriptor->id_mensaje = id_mensaje;
@@ -600,15 +604,38 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     t_paquete* paquete = create_package(tipo);
     add_to_package(paquete, (void*) &respuesta, sizeof(int));
     send_package(paquete, fd);
+
+    // Busque los mensajes antiguos en memoria y se cree las estructuras mensaje_subscriptor
+    for (int i = 0; i < list_size(MENSAJES); ++i) {
+        mensaje* un_mensaje = list_get(MENSAJES, i);
+        if (un_mensaje->tipo == sub_to_men(tipo)){
+            cargar_mensaje(una_cola, un_mensaje);
+        }
+    }
+
+    recursar_operativos();
 }
 
+// Carga mensajes si no estaban antes
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
     int cantidad_subs = list_size(una_cola);
     for (int i = 0; i < cantidad_subs; ++i) {
         subscriptor* un_subscriptor = list_get(una_cola, i);
-        mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        if(!existe_mensaje_subscriptor(un_mensaje->id, un_subscriptor->id_subs)){
+            mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        }
         cantidad_subs = list_size(una_cola);
     }
+}
+
+bool existe_mensaje_subscriptor(int id_mensaje, int id_subs){
+    for (int i = 0; i < list_size(MENSAJE_SUBSCRIPTORE); ++i) {
+        mensaje_subscriptor* relacion = list_get(MENSAJE_SUBSCRIPTORE, i);
+        if (relacion->id_mensaje == id_mensaje && relacion->id_subscriptor){
+            return true;
+        }
+    }
+    return false;
 }
 
 
@@ -667,8 +694,23 @@ void mandar_mensaje(void* cosito){
     if (send_package(paquete, un_subscriptor->socket) > 0){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
+        // Actualizo el LRU
+        un_mensaje->lru = unix_epoch();
+        particion* una_particion = find_particion_by_id_mensaje(un_mensaje->id);
+        una_particion->ultimo_uso = unix_epoch();
     }
 }
+
+particion* find_particion_by_id_mensaje(int id_mensaje){
+    bool id_search(void* una_part){
+        particion* part_encontrada = (particion*) una_part;
+        return part_encontrada->mensaje->id == id_mensaje;
+    }
+
+    subscriptor* encontrado = list_find(PARTICIONES, id_search);
+    return encontrado;
+}
+
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub){
     void* stream = malloc(sizeof(uint32_t)*2 + sizeof(bool)*2);
     int offset = 0;
@@ -812,6 +854,21 @@ particion* best_fit_search(int tam){
     }
 }
 
+void algoritmo_de_reemplazo(){
+    particion* una_particion;
+    if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
+        log_debug(logger, "FIFO victim search starts...");
+        una_particion = get_fifo();
+    }else if (strcmp(config.mem_swap_algorithm, "LRU") == 0){
+        log_debug(logger, "LRU victim search starts...");
+        una_particion = get_lru();
+    }else{
+        log_error(logger, "Unexpected algorithm");
+        exit(EXIT_FAILURE);
+    }
+    particion_delete(una_particion->base);
+}
+
 /*
  * Se buscará una partición libre que tenga suficiente memoria continua como para contener el valor.
  * En caso de no encontrarla, se pasará al paso siguiente (si corresponde, en caso contrario se pasará al paso 3 directamente).
@@ -862,9 +919,16 @@ particion* asignar_particion(size_t tam) {
             return nueva_particion;
         }
     } else {
-        log_error(logger, "It was not possible to assign partition!");
-        exit(EXIT_FAILURE);
-//        INTENTOS++;
+        log_warning(logger, "It was not possible to assign partition!");
+        if((INTENTOS >= config.compactation_freq) && (config.compactation_freq!=-1)){
+            compactar_particiones();
+            INTENTOS = 0;
+        } else{
+            algoritmo_de_reemplazo();
+            INTENTOS++;
+        }
+        // La recursivistica concha de tu hermana como nuestras cursadas de operativos
+        return asignar_particion(tam);
     }
 
 }
@@ -916,7 +980,8 @@ void dump_cache(int sig){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++) {
         particion *s = list_get(PARTICIONES, i);
-        fprintf(archivo_dump, "Particion %d: %06p-%06p\t"
+        //Todo: %06p
+        fprintf(archivo_dump, "Particion %d: %06d-%06d\t"
                               "[%s]\t"
                               "Size: %db",
                               i+1, s->base, s->base+s->tam,
@@ -977,6 +1042,25 @@ char* cola_to_string(MessageType cola) {
             return "CAUGHT_POK";
         default:
             return "No es una cola";
+    }
+}
+
+MessageType sub_to_men(MessageType cola) {
+    switch (cola) {
+        case SUB_NEW:
+            return NEW_POK;
+        case SUB_GET:
+            return GET_POK;
+        case SUB_CATCH:
+            return CATCH_POK;
+        case SUB_APPEARED:
+            return APPEARED_POK;
+        case SUB_LOCALIZED:
+            return LOCALIZED_POK;
+        case SUB_CAUGHT:
+            return CAUGHT_POK;
+        default:
+            exit(EXIT_FAILURE);
     }
 }
 

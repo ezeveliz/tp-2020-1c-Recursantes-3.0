@@ -18,6 +18,15 @@
 #include "structures.h"
 #endif //TEAM_GAMEBOY_H
 
+typedef struct{
+    char* ip_broker;
+    int puerto_broker;
+    char* ip_team;
+    int puerto_team;
+    char* ip_gamecard;
+    int puerto_gamecard;
+    int mac;
+} config_struct;
 
 #define PARAMETROS_BROKER_NEW 7
 #define PARAMETROS_BROKER_APPEARED 7
@@ -43,8 +52,6 @@ void suscribir( char* ,char* );
 
 int envio_mensaje( t_paquete*, char* , uint32_t );
 
-int mensaje_proceso( int, t_paquete* );
-
 /*
  * Funciones auxiliares
  */
@@ -62,15 +69,15 @@ void msj_error();
  * Funciones tamanio
  */
 
-int size_t_new_pokemon( t_new_pokemon* );
-
-int size_t_appeared_pokemon( t_appeared_pokemon* );
-
-int size_t_catch_pokemon( t_catch_pokemon* );
-
-int size_t_caught_pokemon( t_caught_pokemon* );
-
-int size_t_get_pokemon( t_get_pokemon* );
+//int size_t_new_pokemon( t_new_pokemon* );
+//
+//int size_t_appeared_pokemon( t_appeared_pokemon* );
+//
+//int size_t_catch_pokemon( t_catch_pokemon* );
+//
+//int size_t_caught_pokemon( t_caught_pokemon* );
+//
+//int size_t_get_pokemon( t_get_pokemon* );
 
 /*
  * Funciones de tiempo
@@ -83,6 +90,7 @@ void timer(int);
 /*
  * Funciones para suscribirme
  */
+void leer_configuracion();
 
 void logear_mensaje( MessageHeader*, t_list* );
 

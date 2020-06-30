@@ -14,4 +14,5 @@ typedef struct {
     char* ip_broker;
     int puerto_broker;
     int gamecard_id;
-} t_gameboy_config;
+    int puerto_gamecard;
+} t_gamecard_config;

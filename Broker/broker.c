@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server_function, NULL);
     // Inicializo
     IDENTIFICADOR_MENSAJE = 1;
-
+    MIN_PART_LEN = config.min_partition_size;
     MEMORIA_PRINCIPAL = malloc(config.mem_size);
     SUBSCRIPTORES = list_create();
     MENSAJES = list_create();
@@ -770,7 +770,7 @@ particion* first_fit_search(tam){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++){
         particion* x = list_get(PARTICIONES, i);
-        if(x->libre == true && tam <= x->tam ){
+        if(x->libre == true && tam <= x->tam && x->tam >= MIN_PART_LEN){
             log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
             return x;
         }
@@ -784,7 +784,7 @@ particion* best_fit_search(int tam){
     t_list* candidatos = list_create();
     for(int i=0; i<size; i++){
         particion* x = list_get(PARTICIONES, i);
-        if(x->libre == true && tam <= x->tam){
+        if(x->libre == true && tam <= x->tam && x->tam >= MIN_PART_LEN){
             log_info(logger, "Free partition with enough size found!(base: %d)", x->base);
             if(tam == x->tam){log_info(logger, "Best fit partition found!(base:%d)", x->base);return x;}
             list_add(candidatos, x);
@@ -843,6 +843,7 @@ particion* asignar_particion(size_t tam) {
         }
             //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
         else {
+            tam = tam >= MIN_PART_LEN ? tam : MIN_PART_LEN;
             particion* nueva_particion = particion_create(particion_libre->base, tam, false);
             list_add(PARTICIONES, nueva_particion);
             if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nueva_particion);}

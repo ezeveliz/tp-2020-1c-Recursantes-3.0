@@ -100,6 +100,7 @@ pthread_mutex_t M_MENSAJE_SUBSCRIPTORE;
 int IDENTIFICADOR_MENSAJE;
 pthread_mutex_t M_IDENTIFICADOR_MENSAJE;
 
+int MIN_PART_LEN;
 
 typedef struct particion {
     int base;

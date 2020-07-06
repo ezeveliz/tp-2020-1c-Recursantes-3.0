@@ -16,3 +16,9 @@ typedef struct {
     int gamecard_id;
     int puerto_gamecard;
 } t_gamecard_config;
+
+typedef struct{
+    uint32_t x;
+    uint32_t y;
+    uint32_t cant;
+} t_pos_pokemon;

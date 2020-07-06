@@ -383,19 +383,20 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
     //Verificar si existe pokemon sino crearlo
-    if(!find_tall_grass(pokemon->nombre_pokemon)){
+    if(!find_tall_grass(pokemon->nombre_pokemon)){// --> paso 1
         create_tall_grass(path_archvio);
     }
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
-    if( archivo == NULL ){
-
+    if( archivo == NULL ){ // --> paso 4
         free(path_file);
         free(path_archvio);
         sleep(configuracion.tiempo_reoperacion);
         mensaje_new_pokemon(pokemon);
+        return;
     }
     //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
+
 
     //Cerrar el archivo
     close_tall_grass(archivo);
@@ -443,6 +444,7 @@ void mensaje_get_pokemon(t_get_pokemon* pokemon){
     if(!find_tall_grass(pokemon->nombre_pokemon)){
 
     }
+
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
     if( archivo == NULL ){
@@ -457,4 +459,72 @@ void mensaje_get_pokemon(t_get_pokemon* pokemon){
     //Cerrar archivo
     close_tall_grass(archivo);
     // Enviar menaje LOCALIZED_POKEMON al broker
+}
+
+t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
+    t_pos_pokemon* pos = malloc(sizeof (t_pos_pokemon));
+    char* string_con_pos = string_new();
+
+    char* char_leido = read_tall_grass(archivo,1,archivo->pos);
+    archivo->pos++;
+
+    while(strcmp(char_leido,"\n") != 0 && char_leido[0] != EOF){
+        string_append(&string_con_pos, char_leido);
+
+        char* char_leido = read_tall_grass(archivo,1,archivo->pos);
+        archivo->pos++;
+    }
+
+    if(char_leido[0] != EOF){
+        //Tiene las posiciones con un - entre ellas en pos 0
+        //Tiene la cantidad en la pos 1
+        char** string_pos_cantidad = string_split(string_con_pos,"=");
+        //Tiene las posiciones para converitr en un int
+        char** string_pos = string_split(string_con_pos[0],"-");
+
+        pos->cant = atoi(string_pos_cantidad[1]);
+        pos->x = atoi(string_pos[0]);
+        pos->y = atoi(string_pos[1]);
+
+        free(char_leido);
+        free(string_con_pos);
+        free(string_pos_cantidad[0]);
+        free(string_pos_cantidad[1]);
+        free(string_pos_cantidad);
+        free(string_pos[0]);
+        free(string_pos[1]);
+        free(string_pos);
+        return pos;
+    }
+
+
+    free(char_leido);
+    free(string_con_pos);
+    return NULL;
+}
+
+int buscar_coordenadas(t_pos_pokemon* coordenadas, t_file* archivo){
+
+    char* coordenadas_archivo = string_new();
+
+    t_pos_pokemon* pos_iteretor = obtener_sig_coordenada(archivo);
+    while(pos_iteretor != NULL){
+        if(coordenadas->x == pos_iteretor->x && coordenadas->y == pos_iteretor->y){
+         int x = pos_iteretor->x;
+         int y = pos_iteretor->y;
+         int cant = pos_iteretor->cant;
+
+         string_append(&coordenadas_archivo,string_itoa(x));
+         string_append(&coordenadas_archivo,"-");
+         string_append(&coordenadas_archivo,string_itoa(y));
+         string_append(&coordenadas_archivo,"=");
+         string_append(&coordenadas_archivo,string_itoa(cant));
+
+         break;
+        }
+
+        t_pos_pokemon* pos_iteretor = obtener_sig_coordenada(archivo);
+    }
+
+    return (archivo->pos) - string_length(coordenadas_archivo);
 }

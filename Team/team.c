@@ -931,9 +931,9 @@ void* trainer_thread(void* arg){
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
-
+                //TODO: Arreglar esto, pasar bien los parametros
                 dictionary_put(entrenador->stock_pokemons,entrenador->pokemon_objetivo,1);
-                dictionary_put(entrenador->entrenador_objetivo->stock_pokemons,entrenador->entrenador_objetivo->pokemon_objetivo,1);
+                dictionary_put(entrenador->entrenador_objetivo->stock_pokemons,entrenador->entrenador_objetivo->pokemon_objetivo->especie,1);
 
 
                 dictionary_remove(entrenador->objetivos_particular,entrenador->pokemon_objetivo);
@@ -1136,7 +1136,6 @@ void* message_function(void* message_package){
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 
-                // TODO: loggear los mensajes enviados?
                 // TODO: Limpieza
             }
         }
@@ -1475,9 +1474,8 @@ void algoritmo_deadlock(){
             while (cont_segundo < tamanio_ent) {
                 Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
                 //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
-                //Me devuelve un listado de pokemons que se repiten, tengo que quedarme con el primer pokemon que no le sirva al segundo entrenador
-                Pokemon *repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons,
-                                                              entrenador_primero->objetivos_particular);
+                //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
+                Pokemon *repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
                 if (repeat_pokemon != null) {
                     //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
@@ -1486,10 +1484,10 @@ void algoritmo_deadlock(){
                     if (unnecesary_pokemon != null) {
 
                         Pokemon* primero_no_necesita;
-
+                        //TODO: Actualizar nombres para ser mas declarativo
                         //Calculo que pokemon no le sirve al entrenador
                         void no_necesita(char* key, void* value){
-                            if(!dictionary_has_key(entrenador_primero->entrenador_objetivo, key) && primero_no_necesita == null){
+                            if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && primero_no_necesita == null){
                                 primero_no_necesita = (Pokemon*) malloc(sizeof(Pokemon));
                                 primero_no_necesita->especie = key;
                             }
@@ -1527,7 +1525,7 @@ void algoritmo_deadlock(){
                 }
             }
 
-            cont_primero;
+            cont_primero++;
         }
     }
 }
@@ -1559,7 +1557,7 @@ Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* secon
     int count = 0;
 
     //TODO: Sacar la clave cuando el value es 0
-    void* iterador(char* key, void* _value){
+    void iterador(char* key, void* _value){
         if(dictionary_has_key(first_dictionary,key)){
             pokemon_estimado->especie = key;
             count++;

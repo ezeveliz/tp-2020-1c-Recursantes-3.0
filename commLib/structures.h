@@ -11,6 +11,7 @@
 typedef enum _MessageType {
     // Enum de prueba
     ABC,
+    ACK,
     // PARA RESPONDER UTILIZAR EL MISMO ENCABEZADO
     // Suscripcion a colas globales Team-Broker
     SUB_NEW,
@@ -27,7 +28,6 @@ typedef enum _MessageType {
     APPEARED_POK, // Tambien aplica a GameBoy-Team
     LOCALIZED_POK,
     CAUGHT_POK,
-    ACK,
 } MessageType;
 
 /**

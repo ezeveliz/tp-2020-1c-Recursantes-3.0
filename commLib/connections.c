@@ -301,7 +301,7 @@ t_list *receive_package(int socket_cliente, MessageHeader *header) {
 
 t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y, uint32_t cantidad){
     t_new_pokemon* new_pokemon = malloc(sizeof(t_new_pokemon));
-    new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    new_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     new_pokemon->nombre_pokemon = nombre_pokemon;
     new_pokemon->pos_x = pos_x;
     new_pokemon->pos_y = pos_y;
@@ -355,7 +355,7 @@ t_new_pokemon* void_a_new_pokemon(void* stream){
 
 t_get_pokemon* create_get_pokemon(char* nombre_pokemon){
     t_get_pokemon* get_pokemon = malloc(sizeof(t_get_pokemon));
-    get_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    get_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     get_pokemon->nombre_pokemon = nombre_pokemon;
     return get_pokemon;
 }
@@ -389,7 +389,7 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
 
 t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
     t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
-    localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
     localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
@@ -476,7 +476,7 @@ t_caught_pokemon* void_a_caught_pokemon(void* stream){
 
 t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y){
     t_catch_pokemon* catch_pokemon = malloc(sizeof(t_catch_pokemon));
-    catch_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    catch_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     catch_pokemon->nombre_pokemon = nombre_pokemon;
     catch_pokemon->pos_x = pos_x;
     catch_pokemon->pos_y = pos_y;
@@ -524,7 +524,7 @@ t_catch_pokemon* void_a_catch_pokemon(void* stream){
 
 t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t pos_y){
     t_appeared_pokemon* appeared_pokemon = malloc(sizeof(t_appeared_pokemon));
-    appeared_pokemon->nombre_pokemon_length = strlen(nombre_pokemon) + 1;
+    appeared_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     appeared_pokemon->nombre_pokemon = nombre_pokemon;
     appeared_pokemon->pos_x = pos_x;
     appeared_pokemon->pos_y = pos_y;
@@ -600,17 +600,17 @@ size_t sizeof_caught_pokemon(t_caught_pokemon* estructura){
 }
 
 
-unsigned long unix_epoch() {
+uint64_t unix_epoch() {
 
-    struct timeval tv;
-    time_t seconds;
-    gettimeofday(&tv, NULL);
-    unsigned long long miliseconds_since_epoch = (unsigned long long)((unsigned long long)(tv.tv_sec) * (unsigned long long)1000 + (unsigned long long)(tv.tv_usec) / (unsigned long long)1000);
+    long int ns;
+    uint64_t all;
+    time_t sec;
+    struct timespec spec;
 
-    seconds = time(NULL);
-    int days_since_epoch = seconds/(60*60*24);
-    unsigned long long midnight_miliseconds_since_epoch = (unsigned long long)days_since_epoch*(24*60*60*1000);
+    clock_gettime(CLOCK_REALTIME, &spec);
+    sec = spec.tv_sec;
+    ns = spec.tv_nsec;
 
-    unsigned long miliseconds_since_midnight = (unsigned long)(miliseconds_since_epoch - midnight_miliseconds_since_epoch);
-    return miliseconds_since_midnight;
+    all = (uint64_t) sec * BILLION + (uint64_t) ns;
+    return all;
 }

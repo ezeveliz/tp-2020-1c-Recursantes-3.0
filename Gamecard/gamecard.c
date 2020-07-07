@@ -374,7 +374,7 @@ void* server_function_gamecard(void* arg) {
 
 //-----------------------Funciones ante la llegada de mensajes ----------------------------------------//
 
-void mensaje_new_pokemon(t_new_pokemon* pokemon){
+void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id){
     char* path_file = obtener_path_file();
 
     char* path_archvio = string_new();
@@ -396,14 +396,102 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon){
         return;
     }
     //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
+    t_pos_pokemon* pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
 
+    char* registro_agregar = string_new();
+    string_append(&registro_agregar,string_itoa(pokemon->pos_x));
+    string_append(&registro_agregar,"-");
+    string_append(&registro_agregar,string_itoa(pokemon->pos_y));
+    string_append(&registro_agregar,"=");
+    //Verifico si esta el registro con esa posicion
+    if( pos_pok == NULL ){
+        //Le agrego la cantidad al string y lo escribo en el archivo
+        string_append(&registro_agregar,string_itoa(pokemon->cantidad));
+        string_append(&registro_agregar,"\n");
+        write_tall_grass(archivo, registro_agregar, archivo->metadata->size - 1,string_length(registro_agregar));
+    }else{
+        //Elimino la entrada vieja
+        delet_tall_grass(archivo,pos_pok->pos_archivo, pos_pok->tam);
+
+        //Le agrego la cantidad que quiero al registro a agregar
+        string_append(&registro_agregar,string_itoa(pos_pok->cant + pokemon->cantidad));
+        string_append(&registro_agregar,"\n");
+
+        //Escribo el registro
+        write_tall_grass(archivo,registro_agregar,(archivo->metadata->size) - 1,string_length(registro_agregar));
+
+    }
 
     //Cerrar el archivo
     close_tall_grass(archivo);
     //Enviar mensaje APPEARED_POKEMON
+    t_paquete * paquete = create_package(APPEARED_POK);
+
+
+    t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
+    void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
+
+
+    add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+    add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
     //Si no se puede conectar informar por log
+    envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+
+    //Libero
+    free(mensaje_serializado);
+    free(appeared_pokemon->nombre_pokemon);
+    free(appeared_pokemon);
+
 }
+
+
+int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
+    int server_socket = create_socket();
+
+    if (server_socket == -1) {
+        printf("Error al crear el socket\n");
+        return -1;
+    }
+
+    if (connect_socket(server_socket, ip, puerto) == -1) {
+        log_error(logger, "Conexion fallida Broker ip:%s, puerto:%d", ip, puerto);
+        close_socket(server_socket);
+        return -1;
+    }
+
+    if (send_package(paquete, server_socket) == -1) {
+        log_error(logger, "Error al enviar paquete al Broker ip:%s, puerto:%d", ip, puerto);
+        close_socket(server_socket);
+        return -1;
+    }
+
+    // Trato de recibir el encabezado de la respuesta
+    MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
+    if(receive_header(server_socket, buffer_header) <= 0) {
+        log_info(logger, "No recibi un header");
+        return false;
+    }
+
+    //Esto solo si es el proceso broker creo
+    // Recibo la confirmacion
+    t_list* rta_list = receive_package(server_socket, buffer_header);
+    int rta = *(int*) list_get(rta_list, 0);
+    printf("Llego mensaje de confirmacion exitoso: %d\n", rta);//TODO:Revisar si estoy hay que logearlo
+
+    // Limpieza
+    free(buffer_header);
+
+    list_destroy_and_destroy_elements(rta_list, free);
+
+    /////////////////////////////////////////////////////////
+    //log_info(logger, "Se envio un mensaje a la ip: %s, puerto: %d\n", ip, puerto);
+
+    close_socket(server_socket);
+    return 1;
+
+}
+
 
 void mensaje_catch_pokemon(t_catch_pokemon* pokemon){
     char* path_file = obtener_path_file();
@@ -463,29 +551,42 @@ void mensaje_get_pokemon(t_get_pokemon* pokemon){
 
 t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
     t_pos_pokemon* pos = malloc(sizeof (t_pos_pokemon));
+
+    //String para acumular el registro(12-3=212\n)
     char* string_con_pos = string_new();
 
+    // lee de a un char del archivo, porque no se el largo exacto
     char* char_leido = read_tall_grass(archivo,1,archivo->pos);
     archivo->pos++;
 
+    //Comparo que no sea el final del archivo ni un salto de linea
     while(strcmp(char_leido,"\n") != 0 && char_leido[0] != EOF){
+        //acumulo de a un char
         string_append(&string_con_pos, char_leido);
 
+        //Leo el siguiente char
         char* char_leido = read_tall_grass(archivo,1,archivo->pos);
         archivo->pos++;
     }
 
+    //Controlo que no haya llegado al final de archivo
     if(char_leido[0] != EOF){
+
         //Tiene las posiciones con un - entre ellas en pos 0
         //Tiene la cantidad en la pos 1
         char** string_pos_cantidad = string_split(string_con_pos,"=");
+
         //Tiene las posiciones para converitr en un int
         char** string_pos = string_split(string_con_pos[0],"-");
 
+        //Seteo la pos en un struct
         pos->cant = atoi(string_pos_cantidad[1]);
         pos->x = atoi(string_pos[0]);
         pos->y = atoi(string_pos[1]);
+        pos->tam = string_length(string_con_pos);
+        pos->pos_archivo = (archivo->pos - atoi(string_con_pos));
 
+        //Libero
         free(char_leido);
         free(string_con_pos);
         free(string_pos_cantidad[0]);
@@ -498,33 +599,29 @@ t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
     }
 
 
+    //Si no se encontro libero y devuelvo null
     free(char_leido);
     free(string_con_pos);
     return NULL;
 }
 
-int buscar_coordenadas(t_pos_pokemon* coordenadas, t_file* archivo){
+//busca unas coordenadas dentro del archivo
+t_pos_pokemon* buscar_coordenadas(uint32_t x, uint32_t  y, t_file* archivo){
 
-    char* coordenadas_archivo = string_new();
-
+    //Obtiene la primer registro del archivo
     t_pos_pokemon* pos_iteretor = obtener_sig_coordenada(archivo);
+
+    //Recorro el archivo hasta encontrar la posicion indicada y sino es null
     while(pos_iteretor != NULL){
-        if(coordenadas->x == pos_iteretor->x && coordenadas->y == pos_iteretor->y){
-         int x = pos_iteretor->x;
-         int y = pos_iteretor->y;
-         int cant = pos_iteretor->cant;
 
-         string_append(&coordenadas_archivo,string_itoa(x));
-         string_append(&coordenadas_archivo,"-");
-         string_append(&coordenadas_archivo,string_itoa(y));
-         string_append(&coordenadas_archivo,"=");
-         string_append(&coordenadas_archivo,string_itoa(cant));
-
-         break;
+        if( x == pos_iteretor->x && y == pos_iteretor->y ){
+            break;
         }
 
-        t_pos_pokemon* pos_iteretor = obtener_sig_coordenada(archivo);
+        //Obtengo el siguiente registro
+        pos_iteretor = obtener_sig_coordenada(archivo);
     }
 
-    return (archivo->pos) - string_length(coordenadas_archivo);
+    //Retorno un archivo con el registro o null
+    return pos_iteretor;
 }

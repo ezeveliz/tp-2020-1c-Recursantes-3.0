@@ -4,7 +4,7 @@
 
 #include "tallGrass.h"
 
-//TODO: Revisar suscripcion y probarla con el broker
+//TODO agregar EOF al final de los archivos
 
 char* carpeta_montaje;
 

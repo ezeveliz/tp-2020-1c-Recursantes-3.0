@@ -21,4 +21,6 @@ typedef struct{
     uint32_t x;
     uint32_t y;
     uint32_t cant;
+    uint32_t tam;
+    uint32_t pos_archivo; //Es el tamaño que ocupa ese registro en el archivo
 } t_pos_pokemon;

@@ -26,6 +26,11 @@ void mensaje_get_pokemon();
 
 void mensaje_catch_pokemon();
 
+t_pos_pokemon* obtener_sig_coordenada(t_file* archivo);
+
+t_pos_pokemon* buscar_coordenadas(uint32_t x, uint32_t  y, t_file* archivo);
+
+
 //------- funciones de conexion--------//
 void subscribe_to_queues();
 
@@ -42,3 +47,5 @@ bool subscribe_to_queue(int broker, MessageType cola);
 int initialize_server();
 
 void* server_function_gamecard(void* arg);
+
+int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto);

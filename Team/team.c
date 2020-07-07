@@ -622,15 +622,23 @@ void initialize_structures() {
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
-        char **pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
+        //Verifico que el entrenador tenga stock de pokemons
+        char **pokemon_entrenador;
+
+        if(config.pokemon_entrenadores[pos] != NULL) {
+            pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
+
+            // Seteo los objetivos globales
+            add_global_objectives(objetivos_entrenador, pokemon_entrenador);
+            //Seteo el stock de pokemons
+            add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
+
+        }
+
         char **posiciones = string_split(coordenada, "|");
 
-        // Seteo los objetivos globales
-        add_global_objectives(objetivos_entrenador, pokemon_entrenador);
-
-        // Seteo los objetivos del entrenador y los que ya tiene
+        // Seteo el objetivo del entrenador
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
-        add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
 
         // Buscamos y seteamos la cantidad de Pokemones maxima que puede tener el entrenador
         int contador_objetivos = 0;
@@ -661,7 +669,9 @@ void initialize_structures() {
 
         // Limpieza
         free_splitted_arrays(objetivos_entrenador, contador_objetivos);
-        free_splitted_arrays(pokemon_entrenador, contador_stock);
+        if(config.pokemon_entrenadores[pos] != NULL) {
+            free_splitted_arrays(pokemon_entrenador, contador_stock);
+        }
         free_splitted_arrays(posiciones, 2);
     }
 
@@ -931,14 +941,33 @@ void* trainer_thread(void* arg){
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
-                //TODO: Arreglar esto, pasar bien los parametros
-                dictionary_put(entrenador->stock_pokemons,entrenador->pokemon_objetivo,1);
-                dictionary_put(entrenador->entrenador_objetivo->stock_pokemons,entrenador->entrenador_objetivo->pokemon_objetivo->especie,1);
+                char** pokemon_first_trainer = (char**) malloc(sizeof(char*));
+                pokemon_first_trainer[0] = entrenador->pokemon_objetivo->especie;
 
+                add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
-                dictionary_remove(entrenador->objetivos_particular,entrenador->pokemon_objetivo);
-                dictionary_remove(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo);
+                char** pokemon_second_trainer = (char**) malloc(sizeof(char*));
+                pokemon_second_trainer[0] = entrenador->pokemon_objetivo->especie;
 
+                add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
+
+                dictionary_remove(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie);
+                dictionary_remove(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie);
+
+                char *deadlock = string_new();
+
+                string_append(&deadlock, "El entrenador ");
+                char *first_trainer = string_itoa(entrenador->tid);
+                string_append(&deadlock, first_trainer);
+                free(first_trainer);
+                string_append(&deadlock, " y el entrenador ");
+                char *second_trainer = string_itoa(entrenador->entrenador_objetivo->tid);
+                string_append(&deadlock, second_trainer);
+                free(second_trainer);
+                string_append(&deadlock, " van a realizar una operacion de intercambio");
+
+                log_info(logger, deadlock);
+                free(deadlock);
 
                 // TODO: ver que carajohacer aca
                 break;
@@ -1497,20 +1526,7 @@ void algoritmo_deadlock(){
 
                         //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
                         // Solo hay que cortar y pegar despues de la simulacion.
-                        char *deadlock = string_new();
 
-                        string_append(&deadlock, "El entrenador ");
-                        char *first_trainer = string_itoa(entrenador_primero->tid);
-                        string_append(&deadlock, first_trainer);
-                        free(first_trainer);
-                        string_append(&deadlock, " y el entrenador ");
-                        char *second_trainer = string_itoa(entrenador_segundo->tid);
-                        string_append(&deadlock, second_trainer);
-                        free(second_trainer);
-                        string_append(&deadlock, " van a realizar una operacion de intercambio");
-
-                        log_info(logger, deadlock);
-                        free(deadlock);
                         //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura

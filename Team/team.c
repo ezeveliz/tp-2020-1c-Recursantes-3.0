@@ -1006,6 +1006,7 @@ void* trainer_thread(void* arg){
         }
     }
 
+
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
     return null;

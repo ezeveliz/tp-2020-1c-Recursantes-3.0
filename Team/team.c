@@ -904,6 +904,7 @@ void* trainer_thread(void* arg){
                 list_remove(estado_exec, 0);
 
                 // Me asigno la razon de bloqueo ESPERANDO_CATCH y me agrego a la lista de bloqueo
+                entrenador->estado = BLOCK;
                 entrenador->razon_bloqueo = ESPERANDO_CATCH;
                 list_add(estado_block, entrenador);
 
@@ -1029,20 +1030,19 @@ void* trainer_thread(void* arg){
             // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
 
-                list_remove(estado_exec, 0);
-                list_add(estado_block, entrenador);
-                entrenador->razon_bloqueo = ESPERANDO_POKEMON;
-                entrenador->estado = BLOCK;
-                algoritmo_de_cercania(); // Sacarme de la lista de ejecucion y ponerme en la de bloqueo?
+                // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
+                algoritmo_de_cercania();
 
             // No tengo mas espacio para recibir pokemones
             }else{
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
-                list_add(estado_block, entrenador);
-                entrenador->razon_bloqueo = DEADLOCK;
+                list_add(estado_block, (void*)entrenador);
+                entrenador->razon_bloqueo = DEADLOCK; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
+
+                // LLamo al algoritmo de deadlock para ver si hay otro entronador con cosillas que yo necesite
                 algoritmo_deadlock();
             }
 
@@ -1056,7 +1056,10 @@ void* trainer_thread(void* arg){
 
             free(entrenador_tid_block);
             free(block);
+
+
             call_planner();
+
             //Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
             sem_wait(&block_ready_transition[entrenador->tid]);
         }
@@ -1320,7 +1323,7 @@ void fifo_planner() {
 
     log_info(logger, "Se llamo al algoritmo FIFO ");
     // Busco si no hay ningun entrenador en ejecucion
-    if (list_size(estado_exec) == 0) {
+    if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
 
         log_info(logger, "Entro a FIFO planner y no hay nadie en ejecucion ");
         // Ordeno la lista de entrenadores en ready segun el tiempo de llegada
@@ -1337,8 +1340,8 @@ void fifo_planner() {
         list_sort(estado_ready, ordenar_por_llegada);
 
         // Obtengo el primer entrenador de la lista ordenada
-        Entrenador * entrenador_elegido = (Entrenador*)list_get(estado_ready, 0);
-        list_add(estado_exec, entrenador_elegido);
+        Entrenador * entrenador_elegido = (Entrenador*)list_remove(estado_ready, 0);
+        list_add(estado_exec, (void*)entrenador_elegido);
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
 

@@ -388,60 +388,69 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id){
     }
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
+    //Hago una recursividad llamando a la funcion hasta que se pueda conectar
     if( archivo == NULL ){ // --> paso 4
+
         free(path_file);
         free(path_archvio);
+        close_tall_grass(archivo);
         sleep(configuracion.tiempo_reoperacion);
-        mensaje_new_pokemon(pokemon);
-        return;
-    }
-    //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
-    t_pos_pokemon* pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
+        mensaje_new_pokemon(pokemon,id);
 
-    char* registro_agregar = string_new();
-    string_append(&registro_agregar,string_itoa(pokemon->pos_x));
-    string_append(&registro_agregar,"-");
-    string_append(&registro_agregar,string_itoa(pokemon->pos_y));
-    string_append(&registro_agregar,"=");
-    //Verifico si esta el registro con esa posicion
-    if( pos_pok == NULL ){
-        //Le agrego la cantidad al string y lo escribo en el archivo
-        string_append(&registro_agregar,string_itoa(pokemon->cantidad));
-        string_append(&registro_agregar,"\n");
-        write_tall_grass(archivo, registro_agregar, archivo->metadata->size - 1,string_length(registro_agregar));
     }else{
-        //Elimino la entrada vieja
-        delet_tall_grass(archivo,pos_pok->pos_archivo, pos_pok->tam);
+        //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
+        t_pos_pokemon* pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
 
-        //Le agrego la cantidad que quiero al registro a agregar
-        string_append(&registro_agregar,string_itoa(pos_pok->cant + pokemon->cantidad));
-        string_append(&registro_agregar,"\n");
+        char* registro_agregar = string_new();
+        string_append(&registro_agregar,string_itoa(pokemon->pos_x));
+        string_append(&registro_agregar,"-");
+        string_append(&registro_agregar,string_itoa(pokemon->pos_y));
+        string_append(&registro_agregar,"=");
 
-        //Escribo el registro
-        write_tall_grass(archivo,registro_agregar,(archivo->metadata->size) - 1,string_length(registro_agregar));
+        //Verifico si esta el registro con esa posicion
+        if( pos_pok == NULL ){
 
+            //Le agrego la cantidad al string y lo escribo en el archivo
+            string_append(&registro_agregar,string_itoa(pokemon->cantidad));
+            string_append(&registro_agregar,"\n");
+            write_tall_grass(archivo, registro_agregar, archivo->metadata->size - 1,string_length(registro_agregar));
+        }else{
+
+            //Elimino la entrada vieja
+            delet_tall_grass(archivo,pos_pok->pos_archivo, pos_pok->tam);
+
+            //Le agrego la cantidad que quiero al registro a agregar
+            string_append(&registro_agregar,string_itoa(pos_pok->cant + pokemon->cantidad));
+            string_append(&registro_agregar,"\n");
+
+            //Escribo el registro
+            write_tall_grass(archivo,registro_agregar,(archivo->metadata->size) - 1,string_length(registro_agregar));
+
+        }
+        //Enviar mensaje APPEARED_POKEMON
+        t_paquete * paquete = create_package(APPEARED_POK);
+
+
+        t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
+        void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
+
+
+        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+        add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
+
+        //Si no se puede conectar informar por log
+        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+
+        //Libero
+        free(mensaje_serializado);
+        free(appeared_pokemon->nombre_pokemon);
+        free(appeared_pokemon);
+        free(path_archvio);
+        free(path_file);
+
+        //Cerrar el archivo
+        close_tall_grass(archivo);
     }
-
-    //Cerrar el archivo
-    close_tall_grass(archivo);
-    //Enviar mensaje APPEARED_POKEMON
-    t_paquete * paquete = create_package(APPEARED_POK);
-
-
-    t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
-    void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
-
-
-    add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-    add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
-
-    //Si no se puede conectar informar por log
-    envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
-
-    //Libero
-    free(mensaje_serializado);
-    free(appeared_pokemon->nombre_pokemon);
-    free(appeared_pokemon);
 
 }
 

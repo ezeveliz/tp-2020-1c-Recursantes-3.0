@@ -63,12 +63,13 @@ int set_estado_archivo(FILE* archivo,char estado);
 void agregar_byte_archivo(t_file* archivo, int cantidad);
 void disminuir_byte_archivo(t_file* archivo, int cantidad);
 void agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
-void sacar_bloques(t_file* archivo,uint32_t cantidad);
+void sacar_bloques_metadata(t_file* archivo,  uint32_t pos_final_archivo);
 
 //Funciones para obtener distintos elementos del fileSystem
 int obtener_cantidad_bloques();
 int obtener_tamanio_bloques();
 t_list* obtener_bloques_libres(int cantidad_pedida);
+int liberar_bloque(uint32_t nro_bloque);
 FILE* obtener_file_bloque(int numero_bloque,char* flag);
 int obtener_bloque(char* bloques,int posicion);
 

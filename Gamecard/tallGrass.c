@@ -4,7 +4,7 @@
 
 #include "tallGrass.h"
 
-//TODO agregar EOF al final de los archivos
+//TODO Armar test para mantener esto estable
 
 char* carpeta_montaje;
 
@@ -25,15 +25,15 @@ int main(){
      */
     //crear varios archivos y agregarles datos
 
-//    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
-//    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
-//    create_tall_grass(path_charmander);
-//    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
-//    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
-//    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
-//    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
-//    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
-//    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
+    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
+    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
+    create_tall_grass(path_charmander);
+    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
+    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
+    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
+    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
+    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
+    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
 
     /*
      * PRUEBA 3
@@ -41,12 +41,26 @@ int main(){
     //Eliminar un pedaso de memoria del archivo
 
     delet_tall_grass(archivo_pikachu,0,6);
+    delet_tall_grass(archivo_pikachu,0,7);
+    delet_tall_grass(archivo_charmander,0,12);
 
-//    close_tall_grass(archivo_charmander);
-//    free(path_charmander);
+    close_tall_grass(archivo_charmander);
+    free(path_charmander);
 
     close_tall_grass(archivo_pikachu);
     free(path_pikachu);
+
+    int cantidad_bloques = obtener_cantidad_bloques();
+    char *path_bitmap = obtener_path_bitmap();
+    t_list *bloques_libres = list_create();
+
+    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
+
+    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
+                                         tamanio_bitmap(cantidad_bloques));
+
+
+    doom_bitmap(bitmap);
 
 }
 
@@ -422,6 +436,7 @@ int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escr
     int exedente_byte = (archivo->metadata->size) - posicion_dentro_archivo;
 
     //Controlo que el puntero este en los limites existentes del archivo
+    //El igual es para que agregue en la ultima posicion
     if(exedente_byte >= 0){
         //Seteo la posicion en el archivo
         archivo->pos = posicion_dentro_archivo;
@@ -466,6 +481,17 @@ int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escr
             //Caso positivo los agrego
             agregar_byte_archivo(archivo, byte_bloque_extra);
         }
+
+        //Es para agregarle EOF al archivo si no esta agregado
+        char* ultimo_byte = read_tall_grass(archivo,1,(archivo->metadata->size)-1);
+        if( ultimo_byte[0] != '\t' ){
+            char* eof_a_agregar= malloc(1);
+            eof_a_agregar[0] = '\t';
+            write_tall_grass(archivo,eof_a_agregar,1,archivo->metadata->size);
+            free(eof_a_agregar);
+        }
+        free(ultimo_byte);
+
         //Retorno los bytes que escribi
         return size_a_escribir;
 
@@ -550,12 +576,16 @@ void agregar_byte_archivo(t_file* archivo, int cantidad){
     t_config* metadata = config_create(archivo->path);
     int size_anterior = config_get_int_value(metadata,"SIZE");
     char* size = string_itoa(size_anterior + cantidad);
+
     //Modifico el t_config con el nuevo valor
     config_set_value(metadata,"SIZE", size);
+
     //modifico la estructura t_file tambien
     archivo->metadata->size = config_get_int_value(metadata,"SIZE");
+
     //Salvo el archivo
     config_save(metadata);
+
     //Libero el t_config
     config_destroy(metadata);
     free(size);
@@ -613,7 +643,7 @@ int obtener_bloque(char* bloques,int posicion){
             }
         }else {
             //Si hay mas de un elemento los separo
-            char** bloques_split = cortar_bloques_array(bloques);
+            char** bloques_split = cortar_bloques_array(bloques_cortados);
 
             //Me fijo que el array tenga esa cantidad de posiciones
             if(contar_elementos_array(bloques_split) > posicion){
@@ -664,9 +694,9 @@ int bloque_relativo_archivo(int posicion){
 char** cortar_bloques_array(char* array){
     char **bloques_split;
 
-    if(strlen(array)>3){
+    if(strlen(array)>1){
         bloques_split = string_split(array, ",");
-    }else if(strlen(array) == 3){
+    }else if(strlen(array) == 1){
         bloques_split = malloc(sizeof(char*) * 2);
         bloques_split[0] = string_substring(array,1,1);
     }else{
@@ -738,78 +768,95 @@ int truncate_tall_grass(t_file* archivo, uint32_t off_set){
     int bytes_a_disminuir = (archivo->metadata->size - off_set);
 
     //Calculo los bloques por los q paso la posicion
-    int bloque_usado_en_array = bloque_relativo_archivo(archivo->pos);
-    int nro_bloque_actual = obtener_bloque(archivo->metadata->bloques,bloque_usado_en_array);
+    int bloque_usado_en_array = bloque_relativo_archivo(archivo->pos); //Es la posicion del array de bloques
+    int nro_bloque_actual = obtener_bloque(archivo->metadata->bloques,bloque_usado_en_array);//Es el nro de bloque en el file system
 
     //Obtengo el file del archivo
     FILE * bloque = obtener_file_bloque(nro_bloque_actual,"r+");
+
     //Trunco el archivo del bloque en la pos que debo
     ftruncate(bloque->_fileno, (archivo->pos % obtener_tamanio_bloques()));
 
-    //voy incrementando la pos en el array de bloques del archivo para liberarlos
+    //bloque usado en el array es el bloque que apunta el ultimo byte del archivo
+    //tengo  que eliminar el siguiente por eso le sumo 1
     int i = bloque_usado_en_array +1;
+
+    //Primer bloque que voy a eliminar
     int bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, i);
 
     FILE* bloque_a_liberar_archivo;
+
     //Libero hasta que el proximo bloque que quiero obtener me de error
     while(bloque_a_liberar != -1){
         //Para eliminar la info los abro como si fueran archivos nuevos
         bloque_a_liberar_archivo= obtener_file_bloque(bloque_a_liberar,"w+");
         fclose(bloque_a_liberar_archivo);
+
+        //Libero del bitmap
+        liberar_bloque(bloque_a_liberar);
+        //Incremento el i para liberar el siguiente
         i++;
+        printf("Bloque liberado:%d\n",bloque_a_liberar);//TODO sacar en algun momento
+
+        //Obtengo el siguiente bloque a liberar
         bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, i);
     }
 
-    //El unico caso en el que vas a tener uno mas es si borras el archivo, sino siempre va a ser la parte entera
-    // de la divicion
-    int bloques_a_sacar;
+    //Controlo en caso de que este vaciando el archivo
+    //Fue la unica forma que encontre
+    if(((int)archivo->metadata->size - bytes_a_disminuir) == 0){
+        //El bloque que voy a liberar es al que apunta el ultimo byte 0 bloque 0 del array
+        bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, bloque_usado_en_array);
+        //Obtengo el archivo de ese bloque lo abro como si fuera nuevo
+        bloque_a_liberar_archivo= obtener_file_bloque(bloque_a_liberar,"w+");
+        fclose(bloque_a_liberar_archivo);
+        printf("Archivo vacio: bloque eliminado %d\n",bloque_a_liberar);
 
-
-    bloques_a_sacar = bytes_a_disminuir/obtener_tamanio_bloques();
-
-    if((bytes_a_disminuir % obtener_tamanio_bloques()) != 0){
-        bloques_a_sacar++;
+        //Libero el bloque del bitmap
+        liberar_bloque(bloque_a_liberar);
     }
 
-    sacar_bloques(archivo,bloques_a_sacar);
+    sacar_bloques_metadata(archivo,off_set);
+
     //Disminuyo en la metadata
     disminuir_byte_archivo(archivo, bytes_a_disminuir);
     return bytes_a_disminuir;
 }
 
 //Funcion para sacar el ultimo bloque de la metadata del archivo
-void sacar_bloques(t_file* archivo, uint32_t cantidad){
+void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
+
+    //Calculo los bloques por los q paso la posicion
+    int bloque_usado_en_array = bloque_relativo_archivo(pos_final_archivo); //Es la posicion del array de bloques
+
+    //Abro el archivo como
     t_config* metadata = config_create(archivo->path);
-    char* blocks = config_get_string_value(metadata,"BLOCKS");
-    char* bloques_final = malloc(strlen(archivo->path) + 1);
-    strcpy(bloques_final,archivo->metadata->bloques);
-    char* bloques_abiertos;
+    char** blocks = config_get_array_value(metadata,"BLOCKS");
 
-    for(int i = 0; i < cantidad; i++) {
-        //Controlo que el array de bloques no este vacio
-        if (strlen(bloques_final) != 2) {
+    char* bloques_que_van_archivo = string_new();
 
-            //controlo que haya un solo elemento y lo scao
-            if (strlen(bloques_final) == 3) {
-                bloques_abiertos = string_substring(bloques_final, 0, string_length(bloques_final) - 2);
-                // Si hay mas de uno lo saco a el y a su coma
-            } else {
-                bloques_abiertos = string_substring(bloques_final, 0, string_length(bloques_final) - 3);
-            }
+    //Verifico que no se haya borrado el archivo y que quede sin bloques
+    if(pos_final_archivo == 0){
+        string_append(&bloques_que_van_archivo,"[]");
+    }else{
+        //Armo el string de bloques
+        string_append(&bloques_que_van_archivo,"[");// Lo incializo con el primer corchete
 
-            strcpy(bloques_final,bloques_abiertos);
-            //Concateno el corchete para cerrar el array
-            string_append(&bloques_final,"]");
-            free(bloques_abiertos);
+        for(int i = 0; i < bloque_usado_en_array && blocks[i] != NULL; i++){
+            string_append(&bloques_que_van_archivo,blocks[i]);
+            string_append(&bloques_que_van_archivo,",");
         }
+
+        //Le agrego la ultima posicion y lo pongo afuera porque va sin coma
+        string_append(&bloques_que_van_archivo,blocks[bloque_usado_en_array]);
+        string_append(&bloques_que_van_archivo,"]");// Lo cierro con el ultimo chorchete
     }
-        //Libero el array viejo
         free(archivo->metadata->bloques);
         //Asigno version nueva ya guardada de bloques
-        archivo->metadata->bloques = bloques_final;
+        archivo->metadata->bloques = bloques_que_van_archivo;
 
         //Lo abro como config seteo el nuevo array, guardo en archivo y libero
-        config_set_value(metadata,"BLOCKS", bloques_final);
+        config_set_value(metadata,"BLOCKS", bloques_que_van_archivo);
         config_save(metadata);
 
     config_destroy(metadata);
@@ -818,8 +865,8 @@ void sacar_bloques(t_file* archivo, uint32_t cantidad){
 
 int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) {
     char *caracter_a_copiar;
-
-    for (int i = 0; i < cantidad_byte && (off_set + cantidad_byte + i) < (archivo->metadata->size); i++) {
+//i < cantidad_byte &&
+    for (int i = 0;  (off_set + cantidad_byte + i) < (archivo->metadata->size); i++) {
         if ((off_set + cantidad_byte + i) < archivo->metadata->size) {
             caracter_a_copiar = read_tall_grass(archivo, 1, (off_set + cantidad_byte + i));
             write_tall_grass(archivo, caracter_a_copiar, 1, off_set + i);
@@ -831,7 +878,8 @@ int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) 
     //Para evitar eso pongo una validacion
     int pos_truncar;
 
-    if((archivo->metadata->size - cantidad_byte) > off_set){
+    //Esta casteado por problemas con el tipo de dato
+    if(((int)(archivo->metadata->size - cantidad_byte)) > (int) off_set){
         pos_truncar = archivo->metadata->size - cantidad_byte;
     }else{
         pos_truncar = off_set;
@@ -890,20 +938,36 @@ t_list* obtener_bloques_libres(int cantidad_pedida) {
     return bloques_libres;
 }
 
-int liberar_bloques(t_list* bloques_a_liberar){
+int liberar_bloque(uint32_t nro_bloque){
     char* path_bitmap = obtener_path_bitmap();
-    FILE* archivo_bitmap = fopen(path_bitmap,"r+");
-    if(archivo_bitmap != NULL){
-        int cantidad_bloques = obtener_cantidad_bloques();
-        t_bitarray* bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),tamanio_bitmap(cantidad_bloques));
+    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
 
-        for(int i = 0; i < list_size(bloques_a_liberar); i++){
-            bitarray_set_bit(bitmap,*(int*)list_get(bloques_a_liberar,i));
-        }
+    if(archivo_bitmap != NULL){
+
+        //Lo dejo esperando hasta que pueda entrar
+        while (flock(archivo_bitmap->_fileno, LOCK_EX | LOCK_NB) != 0) {}
+
+        //Obtengo la cantidad de bloques, para calcular tamanio del bitmap
+        int cantidad_bloques = obtener_cantidad_bloques();
+        char* string_bitmap = obtener_bitmap(archivo_bitmap, cantidad_bloques);
+
+        t_bitarray* bitmap = bitarray_create(string_bitmap,tamanio_bitmap(cantidad_bloques));
+
+        //Limpio el bitmap
+        bitarray_clean_bit(bitmap,nro_bloque);
+
         //Escribo el bitmap modificado en el archivo
         escribir_bitmap(bitmap, archivo_bitmap);
+
+        //Desbloqueo el archivo
+        flock(archivo_bitmap->_fileno, LOCK_UN);
+
+        //Libero
+        free(string_bitmap);
+
+        //Cierro el archivo
         fclose(archivo_bitmap);
-        return list_size(bloques_a_liberar);//Devuelvo los bloques que fueron liberados
+        return 0;
     }else{
         return -1;
     }

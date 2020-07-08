@@ -1338,6 +1338,7 @@ void fifo_planner() {
 
         // Obtengo el primer entrenador de la lista ordenada
         Entrenador * entrenador_elegido = (Entrenador*)list_get(estado_ready, 0);
+        list_add(estado_exec, entrenador_elegido);
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
 

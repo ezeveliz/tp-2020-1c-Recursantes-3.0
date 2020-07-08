@@ -262,8 +262,8 @@ Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array);
 
 /**
  * Devuelve la lista de pokemons que se repiten
- * @param first_dictionary
- * @param second_dictionary
+ * @param first_dictionary, pokemones que tiene un entrenador
+ * @param second_dictionary, pokemones que necesita un entrenador
  * @return array de pokemons repetidos
  */
 
@@ -323,5 +323,12 @@ void free_resources();
  * @param cant
  */
 void free_splitted_arrays(char ** elements, int cant);
+
+/**
+ * Esta funcion recibe un array de chars dinamico y retorna su longitud
+ * @param mierda
+ * @return
+ */
+int funcion_de_mierda(char** mierda);
 
 #endif //TEAM_TEAM_H

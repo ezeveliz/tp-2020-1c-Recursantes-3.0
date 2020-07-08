@@ -607,6 +607,9 @@ void initialize_structures() {
     // Inicializo semaforo mutex que protege la lista de pokemones recibidos(solo nombre)
     pthread_mutex_init(&mutex_pokemons_received, NULL);
 
+    // Hallo la cantidad de listas de stock de pokemones hay
+    int cant_listas_pokemones_stock = funcion_de_mierda(config.pokemon_entrenadores);
+
     //Itero el array de posiciones de entrenadores
     for (char *coordenada = *ptr; coordenada; coordenada = *++ptr) {
 
@@ -625,19 +628,27 @@ void initialize_structures() {
         //Verifico que el entrenador tenga stock de pokemons
         char **pokemon_entrenador;
 
-        if(config.pokemon_entrenadores[pos] != NULL) {
+        // Chequeo si el entrenador tiene pokemones en stock
+        if(pos < cant_listas_pokemones_stock) {
+
+            // Desarmo la lista de pokemons en stock
             pokemon_entrenador = string_split(config.pokemon_entrenadores[pos], "|");
 
-            // Seteo los objetivos globales
+            // Seteo los objetivos globales, teniendo en cuenta los objetivos y el stock
             add_global_objectives(objetivos_entrenador, pokemon_entrenador);
             //Seteo el stock de pokemons
             add_to_dictionary(pokemon_entrenador, entrenador->stock_pokemons);
 
+            // En este caso no tenia pokemones en stock
+        } else {
+
+            // Seteo los objetivos globales, teniendo en cuenta SOLO los objetivos, ya que no posee stock
+            add_to_dictionary(objetivos_entrenador, objetivo_global);
         }
 
         char **posiciones = string_split(coordenada, "|");
 
-        // Seteo el objetivo del entrenador
+        // Seteo el objetivo particular del entrenador
         add_to_dictionary(objetivos_entrenador, entrenador->objetivos_particular);
 
         // Buscamos y seteamos la cantidad de Pokemones maxima que puede tener el entrenador
@@ -645,7 +656,7 @@ void initialize_structures() {
         void iterador_objetivos(char* clave, void* contenido){
             contador_objetivos += *(int*) contenido;
         }
-        dictionary_iterator(entrenador->objetivos_particular,iterador_objetivos);
+        dictionary_iterator(entrenador->objetivos_particular, iterador_objetivos);
         entrenador->cant_objetivos = contador_objetivos;
 
         // Buscamos y seteamos la cantidad actual de pokemons que tiene el entrenador
@@ -665,14 +676,14 @@ void initialize_structures() {
 
         // Agrego al entrenador a New
         list_add(estado_new, (void *) entrenador);
-        pos++;
 
         // Limpieza
         free_splitted_arrays(objetivos_entrenador, contador_objetivos);
-        if(config.pokemon_entrenadores[pos] != NULL) {
+        if(pos < cant_listas_pokemones_stock) {
             free_splitted_arrays(pokemon_entrenador, contador_stock);
         }
         free_splitted_arrays(posiciones, 2);
+        pos++;
     }
 
     //Obtengo la cantidad de entrenadores nuevos
@@ -1003,28 +1014,16 @@ void* trainer_thread(void* arg){
 
         // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
-//
-//            // Chequeo si venia de una resolucion de deadlock
-//            if (entrenador->razon_movimiento == RESOLUCION_DEADLOCK) {
-//
-//                // Me quito de la lista de Ejecucion
-//                list_remove(estado_exec, 0);
-//
-//                // Me agrego a la lista de Bloqueo
-//                list_add(estado_block, entrenador);
-//            }
-//            // Actualizo la razon de bloqueo
-//            entrenador->razon_bloqueo = ESPERANDO_POKEMON;
-//
-//            // Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
-//            sem_wait(&block_ready_transition[entrenador->tid]);
 
+            // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
-                //Quiere decir que todavia tengo lugar para atrapar pokemons
+
                 entrenador->razon_bloqueo = ESPERANDO_POKEMON;
-                algoritmo_de_cercania();
+                algoritmo_de_cercania(); // Sacarme de la lista de ejecucion y ponerme en la de bloqueo?
+
+            // No tengo mas espacio para recibir pokemones
             }else{
-                //No tengo mas lugar para atrapar pokemons
+
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
                 entrenador->razon_bloqueo = DEADLOCK;
@@ -1668,4 +1667,13 @@ void free_splitted_arrays(char ** elements, int cant) {
     for(int i = 0; i < cant; i++)
         free(elements[i]);
     free(elements);
+}
+
+int funcion_de_mierda(char** mierda) {
+    int i = 0;
+    // Itero el array de mierda hasta hallar el ultimo elemento(un NULL)
+    for (char *mierda2 = *mierda; mierda2; mierda2 = *++mierda) {
+        i++;
+    }
+    return i;
 }

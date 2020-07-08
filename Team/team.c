@@ -800,6 +800,17 @@ void* trainer_thread(void* arg){
     // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
     sem_wait( &new_ready_transition[entrenador->tid] );
 
+    char* ready = string_new();
+    string_append(&ready,"El entrenador ");
+    char* entrenador_tid_ready = string_itoa(entrenador->tid);
+    string_append(&ready, entrenador_tid_ready);
+    string_append(&ready, " ha entrado a Ready");
+
+    log_info(logger, ready);
+
+    free(entrenador_tid_ready);
+    free(ready);
+
     // Reservo memoria, para el tiempo de llegada, aca guardo cuando entra a Ready
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
 
@@ -814,6 +825,17 @@ void* trainer_thread(void* arg){
 
         // Bloqueo esperando a que el planificador decida que ejecute
         sem_wait( &ready_exec_transition[entrenador->tid] );
+
+        char* exec = string_new();
+        string_append(&exec,"El entrenador ");
+        char* entrenador_tid_exec = string_itoa(entrenador->tid);
+        string_append(&exec, entrenador_tid_exec);
+        string_append(&exec, " ha entrado a Exec");
+
+        log_info(logger, exec);
+
+        free(entrenador_tid_exec);
+        free(exec);
 
         int distancia_a_viajar = 0;
 

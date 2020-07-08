@@ -1051,6 +1051,18 @@ void* trainer_thread(void* arg){
                 entrenador->razon_bloqueo = DEADLOCK;
                 algoritmo_deadlock();
             }
+
+            char* block = string_new();
+            string_append(&block,"El entrenador ");
+            char* entrenador_tid_block = string_itoa(entrenador->tid);
+            string_append(&block, entrenador_tid_block);
+            string_append(&block, " ha entrado a Block");
+
+            log_info(logger, exec);
+
+            free(entrenador_tid_block);
+            free(block);
+
             //Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
             sem_wait(&block_ready_transition[entrenador->tid]);
         }
@@ -1415,6 +1427,9 @@ void appeared_pokemon(t_list* paquete){
 void algoritmo_de_cercania(){
 
     sem_wait(s_cantidad_pokemons);
+
+    log_info(logger, "Se ha iniciado el algoritmo de cercania ");
+
     //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
     bool puede_ir_ready(void* _entreador){
         Entrenador* entrenador = (Entrenador*) _entreador;
@@ -1426,45 +1441,46 @@ void algoritmo_de_cercania(){
     list_add_all(entrenadores_con_margen,estado_new);
 
     //Verifico que la lista de entrenadores no sea vacia
-    if(list_size(entrenadores_con_margen) > 0){
+    if(list_size(entrenadores_con_margen) > 0) {
         int cant_pok = list_size(pokemons);
-        while(cant_pok > 0){
-            Pokemon* pokemon = (Pokemon*) list_get(pokemons,0);
+        while (cant_pok > 0) {
+            Pokemon *pokemon = (Pokemon *) list_get(pokemons, 0);
 
             //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
-            if(list_size(entrenadores_con_margen) > 1){
+            if (list_size(entrenadores_con_margen) > 1) {
 
                 //Ordeno a los entrenadores por cercania al pokemon
-                bool entrenador_mas_cerca(void* _entrenador_actual, void* _entrenador_siguiente){
-                    Entrenador* entrenador_actual = (Entrenador*) _entrenador_actual;
-                    Entrenador* entrenador_siguiente = (Entrenador*) _entrenador_siguiente;
+                bool entrenador_mas_cerca(void *_entrenador_actual, void *_entrenador_siguiente) {
+                    Entrenador *entrenador_actual = (Entrenador *) _entrenador_actual;
+                    Entrenador *entrenador_siguiente = (Entrenador *) _entrenador_siguiente;
 
-                    return distancia(entrenador_actual->pos_actual, pokemon->coordenada) < distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                    return distancia(entrenador_actual->pos_actual, pokemon->coordenada) <
+                           distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
                 }
                 list_sort(entrenadores_con_margen, entrenador_mas_cerca);
             }
             //Obtengo el primero que es el mas cercano
-            Entrenador* entrenador_cercano = (Entrenador*) list_get(entrenadores_con_margen,0);
+            Entrenador *entrenador_cercano = (Entrenador *) list_get(entrenadores_con_margen, 0);
 
             //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
             list_remove(entrenadores_con_margen, 0);
 
-            bool remover(void* _entrenador){
-                Entrenador* entrenador = (Entrenador*) _entrenador;
+            bool remover(void *_entrenador) {
+                Entrenador *entrenador = (Entrenador *) _entrenador;
                 return entrenador->tid == entrenador_cercano->tid;
             }
             //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
-            switch(entrenador_cercano->estado){
+            switch (entrenador_cercano->estado) {
                 case (NEW):;
 
                     list_remove_by_condition(estado_new, remover);
 
                     entrenador_cercano->pokemon_objetivo = pokemon;
                     entrenador_cercano->razon_movimiento = CATCH;
-                    list_add(estado_ready,entrenador_cercano);
+                    list_add(estado_ready, entrenador_cercano);
                     entrenador_cercano->estado = READY;
 
-                    sem_post( &new_ready_transition[entrenador_cercano->tid]);
+                    sem_post(&new_ready_transition[entrenador_cercano->tid]);
                     break;
 
                 case (BLOCK):;
@@ -1473,7 +1489,7 @@ void algoritmo_de_cercania(){
 
                     entrenador_cercano->pokemon_objetivo = pokemon;
                     entrenador_cercano->razon_movimiento = CATCH;
-                    list_add(estado_ready,entrenador_cercano);
+                    list_add(estado_ready, entrenador_cercano);
                     entrenador_cercano->estado = READY;
 
                     sem_post(&block_ready_transition[entrenador_cercano->tid]);
@@ -1486,12 +1502,12 @@ void algoritmo_de_cercania(){
 
             //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
             pthread_mutex_lock(&mutex_pokemon);
-            list_remove(pokemons,0);
+            list_remove(pokemons, 0);
             pthread_mutex_unlock(&mutex_pokemon);
             cant_pok--;
+
         }
     }
-
 }
 
 void algoritmo_deadlock(){

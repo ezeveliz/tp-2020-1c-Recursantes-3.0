@@ -1001,6 +1001,14 @@ void* trainer_thread(void* arg){
 
         // Verifico si el entrenador completo sus objetivos
         if (objetivos_cumplidos(entrenador)) {
+            char* objetivos_cumplidos_entrenador = string_new();
+            string_append(&objetivos_cumplidos_entrenador, "El entrenador ");
+            char* entrenador_tid_objetivos_cumplidos = string_itoa(entrenador->tid);
+            string_append(&objetivos_cumplidos_entrenador, entrenador_tid_objetivos_cumplidos);
+            string_append(&objetivos_cumplidos_entrenador, " ha cumplido con los objetivos ");
+            log_info(logger,objetivos_cumplidos_entrenador);
+            free(objetivos_cumplidos_entrenador);
+            free(entrenador_tid_objetivos_cumplidos);
 
             // Dependiendo de la razon del movimiento me tengo que quitar de una lista distinta
             switch (entrenador->razon_movimiento) {
@@ -1030,8 +1038,26 @@ void* trainer_thread(void* arg){
         // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
 
+            char* objetivos_nocumplidos_entrenador = string_new();
+            string_append(&objetivos_nocumplidos_entrenador, "El entrenador ");
+            char* entrenador_tid_objetivos_nocumplidos = string_itoa(entrenador->tid);
+            string_append(&objetivos_nocumplidos_entrenador, entrenador_tid_objetivos_nocumplidos);
+            string_append(&objetivos_nocumplidos_entrenador, " todavia no ha cumplido con los objetivos ");
+            log_info(logger,objetivos_nocumplidos_entrenador);
+            free(objetivos_nocumplidos_entrenador);
+            free(entrenador_tid_objetivos_nocumplidos);
+
             // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
+
+                char* entrenador_sin_lugar = string_new();
+                string_append(&entrenador_sin_lugar, "El entrenador ");
+                char* entrenador_tid_sin_lugar = string_itoa(entrenador->tid);
+                string_append(&entrenador_sin_lugar, entrenador_tid_sin_lugar);
+                string_append(&entrenador_sin_lugar, " tiene lugar para atrapar mas pokemons, procede a llamar al algoritmo de cercania ");
+                log_info(logger,entrenador_sin_lugar);
+                free(entrenador_sin_lugar);
+                free(entrenador_tid_sin_lugar);
 
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
                 algoritmo_de_cercania();
@@ -1059,7 +1085,6 @@ void* trainer_thread(void* arg){
 
             free(entrenador_tid_block);
             free(block);
-
 
             call_planner();
 
@@ -1424,10 +1449,10 @@ void appeared_pokemon(t_list* paquete){
     //list_destroy(paquete); Si lo destruyo despues no voy a tener el id para confirmarle la recepcion al Broker
 }
 
-void algoritmo_de_cercania(){
+void algoritmo_de_cercania() {
 
     pthread_mutex_lock(&mutex_algoritmo_cercania);
-    if(list_size(pokemons) > 0) {
+    if (list_size(pokemons) > 0) {
         log_info(logger, "Se ha iniciado el algoritmo de cercania ");
 
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
@@ -1511,10 +1536,8 @@ void algoritmo_de_cercania(){
             log_info(logger, "Ha terminado el algoritmo de cercania");
         }
         log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
+        pthread_mutex_unlock(&mutex_algoritmo_cercania);
     }
-    pthread_mutex_unlock(&mutex_algoritmo_cercania);
-    if(list_size(estado_block) > 1)
-        algoritmo_deadlock();
 }
 
 void algoritmo_deadlock(){

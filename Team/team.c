@@ -62,6 +62,9 @@ pthread_mutex_t mutex_waiting_list;
 // Semaforo mutex para proteger la lista de pokemones recibidos(solo nombre)
 pthread_mutex_t mutex_pokemons_received;
 
+//Semaforo mutex para algoritmo de cercania
+pthread_mutex_t mutex_algoritmo_cercania;
+
 int main() {
     pthread_t server_thread;
 
@@ -1423,6 +1426,7 @@ void appeared_pokemon(t_list* paquete){
 
 void algoritmo_de_cercania(){
 
+    pthread_mutex_lock(&mutex_algoritmo_cercania);
     if(list_size(pokemons) > 0) {
         log_info(logger, "Se ha iniciado el algoritmo de cercania ");
 
@@ -1504,8 +1508,13 @@ void algoritmo_de_cercania(){
                 cant_pok--;
 
             }
+            log_info(logger, "Ha terminado el algoritmo de cercania");
         }
+        log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
     }
+    pthread_mutex_unlock(&mutex_algoritmo_cercania);
+    if(list_size(estado_block) > 1)
+        algoritmo_deadlock();
 }
 
 void algoritmo_deadlock(){
@@ -1526,6 +1535,7 @@ void algoritmo_deadlock(){
     // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
     if(tamanio_ent > 2 ) {
 
+        log_info(logger,"Hay mas de un entrenador en deadlock");
 
         int cont_primero = 0;
         int cont_segundo = 1;
@@ -1558,9 +1568,7 @@ void algoritmo_deadlock(){
                             }
                         }
                         dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
-
-                        //TODO: Ver si operacion de intercabio se refiere a hacerlo despues de que haya ocurrido, si es asi
-                        // Solo hay que cortar y pegar despues de la simulacion.
+                        log_info(logger,"Se encontraron dos entrenadores que estan en deadlock y van a realizar un intercambio");
 
                         //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
@@ -1579,7 +1587,9 @@ void algoritmo_deadlock(){
 
             cont_primero++;
         }
+        log_info(logger, "No se pudo resolver el deadlock porque no cumplian con las condiciones");
     }
+    log_info(logger,"No hay dos entrenadores en deadlock");
 }
 
 Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array){
@@ -1619,7 +1629,7 @@ Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* secon
     dictionary_iterator(second_dictionary,iterador);
 
     //Vuelvo a asignar la memoria para devolver el array de tamanio real y no retornar uno de mayor tamanio
-    Pokemon* pokemon_real = (Pokemon*) realloc(pokemon_estimado, sizeof(Pokemon) * count);
+    Pokemon* pokemon_real = realloc(pokemon_estimado, count * sizeof *pokemon_real);
 
     free(pokemon_estimado);
     //Me da el listado de pokemons que se repiten

@@ -100,6 +100,7 @@ int main() {
 
         // Paso la estructura a void
         void* pok_void = get_pokemon_a_void(get_pok);
+        free(get_pok);
 
         // Envio el get al Broker con un hilo
         send_message_thread(pok_void, sizeof_get_pokemon(pok_void), GET_POK, -1);
@@ -875,19 +876,19 @@ void* trainer_thread(void* arg){
         string_append(&viaje, "El entrenador: ");
         trainer = string_itoa(entrenador->tid);
         string_append(&viaje, trainer);
-        free(trainer);
         string_append(&viaje, ", ha viajado hasta: (");
         char* pos_x = string_itoa(entrenador->pos_actual.pos_x);
         string_append(&viaje, pos_x);
-        free(pos_x);
         string_append(&viaje, ", ");
         char* pos_y = string_itoa(entrenador->pos_actual.pos_y);
-        string_append(&viaje, pos_x);
-        free(pos_y);
+        string_append(&viaje, pos_y);
         string_append(&viaje, ").");
 
         log_info(logger, viaje);
 
+        free(trainer);
+        free(pos_y);
+        free(pos_x);
         free(viaje);
 
         // Ya viaje a destino, ahora tengo que solicitar el catch o realizar el intercambio
@@ -967,18 +968,21 @@ void* trainer_thread(void* arg){
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
+                //Hago un vector porque add_to_dictionary recibe un char**
                 char** pokemon_first_trainer = (char**) malloc(sizeof(char*));
                 pokemon_first_trainer[0] = entrenador->pokemon_objetivo->especie;
 
+                //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
                 add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
                 char** pokemon_second_trainer = (char**) malloc(sizeof(char*));
                 pokemon_second_trainer[0] = entrenador->pokemon_objetivo->especie;
 
+                //Agrego al stock del entrenador objetivo el pokemon
                 add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
 
-                dictionary_remove(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie);
-                dictionary_remove(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie);
+                (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
+                (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
 
                 char *deadlock = string_new();
 
@@ -1059,6 +1063,7 @@ void* trainer_thread(void* arg){
                 free(entrenador_sin_lugar);
                 free(entrenador_tid_sin_lugar);
 
+                entrenador->razon_bloqueo = ESPERANDO_POKEMON;
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
                 algoritmo_de_cercania();
 
@@ -1418,6 +1423,7 @@ void appeared_pokemon(t_list* paquete){
     log_info(logger, appeared);
 
     free(appeared);
+    //TODO: Librerar paquete_recibido
 
     // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
 
@@ -1451,8 +1457,8 @@ void appeared_pokemon(t_list* paquete){
 
 void algoritmo_de_cercania() {
 
-    pthread_mutex_lock(&mutex_algoritmo_cercania);
     if (list_size(pokemons) > 0) {
+        pthread_mutex_lock(&mutex_algoritmo_cercania);
         log_info(logger, "Se ha iniciado el algoritmo de cercania ");
 
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
@@ -1534,8 +1540,10 @@ void algoritmo_de_cercania() {
 
             }
             log_info(logger, "Ha terminado el algoritmo de cercania");
+        }else{
+            log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
         }
-        log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
+        list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
     }
 }
@@ -1573,32 +1581,34 @@ void algoritmo_deadlock(){
                 Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
                 //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
                 //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
-                Pokemon *repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
+                t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
-                if (repeat_pokemon != null) {
+                if (list_size(repeat_pokemon) > 0) {
                     //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
-                    Pokemon *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
+                    t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
 
-                    if (unnecesary_pokemon != null) {
+                    if (list_size(unnecesary_pokemon) > 0) {
 
-                        Pokemon* primero_no_necesita;
-                        //TODO: Actualizar nombres para ser mas declarativo
-                        //Calculo que pokemon no le sirve al entrenador
-                        void no_necesita(char* key, void* value){
-                            if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && primero_no_necesita == null){
-                                primero_no_necesita = (Pokemon*) malloc(sizeof(Pokemon));
-                                primero_no_necesita->especie = key;
+                        //Calculo que pokemon no le sirve al primer entrenador
+                        char* pokemon_primer_entrenador_no_necesita = (char*) malloc(sizeof(char*) * 50);
+                        int i = 0;
+                        void no_necesita(char* key, void*value){
+                            if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
+                                strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                i++;
                             }
                         }
                         dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
+
+                        //TODO: Actualizar nombres para ser mas declarativo
+
                         log_info(logger,"Se encontraron dos entrenadores que estan en deadlock y van a realizar un intercambio");
 
                         //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
-                        //Acordarse que el array de unnecesary_pokemon solo esta cargado la especie, en las coordenadas hay basura
-                        *entrenador_primero->pokemon_objetivo = unnecesary_pokemon[0];
+                        entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
-                        entrenador_segundo->pokemon_objetivo = primero_no_necesita;
+                        entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
 
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
                     }
@@ -1610,53 +1620,37 @@ void algoritmo_deadlock(){
 
             cont_primero++;
         }
-        log_info(logger, "No se pudo resolver el deadlock porque no cumplian con las condiciones");
+        log_info(logger, "No hay deadlock porque no cumplen con las condiciones");
     }
     log_info(logger,"No hay dos entrenadores en deadlock");
+    list_destroy(entrenadores_sin_margen);
 }
+ t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
 
-Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array){
-
-    int i = 0;
-    Pokemon* pokemon;
-
-    //Recorro el array que obtuve hasta que sea vacio por si ninguno cumple la condicion
-    while(pokemon_array[i].especie != null){
-        //Si no esta la key en los objetivos del entrenador entonces lo guardo y lo retorno
-        if((!dictionary_has_key(entrenador->objetivos_particular,pokemon_array->especie)) && (pokemon == null)) {
-            pokemon = (Pokemon *) malloc(sizeof(Pokemon));
-            *pokemon = pokemon_array[i];
-            break;
-        }
-        i++;
+    t_list* pokemons_innecesarios;
+    bool filtrar_pokemons(void* _nombre_pokemon){
+        char* nombre_pokemon = (char*) _nombre_pokemon;
+        return !dictionary_has_key(entrenador->objetivos_particular,nombre_pokemon);
     }
+    pokemons_innecesarios = list_filter(pokemon_array,filtrar_pokemons);
 
-    return pokemon;
+    return pokemons_innecesarios;
 }
 
 
-Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary){
+t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons){
 
-    //Hago un malloc del tamanio del dictionary que es la cantidad maxima que puedo llegar a tener
-    Pokemon* pokemon_estimado = (Pokemon*) malloc(sizeof(Pokemon) * dictionary_size(second_dictionary));
-    int count = 0;
+    t_list* pokemons_estimado = list_create();
 
     //TODO: Sacar la clave cuando el value es 0
     void iterador(char* key, void* _value){
-        if(dictionary_has_key(first_dictionary,key)){
-            pokemon_estimado->especie = key;
-            count++;
-            pokemon_estimado++;
+        if(dictionary_has_key(stock_pokemons,key) && (*(int*) _value > 0)){
+            list_add(pokemons_estimado,key);
         }
     }
-    dictionary_iterator(second_dictionary,iterador);
+    dictionary_iterator(objetivos_pokemons,iterador);
 
-    //Vuelvo a asignar la memoria para devolver el array de tamanio real y no retornar uno de mayor tamanio
-    Pokemon* pokemon_real = realloc(pokemon_estimado, count * sizeof *pokemon_real);
-
-    free(pokemon_estimado);
-    //Me da el listado de pokemons que se repiten
-    return pokemon_real;
+    return pokemons_estimado;
 }
 
 //----------------------------------------HELPERS----------------------------------------//

@@ -253,21 +253,22 @@ void algoritmo_de_cercania();
 void algoritmo_deadlock();
 
 /**
- * devuelve un array de pokemons en el que no necesita el entrenador, solo se usa para deadlock
+ * devuelve una lista de pokemons que no necesita el entrenador, solo se usa para deadlock
  * @param entrenador
  * @param pokemon_array
- * @return array de pokemon
+ * @return lista de pokemon
  */
-Pokemon* trainer_dont_need(Entrenador* entrenador, Pokemon* pokemon_array);
+t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array);
 
 /**
  * Devuelve la lista de pokemons que se repiten
- * @param first_dictionary, pokemones que tiene un entrenador
- * @param second_dictionary, pokemones que necesita un entrenador
- * @return array de pokemons repetidos
+ * @param stock_pokemons, pokemones que tiene un entrenador
+ * @param objetivos_pokemons, pokemones que necesita un entrenador
+ * @return lista de pokemons repetidos
  */
 
-Pokemon* dictionary_contains(t_dictionary* first_dictionary, t_dictionary* second_dictionary);
+t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons);
+
 //----------------------------------------HELPERS----------------------------------------//
 
 /**

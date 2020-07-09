@@ -1570,8 +1570,9 @@ void algoritmo_deadlock(){
 
         int cont_primero = 0;
         int cont_segundo = 1;
+        bool cumplio_condiciones = false;
 
-        while(cont_primero < tamanio_ent) {
+        while(cont_primero < tamanio_ent && !cumplio_condiciones) {
 
             //Agarro el primer entrenador bloqueado
             Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
@@ -1579,13 +1580,15 @@ void algoritmo_deadlock(){
 
             while (cont_segundo < tamanio_ent) {
                 Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
-                //TODO: A medida que se van cumpliendo los objetivos se van sacando de los objetivos particulares del entrenador?
                 //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
                 t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
+
+                log_info(logger, "Se calculo los pokemons que tiene el entrenador segundo y necesita el primero");
 
                 if (list_size(repeat_pokemon) > 0) {
                     //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
                     t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
+                    log_info(logger, "Se calculo la lista que necesita el primer entrenador y no necesita el segundo entrenador (lista definitiva)");
 
                     if (list_size(unnecesary_pokemon) > 0) {
 
@@ -1600,25 +1603,25 @@ void algoritmo_deadlock(){
                         }
                         dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
 
-                        //TODO: Actualizar nombres para ser mas declarativo
-
                         log_info(logger,"Se encontraron dos entrenadores que estan en deadlock y van a realizar un intercambio");
 
-                        //TODO: Hacer el intercambio en el hilo del entrenador
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
                         entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
 
+                        //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
+                        cumplio_condiciones = true;
+                        break;
                     }
-                } else {
-                    //No hay ningun pokemon
-                    cont_segundo++;
                 }
+                //No hay ningun pokemon ni se cumplieron las condiciones para que se realice el intercambio
+                cont_segundo++;
             }
 
             cont_primero++;
+            cont_segundo = cont_primero + 1;
         }
         log_info(logger, "No hay deadlock porque no cumplen con las condiciones");
     }

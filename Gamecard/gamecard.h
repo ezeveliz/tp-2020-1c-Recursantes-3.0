@@ -20,7 +20,7 @@ void liberar_opciones_configuracion();
 
 
 
-void mensaje_new_pokemon();
+void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id);
 
 void mensaje_get_pokemon();
 

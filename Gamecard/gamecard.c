@@ -14,30 +14,48 @@ pthread_t localized_thread;
 pthread_t caught_thread;
 
 int main() {
-    pthread_t server_thread;
+    montar("..");
+    mensaje_new_pokemon(create_new_pokemon("Charmander",1,1,100), 12);
+    mensaje_new_pokemon(create_new_pokemon("Charmander",1,1,100), 12);
+    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
+    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
+    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,1000000), 12);
+    //
+//    pthread_t server_thread;
+//
+//    //Leo la configuracion, si da error cierro el negocio
+//    if(leer_opciones_configuracion() == -1){
+//        printf("Error al leer configuracion\n");
+//        return -1;
+//    }
+//
+//    // Inicializo el log, si no pude salgo del proceso
+//    logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
+//    if (logger == NULL) {
+//        printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
+//        return -1;
+//    }
+//
+//    //Creo el servidor para que el GameBoy me mande mensajes
+//    pthread_create(&server_thread, NULL, server_function_gamecard, NULL);
+//
+//    //Creo 3 hilos para suscribirme a las colas globales
+//    subscribe_to_queues();
+//
+//    //Joineo el hilo main con el del servidor para el GameBoy
+//    pthread_join(server_thread, NULL);
+//
+    int cantidad_bloques = obtener_cantidad_bloques();
+    char *path_bitmap = obtener_path_bitmap();
+    t_list *bloques_libres = list_create();
 
-    //Leo la configuracion, si da error cierro el negocio
-    if(leer_opciones_configuracion() == -1){
-        printf("Error al leer configuracion\n");
-        return -1;
-    }
+    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
 
-    // Inicializo el log, si no pude salgo del proceso
-    logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
-    if (logger == NULL) {
-        printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
-        return -1;
-    }
+    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
+                                         tamanio_bitmap(cantidad_bloques));
 
-    //Creo el servidor para que el GameBoy me mande mensajes
-    pthread_create(&server_thread, NULL, server_function_gamecard, NULL);
 
-    //Creo 3 hilos para suscribirme a las colas globales
-    subscribe_to_queues();
-
-    //Joineo el hilo main con el del servidor para el GameBoy
-    pthread_join(server_thread, NULL);
-
+    doom_bitmap(bitmap);
     return 0;
 }
 
@@ -388,6 +406,7 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id){
     }
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
+
     //Hago una recursividad llamando a la funcion hasta que se pueda conectar
     if( archivo == NULL ){ // --> paso 4
 
@@ -413,38 +432,46 @@ void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id){
             //Le agrego la cantidad al string y lo escribo en el archivo
             string_append(&registro_agregar,string_itoa(pokemon->cantidad));
             string_append(&registro_agregar,"\n");
-            write_tall_grass(archivo, registro_agregar, archivo->metadata->size - 1,string_length(registro_agregar));
+
+            //Verifico si el archivo esta vacio por tema de posicion a escribir
+            if(archivo->metadata->size > 0){
+                write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size - 1);
+            }else{
+                write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size);
+            }
+
+
         }else{
 
             //Elimino la entrada vieja
-            delet_tall_grass(archivo,pos_pok->pos_archivo, pos_pok->tam);
+            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam +1); // Mas uno por el salto de linea
 
             //Le agrego la cantidad que quiero al registro a agregar
             string_append(&registro_agregar,string_itoa(pos_pok->cant + pokemon->cantidad));
             string_append(&registro_agregar,"\n");
 
             //Escribo el registro
-            write_tall_grass(archivo,registro_agregar,(archivo->metadata->size) - 1,string_length(registro_agregar));
+            write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) - 1);
 
         }
-        //Enviar mensaje APPEARED_POKEMON
-        t_paquete * paquete = create_package(APPEARED_POK);
-
-
-        t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
-        void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
-
-
-        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-        add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
-
-        //Si no se puede conectar informar por log
-        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+//        //Enviar mensaje APPEARED_POKEMON
+//        t_paquete * paquete = create_package(APPEARED_POK);
+//
+//
+//        t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
+//        void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
+//
+//
+//        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+//        add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
+//
+//        //Si no se puede conectar informar por log
+//        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
         //Libero
-        free(mensaje_serializado);
-        free(appeared_pokemon->nombre_pokemon);
-        free(appeared_pokemon);
+//        free(mensaje_serializado);
+//        free(appeared_pokemon->nombre_pokemon);
+//        free(appeared_pokemon);
         free(path_archvio);
         free(path_file);
 
@@ -520,7 +547,7 @@ void mensaje_catch_pokemon(t_catch_pokemon* pokemon){
         free(path_file);
         free(path_archvio);
         sleep(configuracion.tiempo_reoperacion);
-        mensaje_new_pokemon(pokemon);
+
     }
 
     //En caso que la cantidad del Pokémon sea “1”, se debe eliminar la línea. En caso contrario se debe decrementar la cantidad en uno.
@@ -548,7 +575,7 @@ void mensaje_get_pokemon(t_get_pokemon* pokemon){
         free(path_file);
         free(path_archvio);
         sleep(configuracion.tiempo_reoperacion);
-        mensaje_new_pokemon(pokemon);
+
     }
     //Obtener todas las posiciones y cantidades requeridas
 
@@ -559,59 +586,65 @@ void mensaje_get_pokemon(t_get_pokemon* pokemon){
 }
 
 t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
-    t_pos_pokemon* pos = malloc(sizeof (t_pos_pokemon));
 
-    //String para acumular el registro(12-3=212\n)
-    char* string_con_pos = string_new();
+    if(archivo->metadata->size != 0) {
 
-    // lee de a un char del archivo, porque no se el largo exacto
-    char* char_leido = read_tall_grass(archivo,1,archivo->pos);
-    archivo->pos++;
+        t_pos_pokemon *pos = malloc(sizeof(t_pos_pokemon));
 
-    //Comparo que no sea el final del archivo ni un salto de linea
-    while(strcmp(char_leido,"\n") != 0 && char_leido[0] != EOF){
-        //acumulo de a un char
-        string_append(&string_con_pos, char_leido);
+        //String para acumular el registro(12-3=212\n)
+        char *string_con_pos = string_new();
 
-        //Leo el siguiente char
-        char* char_leido = read_tall_grass(archivo,1,archivo->pos);
-        archivo->pos++;
-    }
+        // lee de a un char del archivo, porque no se el largo exacto
+        char *char_leido = read_tall_grass(archivo, 1, archivo->pos);
 
-    //Controlo que no haya llegado al final de archivo
-    if(char_leido[0] != EOF){
+        //Comparo que no sea el final del archivo ni un salto de linea
+        while (strcmp(char_leido, "\n") != 0 && char_leido[0] != '\t' && archivo->metadata->size != 0) {
+            //acumulo de a un char
+            string_append(&string_con_pos, char_leido);
 
-        //Tiene las posiciones con un - entre ellas en pos 0
-        //Tiene la cantidad en la pos 1
-        char** string_pos_cantidad = string_split(string_con_pos,"=");
+            //Leo el siguiente char
+            char_leido = read_tall_grass(archivo, 1, archivo->pos);
+        }
 
-        //Tiene las posiciones para converitr en un int
-        char** string_pos = string_split(string_con_pos[0],"-");
+        //Controlo que no haya llegado al final de archivo
+        if (char_leido[0] != '\t') {
 
-        //Seteo la pos en un struct
-        pos->cant = atoi(string_pos_cantidad[1]);
-        pos->x = atoi(string_pos[0]);
-        pos->y = atoi(string_pos[1]);
-        pos->tam = string_length(string_con_pos);
-        pos->pos_archivo = (archivo->pos - atoi(string_con_pos));
+            //Tiene las posiciones con un - entre ellas en pos 0
+            //Tiene la cantidad en la pos 1
+            char **string_pos_cantidad = string_split(string_con_pos, "=");
 
-        //Libero
+            //Tiene las posiciones para converitr en un int
+            //string_pos_cantidad[0] x-y
+            //string_pos_cantidad[1] cant ->
+            char **string_pos = string_split(string_pos_cantidad[0], "-");
+
+            //Seteo la pos en un struct
+            pos->cant = atoi(string_pos_cantidad[1]);
+            pos->x = atoi(string_pos[0]);
+            pos->y = atoi(string_pos[1]);
+            pos->tam = string_length(string_con_pos);
+            pos->pos_archivo = (archivo->pos - string_length(string_con_pos));
+
+            //Libero
+            free(char_leido);
+            free(string_con_pos);
+            free(string_pos_cantidad[0]);
+            free(string_pos_cantidad[1]);
+            free(string_pos_cantidad);
+            free(string_pos[0]);
+            free(string_pos[1]);
+            free(string_pos);
+            return pos;
+        }
+
+
+        //Si no se encontro libero y devuelvo null
         free(char_leido);
         free(string_con_pos);
-        free(string_pos_cantidad[0]);
-        free(string_pos_cantidad[1]);
-        free(string_pos_cantidad);
-        free(string_pos[0]);
-        free(string_pos[1]);
-        free(string_pos);
-        return pos;
+        return NULL;
+    }else{
+        return NULL;
     }
-
-
-    //Si no se encontro libero y devuelvo null
-    free(char_leido);
-    free(string_con_pos);
-    return NULL;
 }
 
 //busca unas coordenadas dentro del archivo

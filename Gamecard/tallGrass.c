@@ -7,62 +7,62 @@
 //TODO Armar test para mantener esto estable
 
 char* carpeta_montaje;
-
-int main(){
-    montar("..");
-    /*
-     * PRUEBA 1
-     */
-    //New Pikachu
-
-    char* path_pikachu = concatenar_strings(obtener_path_file(),"/Pikachu");
-    create_tall_grass(path_pikachu);
-    t_file* archivo_pikachu = open_tall_grass(path_pikachu) ;
-    write_tall_grass(archivo_pikachu, "5-5=5\n" , strlen("5-5=5") + 1, 0);
-
-    /*
-     * PRUEBA 2
-     */
-    //crear varios archivos y agregarles datos
-
-    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
-    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
-    create_tall_grass(path_charmander);
-    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
-    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
-    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
-    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
-    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
-    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
-
-    /*
-     * PRUEBA 3
-     */
-    //Eliminar un pedaso de memoria del archivo
-
-    delet_tall_grass(archivo_pikachu,0,6);
-    delet_tall_grass(archivo_pikachu,0,7);
-    delet_tall_grass(archivo_charmander,0,12);
-
-    close_tall_grass(archivo_charmander);
-    free(path_charmander);
-
-    close_tall_grass(archivo_pikachu);
-    free(path_pikachu);
-
-    int cantidad_bloques = obtener_cantidad_bloques();
-    char *path_bitmap = obtener_path_bitmap();
-    t_list *bloques_libres = list_create();
-
-    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
-
-    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
-                                         tamanio_bitmap(cantidad_bloques));
-
-
-    doom_bitmap(bitmap);
-
-}
+//
+//int main(){
+//    montar("..");
+//    /*
+//     * PRUEBA 1
+//     */
+//    //New Pikachu
+//
+//    char* path_pikachu = concatenar_strings(obtener_path_file(),"/Pikachu");
+//    create_tall_grass(path_pikachu);
+//    t_file* archivo_pikachu = open_tall_grass(path_pikachu) ;
+//    write_tall_grass(archivo_pikachu, "5-5=5\n" , strlen("5-5=5") + 1, 0);
+//
+//    /*
+//     * PRUEBA 2
+//     */
+//    //crear varios archivos y agregarles datos
+//
+//    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
+//    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
+//    create_tall_grass(path_charmander);
+//    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
+//    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
+//    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
+//    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
+//    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
+//    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
+//
+//    /*
+//     * PRUEBA 3
+//     */
+//    //Eliminar un pedaso de memoria del archivo
+//
+//    delet_tall_grass(archivo_pikachu,0,6);
+//    delet_tall_grass(archivo_pikachu,0,7);
+//    delet_tall_grass(archivo_charmander,0,12);
+//
+//    close_tall_grass(archivo_charmander);
+//    free(path_charmander);
+//
+//    close_tall_grass(archivo_pikachu);
+//    free(path_pikachu);
+//
+//    int cantidad_bloques = obtener_cantidad_bloques();
+//    char *path_bitmap = obtener_path_bitmap();
+//    t_list *bloques_libres = list_create();
+//
+//    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
+//
+//    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
+//                                         tamanio_bitmap(cantidad_bloques));
+//
+//
+//    doom_bitmap(bitmap);
+//
+//}
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
  * Los errores los muestra imprimiendo en consola
@@ -316,7 +316,7 @@ bool find_tall_grass(char* nombre_archivo){
 
     //Recorro la lista buscando coincidencia con el nombre que busco
     for(int i = 0; i < numero_archivos; i++){
-        if(strcmp(nombre_archivo, list_get(archivos,i)) == 0){
+        if(strcmp(nombre_archivo,(char*)list_get(archivos,i)) == 0){
 
             //Ante coincidencia pongo el resultado en true y rompo el ciclo
             resultado = true;
@@ -330,15 +330,32 @@ bool find_tall_grass(char* nombre_archivo){
 
 t_list* ls_tall_grass(char* path){
 
+    //Declaro estructuras
     DIR *dp;
     struct dirent *ep;
 
+    //Abro el directorio
     dp = opendir (path);
+    //Verifico si lo pude abrir
     if (dp != NULL)
     {
         t_list * respuesta = list_create();
+        //Recorro el directorio y voy cargando los archivos que contiene
         while (ep = readdir (dp)){
-            char* elemento = malloc(strlen(ep->d_name));
+            //Los nombres de los direcotrios terminan en null
+            //Recorro el strin en busca del null y ver el espacio que ocupa
+
+            int i = 0;
+            while(ep->d_name[i] != NULL){
+                i++;
+            }
+            //Reservo el espacio para los caracteres y el '\0'
+            char* elemento = malloc(i+1);
+            //Copio los caracteres necesarios
+            memcpy(elemento,ep->d_name,i);
+            //Agrego el fin del string
+            elemento[i] = '\0';
+            //Lo sumo a la lista
             list_add(respuesta,elemento);
         }
 
@@ -367,8 +384,12 @@ t_file* open_tall_grass(char* path){
 //    LOCK_EX es para que sea bloque exclusivo
 //    LOCK_NB es para que sea no bloqueante si esta bloqueado
     if( flock(archivo->_fileno, LOCK_EX | LOCK_NB) == 0){
-        set_estado_archivo(archivo,'Y');
         fclose(archivo);
+        t_config* metadata = config_create(path_archivo_metadata);
+        config_set_value(metadata,"OPEN", "Y");
+        config_save(metadata);
+        config_destroy(metadata);
+
         return retorno;
     }else{
         fclose(archivo);
@@ -380,8 +401,6 @@ t_file* open_tall_grass(char* path){
 
 int close_tall_grass(t_file * fd ){
     t_config* metadata = config_create(fd->path);
-//    char* n = malloc(2);
-//    memcpy(n,"N",2);
     config_set_value(metadata,"OPEN", "N");
     config_save(metadata);
     config_destroy(metadata);
@@ -395,23 +414,6 @@ int close_tall_grass(t_file * fd ){
     return fclose(archivo) ;
 }
 
-//Setias el estado open del archivo
-//Estados Y|N
-
-int set_estado_archivo(FILE* archivo,char estado){
-    //Pongo en 0 el puntero del archivo
-    rewind(archivo);
-    //Busco la posicion del '=' de open
-    int posicion = buscar_caracter_archivo(archivo,'=',4) + 1;//No esta bien esto pero es la forma mas facil
-
-    //Controlo posible error
-    if(posicion != -1){
-        fseek(archivo, posicion, SEEK_SET); //Posiciono el puntero del archivo ahi
-        fputc(estado,archivo);//Pongo el estado pasado por parametro en lugar del existente
-    }else{
-        return -1;
-    }
-}
 
 int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion){
     int i =0;

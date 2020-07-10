@@ -999,11 +999,14 @@ void* trainer_thread(void* arg){
                 char *first_trainer = string_itoa(entrenador->tid);
                 string_append(&deadlock, first_trainer);
                 free(first_trainer);
-                string_append(&deadlock, " y el entrenador ");
+                string_append(&deadlock, " le dio un ");
+                string_append(&deadlock, entrenador->entrenador_objetivo->pokemon_objetivo->especie);
+                string_append(&deadlock, " al entrenador ");
                 char *second_trainer = string_itoa(entrenador->entrenador_objetivo->tid);
                 string_append(&deadlock, second_trainer);
                 free(second_trainer);
-                string_append(&deadlock, " realizaron una operacion de intercambio");
+                string_append(&deadlock, " y, este le dio un ");
+                string_append(&deadlock, entrenador->pokemon_objetivo->especie);
 
                 log_info(logger, deadlock);
                 free(deadlock);
@@ -1569,11 +1572,10 @@ void algoritmo_deadlock(){
     }
     t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
 
+    //Para pruebas
     int bloqueado = list_size(estado_block);
     int ejecucion = list_size(estado_exec);
     int ready = list_size(estado_ready);
-
-    //Para pruebas
     int j = 0;
     while(j < list_size(entrenadores_sin_margen)){
         Entrenador* entrenador_prueba = (Entrenador*) list_get(entrenadores_sin_margen,0);
@@ -1617,6 +1619,9 @@ void algoritmo_deadlock(){
                         void no_necesita(char* key, void*value){
                             if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
                                 strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                //memcpy(pokemon_primer_entrenador_no_necesita, key, strlen(key));
+                                //sscanf(key,"%s", &pokemon_primer_entrenador_no_necesita);
+                                //pokemon_primer_entrenador_no_necesita = key;
                                 i++;
                             }
                         }
@@ -1639,6 +1644,7 @@ void algoritmo_deadlock(){
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                        //strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_primer_entrenador_no_necesita);
                         entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
 
                         list_add(estado_ready, entrenador_primero);

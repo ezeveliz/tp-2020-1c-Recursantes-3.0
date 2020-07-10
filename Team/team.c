@@ -65,6 +65,9 @@ pthread_mutex_t mutex_pokemons_received;
 //Semaforo mutex para algoritmo de cercania
 pthread_mutex_t mutex_algoritmo_cercania;
 
+//Semaforo mutex deadlock
+pthread_mutex_t mutex_deadlock;
+
 int main() {
     pthread_t server_thread;
 
@@ -606,6 +609,10 @@ void initialize_structures() {
     // Inicializo semaforo mutex que protege la lista de pokemones recibidos(solo nombre)
     pthread_mutex_init(&mutex_pokemons_received, NULL);
 
+    //TODO: Despues ver si esto se queda o se borra
+    pthread_mutex_init(&mutex_algoritmo_cercania, NULL);
+    pthread_mutex_init(&mutex_deadlock, NULL);
+
     // Hallo la cantidad de listas de stock de pokemones hay
     int cant_listas_pokemones_stock = funcion_de_mierda(config.pokemon_entrenadores);
 
@@ -969,14 +976,16 @@ void* trainer_thread(void* arg){
                 entrenador->acumulado_actual = 0;
 
                 //Hago un vector porque add_to_dictionary recibe un char**
-                char** pokemon_first_trainer = (char**) malloc(sizeof(char*));
+                char** pokemon_first_trainer = (char**) malloc(sizeof(char*) * 2);
                 pokemon_first_trainer[0] = entrenador->pokemon_objetivo->especie;
+                pokemon_first_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
                 add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
-                char** pokemon_second_trainer = (char**) malloc(sizeof(char*));
-                pokemon_second_trainer[0] = entrenador->pokemon_objetivo->especie;
+                char** pokemon_second_trainer = (char**) malloc(sizeof(char*) * 2);
+                pokemon_second_trainer[0] = entrenador->entrenador_objetivo->pokemon_objetivo->especie;
+                pokemon_second_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador objetivo el pokemon
                 add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
@@ -994,7 +1003,7 @@ void* trainer_thread(void* arg){
                 char *second_trainer = string_itoa(entrenador->entrenador_objetivo->tid);
                 string_append(&deadlock, second_trainer);
                 free(second_trainer);
-                string_append(&deadlock, " van a realizar una operacion de intercambio");
+                string_append(&deadlock, " realizaron una operacion de intercambio");
 
                 log_info(logger, deadlock);
                 free(deadlock);
@@ -1072,7 +1081,8 @@ void* trainer_thread(void* arg){
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
-                list_add(estado_block, (void*)entrenador);
+                //TODO: Comento esta linea porque si el entrenador viene de un catch estas agregando dos veces al entrenador a la lista de bloqueados
+                //list_add(estado_block, (void*)entrenador);
                 entrenador->razon_bloqueo = DEADLOCK; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
 
@@ -1258,7 +1268,6 @@ void exec_default(MessageType header, int tid) {
             caught_pokemon(tid, 1);
             break;
         default:
-            printf("Chupame la pija\n");
             break;
     }
 }
@@ -1528,7 +1537,6 @@ void algoritmo_de_cercania() {
                         break;
 
                     default:
-                        printf("Andate a a concha de tu hermana");
                         break;
                 }
 
@@ -1550,7 +1558,7 @@ void algoritmo_de_cercania() {
 
 void algoritmo_deadlock(){
 
-
+    pthread_mutex_lock(&mutex_deadlock);
     // Logueo el inicio del algoritmo de deteccion de deadlock
     log_info(logger,"Se ha iniciado el algoritmo de deteccion de deadlock");
 
@@ -1560,6 +1568,17 @@ void algoritmo_deadlock(){
         return entrenador->cant_objetivos == entrenador->cant_stock;
     }
     t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
+
+    int bloqueado = list_size(estado_block);
+    int ejecucion = list_size(estado_exec);
+    int ready = list_size(estado_ready);
+
+    //Para pruebas
+    int j = 0;
+    while(j < list_size(entrenadores_sin_margen)){
+        Entrenador* entrenador_prueba = (Entrenador*) list_get(entrenadores_sin_margen,0);
+        j++;
+    }
 
     int tamanio_ent = list_size(entrenadores_sin_margen);
 
@@ -1603,12 +1622,32 @@ void algoritmo_deadlock(){
                         }
                         dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
 
-                        log_info(logger,"Se encontraron dos entrenadores que estan en deadlock y van a realizar un intercambio");
+                        char* deadlock_entrenadores = string_new();
+                        string_append(&deadlock_entrenadores,"El entrenador ");
+                        char* entrenador_primero_tid = string_itoa(entrenador_primero->tid);
+                        string_append(&deadlock_entrenadores, entrenador_primero_tid);
+                        string_append(&deadlock_entrenadores, " y el entrenador ");
+                        char* entrenador_segundo_tid = string_itoa(entrenador_segundo->tid);
+                        string_append(&deadlock_entrenadores, entrenador_segundo_tid);
+                        string_append(&deadlock_entrenadores, " estan en deadlock ");
+                        log_info(logger, deadlock_entrenadores);
+
+                        free(deadlock_entrenadores);
+                        free(entrenador_primero_tid);
+                        free(entrenador_segundo_tid);
 
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
                         entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
+
+                        list_add(estado_ready, entrenador_primero);
+
+                        bool remover(void *_entrenador) {
+                            Entrenador *entrenador = (Entrenador *) _entrenador;
+                            return entrenador->tid == entrenador_primero->tid;
+                        }
+                        list_remove_by_condition(estado_block, remover);
 
                         //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
@@ -1623,11 +1662,13 @@ void algoritmo_deadlock(){
             cont_primero++;
             cont_segundo = cont_primero + 1;
         }
-        log_info(logger, "No hay deadlock porque no cumplen con las condiciones");
+    }else {
+        log_info(logger, "No hay dos entrenadores en deadlock");
     }
-    log_info(logger,"No hay dos entrenadores en deadlock");
     list_destroy(entrenadores_sin_margen);
+    pthread_mutex_unlock(&mutex_deadlock);
 }
+
  t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
 
     t_list* pokemons_innecesarios;

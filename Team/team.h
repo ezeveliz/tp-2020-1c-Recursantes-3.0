@@ -251,6 +251,10 @@ void algoritmo_de_cercania();
  * Algoritmo de deadlock
  */
 void algoritmo_deadlock();
+/**
+ * Remuevo del stock de los dos entrenadores involucrados en el deadlock los pokemons que estoy entregando
+ */
+void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char* pokemon_second_trainer);
 
 /**
  * devuelve una lista de pokemons que no necesita el entrenador, solo se usa para deadlock

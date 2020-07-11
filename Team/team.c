@@ -398,7 +398,7 @@ void* subscribe_to_queue_thread(void* arg) {
             // Envio confirmacion al Broker
             send_package(paquete, broker);
 
-        // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
+            // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
             log_info(logger, conexionPerdida);
             broker = connect_and_subscribe(cola);
@@ -954,7 +954,7 @@ void* trainer_thread(void* arg){
 
                 break;
 
-            // Estaba viajando para intercambiar un Pokemon
+                // Estaba viajando para intercambiar un Pokemon
             case (RESOLUCION_DEADLOCK):;
 
                 // Simulo la ejecucion de 5 ciclos de CPU para el intercambio
@@ -989,6 +989,8 @@ void* trainer_thread(void* arg){
 
                 //Agrego al stock del entrenador objetivo el pokemon
                 add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
+
+                remover_de_stock(entrenador, *pokemon_first_trainer, *pokemon_second_trainer);
 
                 (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
                 (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
@@ -1039,7 +1041,7 @@ void* trainer_thread(void* arg){
                     list_remove_by_condition(estado_block, removedor);
                     break;
 
-                // Si estaba resolviendo un DeadLock, me tengo que quita de la lista de ejecucion
+                    // Si estaba resolviendo un DeadLock, me tengo que quita de la lista de ejecucion
                 case (RESOLUCION_DEADLOCK):;
                     //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                     list_remove(estado_exec, 0);
@@ -1051,7 +1053,7 @@ void* trainer_thread(void* arg){
 
             // TODO: agregar a la lista de Finish?
 
-        // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
+            // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
 
             char* objetivos_nocumplidos_entrenador = string_new();
@@ -1079,7 +1081,7 @@ void* trainer_thread(void* arg){
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
                 algoritmo_de_cercania();
 
-            // No tengo mas espacio para recibir pokemones
+                // No tengo mas espacio para recibir pokemones
             }else{
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
@@ -1618,11 +1620,19 @@ void algoritmo_deadlock(){
                         int i = 0;
                         void no_necesita(char* key, void*value){
                             if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                //strcpy(pokemon_primer_entrenador_no_necesita, key);
                                 //memcpy(pokemon_primer_entrenador_no_necesita, key, strlen(key));
                                 //sscanf(key,"%s", &pokemon_primer_entrenador_no_necesita);
-                                //pokemon_primer_entrenador_no_necesita = key;
+                                pokemon_primer_entrenador_no_necesita = key;
                                 i++;
+                            }
+                            else{
+                                int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
+                                int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
+                                if((dictionary_has_key(entrenador_primero->objetivos_particular, key)) && (i == 0) && (cantidad_stock > cantidad_objetivo)){
+                                    pokemon_primer_entrenador_no_necesita = key;
+                                    i++;
+                                }
                             }
                         }
                         dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
@@ -1675,7 +1685,27 @@ void algoritmo_deadlock(){
     pthread_mutex_unlock(&mutex_deadlock);
 }
 
- t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
+void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char* pokemon_second_trainer){
+
+    //Remuevo del stock el pokemon que voy a dar para el primer entrenador
+    if(*(int*)dictionary_get(entrenador->stock_pokemons, pokemon_second_trainer) > 1){
+        *(int*) dictionary_get(entrenador->stock_pokemons, pokemon_second_trainer)-=1;
+    }
+    else{
+        dictionary_remove(entrenador->stock_pokemons, pokemon_second_trainer);
+    }
+
+    //Remuevo del stock el pokemon que voy a dar para el segundo entrenador
+    if(*(int*)dictionary_get(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer) > 1){
+        *(int*)dictionary_get(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer)-=1;
+    }
+    else{
+        dictionary_remove(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer);
+    }
+
+}
+
+t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
 
     t_list* pokemons_innecesarios;
     bool filtrar_pokemons(void* _nombre_pokemon){

@@ -20,16 +20,17 @@ void liberar_opciones_configuracion();
 
 
 
-void mensaje_new_pokemon(t_new_pokemon* pokemon, uint32_t id);
+void* mensaje_new_pokemon(void* parametros);
 
-void mensaje_get_pokemon();
+void* mensaje_get_pokemon(void* parametros);
 
-void mensaje_catch_pokemon();
+void* mensaje_catch_pokemon(void* parametros);
 
 t_pos_pokemon* obtener_sig_coordenada(t_file* archivo);
 
 t_pos_pokemon* buscar_coordenadas(uint32_t x, uint32_t  y, t_file* archivo);
 
+t_list* obtener_todas_coordenadas(t_file* archivo);
 
 //------- funciones de conexion--------//
 void subscribe_to_queues();

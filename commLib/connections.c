@@ -387,19 +387,13 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
 }
 
 
-t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, uint32_t* coordenadas){
     t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
     localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
     localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
-
-    va_list ap;
-    va_start(ap, cantidad_coordenadas*2);
-    for (int i = 0; i < cantidad_coordenadas*2; ++i) {
-        localized_pokemon->coordenadas[i] = va_arg(ap, uint32_t);
-    }
-    va_end(ap);
+    localized_pokemon->coordenadas = coordenadas;
 
     return localized_pokemon;
 }

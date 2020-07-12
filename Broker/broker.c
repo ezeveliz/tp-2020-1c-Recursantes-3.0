@@ -409,7 +409,8 @@ void tests_broker(){
      *
      */
     log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    uint32_t coordenadas_tmp[] = {3, 4, 5, 6};
+    t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
     int base2 = asignar_particion(partition_size2);
     log_debug(logger, "Base: %d", base2);
@@ -422,7 +423,7 @@ void tests_broker(){
   *
   */
     log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
     int base3 = asignar_particion(partition_size3);
     log_debug(logger, "Base: %d", base3);
@@ -434,7 +435,7 @@ void tests_broker(){
      *
      */
     log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
     int base4 = asignar_particion(partition_size4);
     log_debug(logger, "Base: %d", base4);
@@ -446,7 +447,7 @@ void tests_broker(){
      *
      */
     log_debug(logger, "LOCALIZED_POKEMON");
-    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, 3, 4, 5, 6);
+    t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
     int base5= asignar_particion(partition_size5);
     log_debug(logger, "Base: %d", base5);

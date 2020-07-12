@@ -25,6 +25,8 @@ t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
 
+int tamanio_entrenadores;
+
 // Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
 
@@ -69,6 +71,7 @@ pthread_mutex_t mutex_algoritmo_cercania;
 pthread_mutex_t mutex_deadlock;
 
 int main() {
+    int i = 0;
     pthread_t server_thread;
 
     // Leo archivo de configuracion, si no lo encuentro salgo del proceso
@@ -111,6 +114,9 @@ int main() {
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
     // TODO: joinear hilos de entrenadores
+    while(i < tamanio_entrenadores){
+        pthread_join(threads_trainer[i], NULL);
+    }
 
     //Joineo el hilo main con el del servidor para el GameBoy
     pthread_join(server_thread, NULL);
@@ -594,7 +600,8 @@ void initialize_structures() {
 
     // Inicializo las listas de estados y otras cosas
     char **ptr = config.posiciones_entrenadores;
-    int pos = 0, tamanio_entrenadores = 0;
+    int pos = 0;
+    tamanio_entrenadores = 0;
     objetivo_global = dictionary_create();
     estado_new = list_create();
     estado_ready = list_create();
@@ -1045,12 +1052,33 @@ void* trainer_thread(void* arg){
                 case (RESOLUCION_DEADLOCK):;
                     //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                     list_remove(estado_exec, 0);
+
+                    if(objetivos_cumplidos(entrenador->entrenador_objetivo)){
+                        char* objetivos_cumplidos_entrenador = string_new();
+                        string_append(&objetivos_cumplidos_entrenador, "El entrenador ");
+                        char* entrenador_tid_objetivos_cumplidos = string_itoa(entrenador->entrenador_objetivo->tid);
+                        string_append(&objetivos_cumplidos_entrenador, entrenador_tid_objetivos_cumplidos);
+                        string_append(&objetivos_cumplidos_entrenador, " ha cumplido con los objetivos ");
+                        log_info(logger,objetivos_cumplidos_entrenador);
+                        free(objetivos_cumplidos_entrenador);
+                        free(entrenador_tid_objetivos_cumplidos);
+
+                        bool remover(void *_entrenador) {
+                            Entrenador *entrenador_iteracion = (Entrenador *) _entrenador;
+                            return entrenador->entrenador_objetivo->tid == entrenador_iteracion->tid;
+                        }
+                        list_remove_by_condition(estado_block, remover);
+
+                        entrenador->entrenador_objetivo->estado = FINISH;
+                        list_add(estado_finish, entrenador->entrenador_objetivo);
+                    }
+
                     break;
             }
 
             // Le asigno el estado finish
             entrenador->estado = FINISH;
-
+            list_add(estado_finish, entrenador);
             // TODO: agregar a la lista de Finish?
 
             // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
@@ -1086,12 +1114,10 @@ void* trainer_thread(void* arg){
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
-                //TODO: Comento esta linea porque si el entrenador viene de un catch estas agregando dos veces al entrenador a la lista de bloqueados
-                //list_add(estado_block, (void*)entrenador);
                 entrenador->razon_bloqueo = DEADLOCK; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
 
-                // LLamo al algoritmo de deadlock para ver si hay otro entronador con cosillas que yo necesite
+                // LLamo al algoritmo de deadlock para ver si hay otro entrenador con cosillas que yo necesite
                 algoritmo_deadlock();
             }
 
@@ -1116,7 +1142,8 @@ void* trainer_thread(void* arg){
 
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
-    return null;
+
+    return NULL;
 }
 
 bool objetivos_cumplidos(Entrenador* entrenador){

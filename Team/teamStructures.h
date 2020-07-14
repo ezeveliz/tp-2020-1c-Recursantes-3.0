@@ -60,7 +60,7 @@ typedef enum estado_entrenador{
  * Enum para identificar las distintas causas de bloqueo
  */
 typedef enum razonBloqueo{
-    SIN_BLOQUEO, // Ready, Exec
+    SIN_ESPACIO,
     DEADLOCK,
     ESPERANDO_CATCH,
     ESPERANDO_POKEMON, // Estoy disponible pero no hay pokemones para darme

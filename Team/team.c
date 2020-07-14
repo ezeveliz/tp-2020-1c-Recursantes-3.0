@@ -1114,23 +1114,12 @@ void* trainer_thread(void* arg){
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 list_remove(estado_exec, 0);
-                entrenador->razon_bloqueo = DEADLOCK; // En realidad esto significa que no tengo mas lugar para atrapar
+                entrenador->razon_bloqueo = SIN_ESPACIO; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
 
                 // LLamo al algoritmo de deadlock para ver si hay otro entrenador con cosillas que yo necesite
                 algoritmo_deadlock();
             }
-
-            char* block = string_new();
-            string_append(&block,"El entrenador ");
-            char* entrenador_tid_block = string_itoa(entrenador->tid);
-            string_append(&block, entrenador_tid_block);
-            string_append(&block, " ha entrado a Block");
-
-            log_info(logger, block);
-
-            free(entrenador_tid_block);
-            free(block);
 
             call_planner();
 
@@ -1398,6 +1387,11 @@ void fifo_planner() {
     log_info(logger, "Se llamo al algoritmo FIFO ");
     // Busco si no hay ningun entrenador en ejecucion
     if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
+        //Para pruebas
+        int bloqueado_estado = list_size(estado_block);
+        int ejecucion_estado = list_size(estado_exec);
+        int ready_estado = list_size(estado_ready);
+        int finish_estado = list_size(estado_finish);
 
         log_info(logger, "Entro a FIFO planner y no hay nadie en ejecucion ");
         // Ordeno la lista de entrenadores en ready segun el tiempo de llegada
@@ -1418,7 +1412,6 @@ void fifo_planner() {
         list_add(estado_exec, (void*)entrenador_elegido);
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
-
     }
 
 }
@@ -1597,24 +1590,14 @@ void algoritmo_deadlock(){
     //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
-        return entrenador->cant_objetivos == entrenador->cant_stock;
+        return (entrenador->cant_objetivos == entrenador->cant_stock) && (entrenador->razon_bloqueo != DEADLOCK);
     }
     t_list* entrenadores_sin_margen = list_filter(estado_block, _entrenadores_sin_margen);
-
-    //Para pruebas
-    int bloqueado = list_size(estado_block);
-    int ejecucion = list_size(estado_exec);
-    int ready = list_size(estado_ready);
-    int j = 0;
-    while(j < list_size(entrenadores_sin_margen)){
-        Entrenador* entrenador_prueba = (Entrenador*) list_get(entrenadores_sin_margen,0);
-        j++;
-    }
 
     int tamanio_ent = list_size(entrenadores_sin_margen);
 
     // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
-    if(tamanio_ent > 2 ) {
+    if(tamanio_ent > 1 ) {
 
         log_info(logger,"Hay mas de un entrenador en deadlock");
 
@@ -1646,19 +1629,20 @@ void algoritmo_deadlock(){
                         char* pokemon_primer_entrenador_no_necesita = (char*) malloc(sizeof(char*) * 50);
                         int i = 0;
                         void no_necesita(char* key, void*value){
+                            //Busco el pokemon que no necesita el entrenador, es decir el pokemon que tiene en stock pero no esta en sus objetivos. La variable i es para agarrar al primero que encuentre
                             if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                //strcpy(pokemon_primer_entrenador_no_necesita, key);
-                                //memcpy(pokemon_primer_entrenador_no_necesita, key, strlen(key));
-                                //sscanf(key,"%s", &pokemon_primer_entrenador_no_necesita);
                                 pokemon_primer_entrenador_no_necesita = key;
                                 i++;
                             }
                             else{
-                                int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
-                                int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
-                                if((dictionary_has_key(entrenador_primero->objetivos_particular, key)) && (i == 0) && (cantidad_stock > cantidad_objetivo)){
+                                //Si lo tiene como objetivo quiere decir que tiene en stock uno mas del que deberia
+                                if((dictionary_has_key(entrenador_primero->objetivos_particular, key)) && (i == 0)){
+                                    int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
+                                    int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
+                                    if(cantidad_stock > cantidad_objetivo){
                                     pokemon_primer_entrenador_no_necesita = key;
                                     i++;
+                                    }
                                 }
                             }
                         }
@@ -1681,10 +1665,10 @@ void algoritmo_deadlock(){
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                        entrenador_primero->razon_bloqueo = DEADLOCK;
+                        entrenador_segundo->razon_bloqueo = DEADLOCK;
                         //strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_primer_entrenador_no_necesita);
                         entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
-
-                        list_add(estado_ready, entrenador_primero);
 
                         bool remover(void *_entrenador) {
                             Entrenador *entrenador = (Entrenador *) _entrenador;
@@ -1692,9 +1676,11 @@ void algoritmo_deadlock(){
                         }
                         list_remove_by_condition(estado_block, remover);
 
+                        list_add(estado_ready, entrenador_primero);
+
+                        cumplio_condiciones = true;
                         //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
-                        cumplio_condiciones = true;
                         break;
                     }
                 }

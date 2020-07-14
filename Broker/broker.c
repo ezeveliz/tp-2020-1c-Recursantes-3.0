@@ -153,43 +153,43 @@ void *server_function(void *arg) {
 
             case SUB_NEW:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
                     log_info(tp_logger, "Nuevo subscriptor de NEW");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
                     break;
                 }
 
             case SUB_APPEARED:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
                     log_info(tp_logger, "Nuevo subscriptor de APPEARED");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
                     break;
                 }
 
             case SUB_LOCALIZED:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
                     log_info(tp_logger, "Nuevo subscriptor de LOCALIZED");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
                     break;
                 }
 
             case SUB_CAUGHT:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
                     log_info(tp_logger, "Nuevo subscriptor de CAUGHT");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
                     break;
                 }
 
             case SUB_GET:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
                     log_info(tp_logger, "Nuevo subscriptor de GET");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
                     break;
                 }
 
             case SUB_CATCH:;
                 {
-                    subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
                     log_info(tp_logger, "Nuevo subscriptor de CATCH");
+                    subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
                     break;
                 }
 
@@ -1003,19 +1003,23 @@ void dump_cache(int sig){
 }
 
 void compactar_particiones(){
+    log_debug(logger, "COMPACTAMO LO COSO");
     int size = list_size(PARTICIONES);
     for(int i=0; i<size;i++){
-        particion* una_particion = list_get(PARTICIONES, i);
-        if(una_particion->libre){
-            for(int z=i;z<size;z++){
-                particion* otra_particion = list_get(PARTICIONES, z);
-                if(!otra_particion->libre){
-                    uint64_t ult_uso_libre = una_particion->ultimo_uso;
-                    una_particion->ultimo_uso = otra_particion->ultimo_uso;
-                    otra_particion->ultimo_uso = ult_uso_libre;
-                    otra_particion->base = una_particion->base;
-                    una_particion->base += otra_particion->tam;
-                    mergear_particiones_libres();
+        particion* particion_libre = list_get(PARTICIONES, i);
+        if(particion_libre->libre){
+            for(int z=i+1;z<size;z++){
+                particion* particion_ocupada = list_get(PARTICIONES, z);
+                if(!particion_ocupada->libre){
+                    particion_ocupada->base = particion_libre->base;
+                    particion_libre->base += particion_ocupada->tam;
+
+                    // Mover memoria real
+                    particion_ocupada->mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
+                    memcpy(particion_ocupada->mensaje->puntero_a_memoria,
+                            particion_libre->mensaje->puntero_a_memoria,
+                            particion_libre->mensaje->tam);
+
                     ordenar_particiones();
                     //  printPartList();
                     size = list_size(PARTICIONES);

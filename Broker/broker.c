@@ -47,6 +47,8 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server_function, NULL);
 
     // Inicializo
+    FILE* archivo_dump = fopen("dump.txt", "w");
+    fclose(archivo_dump);
     IDENTIFICADOR_MENSAJE = 1;
     INTENTOS = 0;
     MIN_PART_LEN = config.min_partition_size;
@@ -969,7 +971,7 @@ void mergear_particiones_libres(){
 void dump_cache(int sig){
     // Loggeo y abro el archivo
     log_info(tp_logger, "Se solicito un Dump de cache");
-    FILE* archivo_dump = fopen("dump.txt", "w");
+    FILE* archivo_dump = fopen("dump.txt", "a");
 
     // Printeo la fecha y hora
     time_t t = time(NULL);
@@ -996,6 +998,7 @@ void dump_cache(int sig){
         }
         fprintf(archivo_dump, "\n");
     }
+    fprintf(archivo_dump, "\n");
 
     // Cierro el archivo y libero la memoria
     fclose(archivo_dump);

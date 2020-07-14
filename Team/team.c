@@ -926,6 +926,12 @@ void* trainer_thread(void* arg){
                 entrenador->razon_bloqueo = ESPERANDO_CATCH;
                 list_add(estado_block, entrenador);
 
+                // Duermo durante el tiempo que ocupa un ciclo de ejecucion correspondiente al envio de mensaje al broker
+                sleep(config.retardo_ciclo_cpu);
+
+                // Acumulo un ciclo de ejecucion
+                entrenador->acumulado_actual += 1;
+
                 // Creo la estructura t_catch_pokemon para enviarle al Broker
                 Pokemon* pok = entrenador->pokemon_objetivo;
                 t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, pok->coordenada.pos_x, pok->coordenada.pos_y);
@@ -1002,6 +1008,9 @@ void* trainer_thread(void* arg){
                 (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
                 (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
 
+                entrenador->razon_bloqueo = SIN_ESPACIO;
+                entrenador->entrenador_objetivo-> razon_bloqueo = SIN_ESPACIO;
+
                 char *deadlock = string_new();
 
                 string_append(&deadlock, "El entrenador ");
@@ -1020,7 +1029,6 @@ void* trainer_thread(void* arg){
                 log_info(logger, deadlock);
                 free(deadlock);
 
-                // TODO: ver que carajohacer aca
                 break;
         }
 
@@ -1128,6 +1136,20 @@ void* trainer_thread(void* arg){
         }
     }
 
+    int bloqueado_estado = list_size(estado_block);
+    int ready_estado = list_size(estado_ready);
+
+    if(list_size(estado_ready) > 0){
+        call_planner();
+    }else{
+        algoritmo_de_cercania();
+        if(list_size(estado_ready) > 0) {
+            call_planner();
+        } else{
+            algoritmo_deadlock();
+            call_planner();
+        }
+    }
 
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
@@ -1387,11 +1409,6 @@ void fifo_planner() {
     log_info(logger, "Se llamo al algoritmo FIFO ");
     // Busco si no hay ningun entrenador en ejecucion
     if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
-        //Para pruebas
-        int bloqueado_estado = list_size(estado_block);
-        int ejecucion_estado = list_size(estado_exec);
-        int ready_estado = list_size(estado_ready);
-        int finish_estado = list_size(estado_finish);
 
         log_info(logger, "Entro a FIFO planner y no hay nadie en ejecucion ");
         // Ordeno la lista de entrenadores en ready segun el tiempo de llegada

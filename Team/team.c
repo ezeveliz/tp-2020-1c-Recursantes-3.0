@@ -25,8 +25,6 @@ t_dictionary* objetivo_global;
 // Array de hilos de entrenador
 pthread_t* threads_trainer;
 
-int tamanio_entrenadores;
-
 // Array de semaforos que bloquean a los hilos para pasar de new a ready
 sem_t* new_ready_transition;
 
@@ -87,10 +85,13 @@ int main() {
     }
 
     // Inicializo estructuras, semaforos e hilos
-    initialize_structures();
+int tamanio_entrenadores = initialize_structures();
 
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
+
+    //Joineo el hilo main con el del servidor para el GameBoy
+    pthread_detach(server_thread);
 
     //Creo 3 hilos para suscribirme a las colas globales
     subscribe_to_queues();
@@ -116,10 +117,12 @@ int main() {
     // TODO: joinear hilos de entrenadores
     while(i < tamanio_entrenadores){
         pthread_join(threads_trainer[i], NULL);
+        i++;
     }
 
-    //Joineo el hilo main con el del servidor para el GameBoy
-    pthread_join(server_thread, NULL);
+    printf("Todos los entrenadores cumplieron sus objetivos \n");
+
+    log_info(logger, "Todos los entrenadores cumplieron sus objetivos ");
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
@@ -591,7 +594,7 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
 
 //----------------------------------------ENTRENADORES----------------------------------------//
 
-void initialize_structures() {
+int initialize_structures() {
 
     //Inicializo el semaforo mutex y la lista de pokemons para conocer instancias de pokemons en el mapa y los que el broker ya nos envio
     pthread_mutex_init(&mutex_pokemon, NULL);
@@ -600,8 +603,7 @@ void initialize_structures() {
 
     // Inicializo las listas de estados y otras cosas
     char **ptr = config.posiciones_entrenadores;
-    int pos = 0;
-    tamanio_entrenadores = 0;
+    int pos = 0, tamanio_entrenadores = 0;
     objetivo_global = dictionary_create();
     estado_new = list_create();
     estado_ready = list_create();
@@ -725,6 +727,8 @@ void initialize_structures() {
         Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
         pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
     }
+
+    return tamanio_entrenadores;
 
 }
 
@@ -996,6 +1000,9 @@ void* trainer_thread(void* arg){
                 //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
                 add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
+                bool prueba5 = dictionary_has_key(entrenador->stock_pokemons,*pokemon_first_trainer);
+                bool prueba8 = dictionary_has_key(entrenador->entrenador_objetivo->stock_pokemons,*pokemon_first_trainer);
+
                 char** pokemon_second_trainer = (char**) malloc(sizeof(char*) * 2);
                 pokemon_second_trainer[0] = entrenador->entrenador_objetivo->pokemon_objetivo->especie;
                 pokemon_second_trainer[1] = NULL;
@@ -1003,7 +1010,15 @@ void* trainer_thread(void* arg){
                 //Agrego al stock del entrenador objetivo el pokemon
                 add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
 
+                bool prueba6 = dictionary_has_key(entrenador->entrenador_objetivo->stock_pokemons,*pokemon_second_trainer);
+                bool prueba7 = dictionary_has_key(entrenador->stock_pokemons,*pokemon_second_trainer);
+
                 remover_de_stock(entrenador, *pokemon_first_trainer, *pokemon_second_trainer);
+
+                bool prueba1 = dictionary_has_key(entrenador->stock_pokemons,*pokemon_first_trainer);
+                bool prueba2 = dictionary_has_key(entrenador->entrenador_objetivo->stock_pokemons,*pokemon_second_trainer);
+                bool prueba3 = dictionary_has_key(entrenador->stock_pokemons,*pokemon_second_trainer);
+                bool prueba4 = dictionary_has_key(entrenador->entrenador_objetivo->stock_pokemons,*pokemon_first_trainer);
 
                 (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
                 (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
@@ -1153,8 +1168,8 @@ void* trainer_thread(void* arg){
 
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
+    pthread_exit(NULL);
 
-    return NULL;
 }
 
 bool objetivos_cumplidos(Entrenador* entrenador){
@@ -1694,7 +1709,7 @@ void algoritmo_deadlock(){
                         list_remove_by_condition(estado_block, remover);
 
                         list_add(estado_ready, entrenador_primero);
-
+                        entrenador_primero->estado = READY;
                         cumplio_condiciones = true;
                         //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);

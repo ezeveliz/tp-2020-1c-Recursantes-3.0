@@ -130,7 +130,7 @@ void incoming(int socket_server, char* ip, int port, MessageHeader * headerStruc
  *  -   Semaforos para sincronizacion de entrenadores
  *  -   Mando los mensajes de get_pok segun las necesidades globales
  */
-void initialize_structures();
+int initialize_structures();
 
 /**
  * Agrego elementos a un diccionario

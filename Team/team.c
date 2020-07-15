@@ -1094,6 +1094,7 @@ void* trainer_thread(void* arg){
 
                         entrenador->entrenador_objetivo->estado = FINISH;
                         list_add(estado_finish, entrenador->entrenador_objetivo);
+                        sem_post(&block_ready_transition[entrenador->entrenador_objetivo->tid]);
                     }
 
                     break;
@@ -1171,6 +1172,8 @@ void* trainer_thread(void* arg){
 
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
+
+    log_info(logger, "Llegue al finallllllllll");
     return NULL;
 }
 
@@ -1523,7 +1526,9 @@ void appeared_pokemon(t_list* paquete){
     //list_destroy(paquete); Si lo destruyo despues no voy a tener el id para confirmarle la recepcion al Broker
 }
 
-void algoritmo_de_cercania() {
+bool algoritmo_de_cercania() {
+
+    bool se_desbloqueo = false;
 
     if (list_size(pokemons) > 0) {
         pthread_mutex_lock(&mutex_algoritmo_cercania);
@@ -1598,7 +1603,7 @@ void algoritmo_de_cercania() {
                     default:
                         break;
                 }
-
+                se_desbloqueo = true;
                 //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
                 pthread_mutex_lock(&mutex_pokemon);
                 list_remove(pokemons, 0);
@@ -1612,10 +1617,13 @@ void algoritmo_de_cercania() {
         }
         list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
+        return se_desbloqueo;
     }
 }
 
-void algoritmo_deadlock(){
+bool algoritmo_deadlock(){
+
+    bool se_desbloqueo = false;
 
     pthread_mutex_lock(&mutex_deadlock);
     // Logueo el inicio del algoritmo de deteccion de deadlock
@@ -1718,6 +1726,7 @@ void algoritmo_deadlock(){
                         cumplio_condiciones = true;
                         //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
+                        se_desbloqueo = true;
                         break;
                     }
                 }
@@ -1733,6 +1742,7 @@ void algoritmo_deadlock(){
     }
     list_destroy(entrenadores_sin_margen);
     pthread_mutex_unlock(&mutex_deadlock);
+    return se_desbloqueo;
 }
 
 void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char* pokemon_second_trainer){

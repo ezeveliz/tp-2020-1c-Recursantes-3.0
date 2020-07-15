@@ -245,12 +245,12 @@ void appeared_pokemon(t_list* paquete );
  * otro entrenador no pueda acceder a el. Esta funcion es llamada cuando hay un LOCALIZED, APPEARED y cuando termina
  * de ejecutar un entrenador.
  */
-void algoritmo_de_cercania();
+bool algoritmo_de_cercania();
 
 /**
  * Algoritmo de deadlock
  */
-void algoritmo_deadlock();
+bool algoritmo_deadlock();
 /**
  * Remuevo del stock de los dos entrenadores involucrados en el deadlock los pokemons que estoy entregando
  */

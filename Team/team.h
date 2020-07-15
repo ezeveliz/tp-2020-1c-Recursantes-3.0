@@ -235,6 +235,11 @@ void sjf_cd_planner();
 void rr_planner();
 
 /**
+ * Ordena la lista de ready por tiempo de llegada
+ */
+void ordenar_tiempo_llegada();
+
+/**
  * Se llama a esta funcion cuando el servidor recibe un APPEARED
  * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
  */
@@ -274,6 +279,24 @@ t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array);
 t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons);
 
 //----------------------------------------HELPERS----------------------------------------//
+
+/**
+ * Loggea el cambio de estado de un entrenador a Ready
+ * @param entrenador
+ */
+void loggear_ready(Entrenador* entrenador);
+
+/**
+ * Loggear el cambio de estado de un entrenador a Ejecucion
+ * @param entrenador
+ */
+void loggear_exec(Entrenador* entrenador);
+
+/**
+ * Loggear el cambio de estado de un entrenador a Block
+ * @param entrenador
+ */
+void loggear_block(Entrenador* entrenador);
 
 /**
  * Wrapper para liberar una lista, nombre mas corto

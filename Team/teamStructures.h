@@ -110,7 +110,7 @@ typedef struct tEntrenador{
     RazonBloqueo razon_bloqueo;
     Pokemon* pokemon_objetivo; // Pokemon hacia el que me dirijo
     struct tEntrenador* entrenador_objetivo; // Entrenador hacia el que me dirijo
-    int quantum;
+    bool vengo_de_ejecucion; //Se usa para los algoritmos con desalojo para saber si fui desalojado en la ejecucion anterior
 }Entrenador;
 
 /**

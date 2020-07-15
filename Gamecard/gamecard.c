@@ -16,68 +16,37 @@ pthread_t caught_thread;
 
 int main() {
     montar("..");
-//    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
-//    parametro1->id = 12;
-//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,1));
-//    mensaje_new_pokemon(parametro1);
+
+    pthread_t server_thread;
+
+    //Leo la configuracion, si da error cierro el negocio
+    if(leer_opciones_configuracion() == -1){
+        printf("Error al leer configuracion\n");
+        return -1;
+    }
+
+    // Inicializo el log, si no pude salgo del proceso
+    logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
+    if (logger == NULL) {
+        printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
+        return -1;
+    }
+
+    //Creo el servidor para que el GameBoy me mande mensajes
+    pthread_create(&server_thread, NULL, server_function_gamecard, NULL);
+
+    //Creo 3 hilos para suscribirme a las colas globales
+    subscribe_to_queues();
+
+    //Joineo el hilo main con el del servidor para el GameBoy
+    pthread_join(server_thread, NULL);
 
 
-//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,1));
-//    mensaje_new_pokemon(parametro1);
-//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",3,3,1));
-//    mensaje_new_pokemon(parametro1);
 
-    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
-    parametro1->id = 12;
-    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,2));
-    mensaje_new_pokemon(parametro1);
-    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,1));
-    mensaje_new_pokemon(parametro1);
-    parametro1->estructura_pokemon =
-            new_pokemon_a_void(create_new_pokemon("Charmander",3,3,1));
-    mensaje_new_pokemon(parametro1);
-    ;
-    estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
-    parametro2->id = 12;
-    parametro2->estructura_pokemon = catch_pokemon_a_void(create_catch_pokemon("Charmander",2,2));
-    mensaje_catch_pokemon(parametro2);
+    return 0;
+}
 
-
-//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,100));
-//    mensaje_new_pokemon(parametro1);
-//    estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
-//    parametro2->id = 12;
-//    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charmander"));
-//    mensaje_get_pokemon(parametro2);
-//    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
-//    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
-//    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,1000000), 12);
-    //
-//    pthread_t server_thread;
-//
-//    //Leo la configuracion, si da error cierro el negocio
-//    if(leer_opciones_configuracion() == -1){
-//        printf("Error al leer configuracion\n");
-//        return -1;
-//    }
-//
-//    // Inicializo el log, si no pude salgo del proceso
-//    logger = log_create("gameboy_log", "Gameboy", 1, LOG_LEVEL_INFO);//LOG_LEVEL_ERROR
-//    if (logger == NULL) {
-//        printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
-//        return -1;
-//    }
-//
-//    //Creo el servidor para que el GameBoy me mande mensajes
-//    pthread_create(&server_thread, NULL, server_function_gamecard, NULL);
-//
-//    //Creo 3 hilos para suscribirme a las colas globales
-//    subscribe_to_queues();
-//
-//    //Joineo el hilo main con el del servidor para el GameBoy
-//    pthread_join(server_thread, NULL);
-//
-
+void mostrar_bitmap(){
     int cantidad_bloques = obtener_cantidad_bloques();
     char *path_bitmap = obtener_path_bitmap();
     t_list *bloques_libres = list_create();
@@ -87,9 +56,7 @@ int main() {
     t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
                                          tamanio_bitmap(cantidad_bloques));
 
-
     doom_bitmap(bitmap);
-    return 0;
 }
 
 int leer_opciones_configuracion() {
@@ -309,6 +276,7 @@ int connect_to_broker(){
 }
 
 void disconnect_from_broker(int broker_socket) {
+
     close_socket(broker_socket);
 }
 
@@ -388,19 +356,31 @@ void incoming_gameboy(int server_socket, char* ip, int port, MessageHeader * hea
     // Envio confirmacion al GameBoy
     send_package(package, server_socket);
 
+    int idMensaje = *(int *) list_get(paquete_recibido, 0);
+
+    int idCorrelativo = *(int *) list_get(paquete_recibido, 1);
+
+    pthread_t funcion_thread;
+    estructura_para_hilo* parametros_hilo = malloc(sizeof(estructura_para_hilo));
+    parametros_hilo->id = idMensaje;
+    parametros_hilo->estructura_pokemon = list_get(paquete_recibido,2);
+
     // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
     switch(headerStruct -> type){
 
         case (NEW_POK):;
-            printf("NEW_POKEMON\n");
+            pthread_create(&funcion_thread, NULL, mensaje_new_pokemon, parametros_hilo);
+            pthread_detach(funcion_thread);
             break;
 
         case (CATCH_POK):;
-            printf("CATCH_POKEMON\n");
+            pthread_create(&funcion_thread, NULL, mensaje_catch_pokemon, parametros_hilo);
+            pthread_detach(funcion_thread);
             break;
 
         case (GET_POK):;
-            printf("GET_POKEMON\n");
+            pthread_create(&funcion_thread, NULL, mensaje_get_pokemon, parametros_hilo);
+            pthread_detach(funcion_thread);
             break;
     }
 
@@ -413,7 +393,6 @@ void incoming_gameboy(int server_socket, char* ip, int port, MessageHeader * hea
 
     // Envio confirmacion al Gameboy
     send_package(paquete, server_socket);
-
     free(rta);
 }
 
@@ -504,24 +483,24 @@ void* mensaje_new_pokemon(void* parametros ){
             write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) - 1);
 
         }
-//        //Enviar mensaje APPEARED_POKEMON
-//        t_paquete * paquete = create_package(APPEARED_POK);
-//
-//
-//        t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
-//        void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
-//
-//
-//        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-//        add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
-//
-//        //Si no se puede conectar informar por log
-//        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+        //Enviar mensaje APPEARED_POKEMON
+        t_paquete * paquete = create_package(APPEARED_POK);
+
+
+        t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
+        void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
+
+
+        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+        add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
+
+        //Si no se puede conectar informar por log
+        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
         //Libero
-//        free(mensaje_serializado);
-//        free(appeared_pokemon->nombre_pokemon);
-//        free(appeared_pokemon);
+        free(mensaje_serializado);
+        free(appeared_pokemon->nombre_pokemon);
+        free(appeared_pokemon);
         free(path_archvio);
         free(path_file);
 
@@ -569,7 +548,7 @@ void* mensaje_catch_pokemon(void* parametros){
         add_to_package(paquete, (void *) &id, sizeof(uint32_t));
         add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
 
-//        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
         free_package(paquete);
 
@@ -646,11 +625,13 @@ void* mensaje_catch_pokemon(void* parametros){
             //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
             add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
-//        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+            envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+
             //Libero
             free(path_archvio);
             free(path_file);
             free_package(paquete);
+
             //Libero el parametro poque ya no lo uso
             free(datos_param);
         }
@@ -681,13 +662,24 @@ void* mensaje_get_pokemon(void* parametros){
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
     t_localized_pokemon* localized_pokemon;
-
+    t_paquete* paquete = create_package(LOCALIZED_POK);
+    void* mensaje_serializado;
     //Verificar si existe el pokemon, sino devolver el mensaje sin posiciones ni cantidades
     if(!find_tall_grass(pokemon->nombre_pokemon)){
         //Generlo el mensaje de error
         uint32_t* vacio;
         localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon, 0, vacio);
+        mensaje_serializado = localized_pokemon_a_void(localized_pokemon);
 
+        //Agrego los datos al paquete
+        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+        add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(localized_pokemon));
+
+        //Si no se puede conectar informar por log
+        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+
+        free_package(paquete);
+        free(mensaje_serializado);
     }else{
         //Abro el archivo
         t_file* archivo = open_tall_grass(path_archvio);
@@ -720,25 +712,26 @@ void* mensaje_get_pokemon(void* parametros){
 
             localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon,lista_pos->elements_count, array_posiciones);
 
+            mensaje_serializado = localized_pokemon_a_void(localized_pokemon);
+
             //Espero x segundos antes de cerrar el archivo
             sleep(configuracion.tiempo_retardo_operacion);
             close_tall_grass(archivo);
+
+            //Agrego los datos al paquete
+            add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+            add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(localized_pokemon));
+
+            //Si no se puede conectar informar por log
+            envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+
+            free_package(paquete);
+            free(mensaje_serializado);
 
             //Libero el parametro poque ya no lo uso
             //free(datos_param);
         }
     }
-
-//    //Le respondo al broker
-//    t_paquete* paquete = create_package(LOCALIZED_POK);
-//    void* mensaje_serializado = localized_pokemon_a_void(localized_pokemon);
-//
-//    //Agrego los datos al paquete
-//    add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-//    add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(localized_pokemon));
-//
-//    //Si no se puede conectar informar por log
-//    envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
     //Libero los datos del pokemon
     free(pokemon->nombre_pokemon);

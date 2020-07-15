@@ -1658,12 +1658,13 @@ void algoritmo_deadlock(){
                     if (list_size(unnecesary_pokemon) > 0) {
 
                         //Calculo que pokemon no le sirve al primer entrenador
-                        char* pokemon_primer_entrenador_no_necesita = (char*) malloc(sizeof(char*) * 50);
+                        char* pokemon_primer_entrenador_no_necesita;
                         int i = 0;
                         void no_necesita(char* key, void*value){
                             //Busco el pokemon que no necesita el entrenador, es decir el pokemon que tiene en stock pero no esta en sus objetivos. La variable i es para agarrar al primero que encuentre
                             if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                pokemon_primer_entrenador_no_necesita = key;
+                                pokemon_primer_entrenador_no_necesita = (char*) malloc(strlen(key) * sizeof(char));
+                                strcpy(pokemon_primer_entrenador_no_necesita, key);
                                 i++;
                             }
                             else{
@@ -1672,8 +1673,9 @@ void algoritmo_deadlock(){
                                     int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
                                     int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
                                     if(cantidad_stock > cantidad_objetivo){
-                                    pokemon_primer_entrenador_no_necesita = key;
-                                    i++;
+                                        pokemon_primer_entrenador_no_necesita = (char*) malloc(strlen(key) * sizeof(char));
+                                        strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                        i++;
                                     }
                                 }
                             }
@@ -1695,11 +1697,12 @@ void algoritmo_deadlock(){
                         free(entrenador_segundo_tid);
 
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
-                        entrenador_primero->pokemon_objetivo->especie = (char*) list_get(unnecesary_pokemon,0) ;
+                        char* pokemon_objetivo_primer_entrenador = (char*) list_get(unnecesary_pokemon,0);
+                        strcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_objetivo_primer_entrenador);
+
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
                         entrenador_primero->razon_bloqueo = DEADLOCK;
                         entrenador_segundo->razon_bloqueo = DEADLOCK;
-                        //strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_primer_entrenador_no_necesita);
                         entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
 
                         bool remover(void *_entrenador) {

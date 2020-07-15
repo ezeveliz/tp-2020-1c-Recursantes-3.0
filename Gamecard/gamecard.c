@@ -2,6 +2,7 @@
 // Created by utnso on 07/04/20.
 //
 
+#include <search.h>
 #include "gamecard.h"
 
 t_gamecard_config configuracion;
@@ -15,8 +16,40 @@ pthread_t caught_thread;
 
 int main() {
     montar("..");
-//    mensaje_new_pokemon(create_new_pokemon("Charmander",1,1,100), 12);
-//    mensaje_new_pokemon(create_new_pokemon("Charmander",1,1,100), 12);
+    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
+    parametro1->id = 12;
+    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,1));
+    mensaje_new_pokemon(parametro1);
+    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Pikachu",2,2,1));
+    mensaje_new_pokemon(parametro1);
+    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Pikachu",2,2,1));
+    mensaje_new_pokemon(parametro1);
+
+
+//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,1));
+//    mensaje_new_pokemon(parametro1);
+//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",3,3,1));
+//    mensaje_new_pokemon(parametro1);
+
+    estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
+    parametro2->id = 12;
+//    parametro2->estructura_pokemon = catch_pokemon_a_void(create_catch_pokemon("Charmander",3,3));
+//    mensaje_catch_pokemon(parametro2);
+
+    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charmander"));
+    mensaje_get_pokemon(parametro2);
+    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Pikachu"));
+    mensaje_get_pokemon(parametro2);
+    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Squirtle"));
+    mensaje_get_pokemon(parametro2);
+    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charizard"));
+    mensaje_get_pokemon(parametro2);
+//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,100));
+//    mensaje_new_pokemon(parametro1);
+//    estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
+//    parametro2->id = 12;
+//    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charmander"));
+//    mensaje_get_pokemon(parametro2);
 //    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
 //    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,100), 12);
 //    mensaje_new_pokemon(create_new_pokemon("Charmander",2,1,1000000), 12);
@@ -45,6 +78,7 @@ int main() {
 //    //Joineo el hilo main con el del servidor para el GameBoy
 //    pthread_join(server_thread, NULL);
 //
+
     int cantidad_bloques = obtener_cantidad_bloques();
     char *path_bitmap = obtener_path_bitmap();
     t_list *bloques_libres = list_create();
@@ -461,7 +495,7 @@ void* mensaje_new_pokemon(void* parametros ){
         }else{
 
             //Elimino la entrada vieja
-            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam +1); // Mas uno por el salto de linea
+            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam );
 
             //Le agrego la cantidad que quiero al registro a agregar
             string_append(&registro_agregar,string_itoa(pos_pok->cant + pokemon->cantidad));
@@ -495,8 +529,6 @@ void* mensaje_new_pokemon(void* parametros ){
         //Cerrar el archivo
         close_tall_grass(archivo);
 
-        //Libero el parametro poque ya no lo uso
-        free(datos_param);
     }
 
     //Libero el pokemon antes de terminar el hilo
@@ -506,7 +538,6 @@ void* mensaje_new_pokemon(void* parametros ){
     return null;
 
 }
-
 
 void* mensaje_catch_pokemon(void* parametros){
 
@@ -561,7 +592,7 @@ void* mensaje_catch_pokemon(void* parametros){
             string_append(&registro_agregar,"=");
 
             //Elimino la entrada vieja
-            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam +1); // Mas uno por el salto de linea
+            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam ); // Mas uno por el salto de linea
 
             //Verifico que la posicion no quede sin entrada vacia
             if((pos_pok->cant -1) > 0){
@@ -570,8 +601,15 @@ void* mensaje_catch_pokemon(void* parametros){
                 string_append(&registro_agregar,string_itoa(pos_pok->cant - 1));
                 string_append(&registro_agregar,"\n");
 
-                //Escribo el registro
-                write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) - 1);
+                if(archivo->metadata->size == 0){
+                    //Escribo el registro en la posicion 0
+                    write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) );
+                }else{
+
+                    //Escribo el registro pisando el tab y write escribe el tab al final
+                    write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) - 1);
+                }
+
             }
 
             //Espero como dice enunciado paso 5
@@ -619,8 +657,6 @@ void* mensaje_get_pokemon(void* parametros){
     t_get_pokemon* pokemon = void_a_get_pokemon(datos_param->estructura_pokemon) ;
     uint32_t id = datos_param->id;
 
-
-
     //Obtengo el path donde estan alojados los archivos
     char* path_file = obtener_path_file();
 
@@ -635,7 +671,9 @@ void* mensaje_get_pokemon(void* parametros){
     //Verificar si existe el pokemon, sino devolver el mensaje sin posiciones ni cantidades
     if(!find_tall_grass(pokemon->nombre_pokemon)){
         //Generlo el mensaje de error
-        localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon,0);
+        uint32_t* vacio;
+        localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon, 0, vacio);
+
     }else{
         //Abro el archivo
         t_file* archivo = open_tall_grass(path_archvio);
@@ -656,16 +694,24 @@ void* mensaje_get_pokemon(void* parametros){
         } else{
             //Obtengo todas las coordenadas
             t_list* lista_pos = obtener_todas_coordenadas(archivo);
+            uint32_t* array_posiciones = malloc(lista_pos->elements_count * 2);
 
-            //TODO hablar con fran que cambie esto
-            //localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon, lista_pos->elements_count, );
+            for(int i = 0; i < lista_pos->elements_count; i++){
+                t_pos_pokemon* pok_pos = list_get(lista_pos, i);
+                array_posiciones[i] = pok_pos->x;
+                array_posiciones[i + 1] = pok_pos->y;
+
+                printf("Pos x:%d Pos y:%d\n",pok_pos->x,pok_pos->y);
+            }
+
+            localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon,lista_pos->elements_count, array_posiciones);
 
             //Espero x segundos antes de cerrar el archivo
             sleep(configuracion.tiempo_retardo_operacion);
             close_tall_grass(archivo);
 
             //Libero el parametro poque ya no lo uso
-            free(datos_param);
+            //free(datos_param);
         }
     }
 
@@ -727,8 +773,8 @@ t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
             pos->cant = atoi(string_pos_cantidad[1]);
             pos->x = atoi(string_pos[0]);
             pos->y = atoi(string_pos[1]);
-            pos->tam = string_length(string_con_pos);
-            pos->pos_archivo = (archivo->pos - string_length(string_con_pos));
+            pos->tam = string_length(string_con_pos) + 1;
+            pos->pos_archivo = (archivo->pos - pos->tam);
 
             //Libero
             free(char_leido);
@@ -783,7 +829,7 @@ t_list* obtener_todas_coordenadas(t_file* archivo){
 
     //Voy traigo cada posicion
     t_pos_pokemon* pos_pok = obtener_sig_coordenada(archivo);
-    while(pos_pok = NULL){
+    while(pos_pok != NULL){
         //Los agrego a la lista
         list_add(lista,pos_pok);
         pos_pok = obtener_sig_coordenada(archivo);

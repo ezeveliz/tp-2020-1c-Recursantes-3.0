@@ -146,6 +146,7 @@ int read_config_options() {
     config.tiempo_reconexion = config_get_int_value(config_file, "TIEMPO_RECONEXION");
     config.retardo_ciclo_cpu = config_get_int_value(config_file, "RETARDO_CICLO_CPU");
     config.quantum = config_get_int_value(config_file, "QUANTUM");
+    config.alpha = config_get_double_value(config_file, "ALPHA");
     config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
     config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
     config.puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
@@ -642,7 +643,7 @@ int initialize_structures() {
         entrenador->acumulado_total = 0;
         entrenador->acumulado_actual = 0;
         entrenador->ultima_ejecucion = 0;
-        entrenador->ultimo_estimado = 0;
+        entrenador->ultimo_estimado = config.estimacion_inicial;
         entrenador->vengo_de_ejecucion = false;
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
@@ -1435,7 +1436,49 @@ void fifo_planner() {
 
 }
 
-void sjf_sd_planner() {}
+void sjf_sd_planner() {
+
+    log_info(logger, "Se llamo al algoritmo SFJ sin desalojo ");
+
+    // Busco si no hay ningun entrenador en ejecucion
+    if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
+
+        log_info(logger, "Entro a SJF sin desalojo planner y no hay nadie en ejecucion ");
+
+        calcular_estimacion_y_ordenamiento();
+
+        // Obtengo el primer entrenador de la lista ordenada
+        Entrenador * entrenador_elegido = (Entrenador*)list_remove(estado_ready, 0);
+        list_add(estado_exec, (void*)entrenador_elegido);
+
+        sem_post(&ready_exec_transition[entrenador_elegido->tid] );
+    }
+
+}
+
+void calcular_estimacion_y_ordenamiento(){
+
+    void iterador(void* _entrenador){
+        Entrenador* entrenador = (Entrenador*) _entrenador;
+        entrenador->ultimo_estimado = entrenador->ultima_ejecucion * config.alpha + (1-config.alpha) * entrenador->ultimo_estimado;
+    }
+    list_iterate(estado_ready,iterador);
+
+    bool ordenador(void* _entrenador1, void* _entrenador2){
+        Entrenador* entrenador_primero = (Entrenador*) _entrenador1;
+        Entrenador* entrenador_segundo = (Entrenador*) _entrenador2;
+        //TODO: Aca va menor o igual?
+        if(entrenador_primero->ultimo_estimado == entrenador_segundo->ultimo_estimado){
+            if ((entrenador_primero->tiempo_llegada)->tv_sec == (entrenador_segundo->tiempo_llegada)->tv_sec) {
+                return (entrenador_primero->tiempo_llegada)->tv_nsec < (entrenador_segundo->tiempo_llegada)->tv_nsec;
+            } else {
+                return (entrenador_primero->tiempo_llegada)->tv_sec < (entrenador_segundo->tiempo_llegada)->tv_sec;
+            }
+        }
+        return entrenador_primero->ultimo_estimado < entrenador_segundo->ultimo_estimado;
+    }
+    list_sort(estado_ready,ordenador);
+}
 
 void sjf_cd_planner() {}
 

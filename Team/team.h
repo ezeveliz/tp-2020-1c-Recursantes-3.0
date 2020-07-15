@@ -225,6 +225,11 @@ void fifo_planner();
 void sjf_sd_planner();
 
 /**
+ * Calcula la estimacion de todos los entrenadores y los ordena por estimacion actual
+ */
+void calcular_estimacion_y_ordenamiento();
+
+/**
  * Algoritmo de planificaion SJF con desalojo
  */
 void sjf_cd_planner();

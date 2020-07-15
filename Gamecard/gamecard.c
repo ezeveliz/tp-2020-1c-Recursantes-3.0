@@ -16,14 +16,10 @@ pthread_t caught_thread;
 
 int main() {
     montar("..");
-    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
-    parametro1->id = 12;
-    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,1));
-    mensaje_new_pokemon(parametro1);
-    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Pikachu",2,2,1));
-    mensaje_new_pokemon(parametro1);
-    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Pikachu",2,2,1));
-    mensaje_new_pokemon(parametro1);
+//    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
+//    parametro1->id = 12;
+//    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,1));
+//    mensaje_new_pokemon(parametro1);
 
 
 //    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,1));
@@ -31,19 +27,22 @@ int main() {
 //    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",3,3,1));
 //    mensaje_new_pokemon(parametro1);
 
+    estructura_para_hilo* parametro1 = malloc(sizeof(estructura_para_hilo));
+    parametro1->id = 12;
+    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",1,1,2));
+    mensaje_new_pokemon(parametro1);
+    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,1));
+    mensaje_new_pokemon(parametro1);
+    parametro1->estructura_pokemon =
+            new_pokemon_a_void(create_new_pokemon("Charmander",3,3,1));
+    mensaje_new_pokemon(parametro1);
+    ;
     estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
     parametro2->id = 12;
-//    parametro2->estructura_pokemon = catch_pokemon_a_void(create_catch_pokemon("Charmander",3,3));
-//    mensaje_catch_pokemon(parametro2);
+    parametro2->estructura_pokemon = catch_pokemon_a_void(create_catch_pokemon("Charmander",2,2));
+    mensaje_catch_pokemon(parametro2);
 
-    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charmander"));
-    mensaje_get_pokemon(parametro2);
-    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Pikachu"));
-    mensaje_get_pokemon(parametro2);
-    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Squirtle"));
-    mensaje_get_pokemon(parametro2);
-    parametro2->estructura_pokemon = get_pokemon_a_void(create_get_pokemon("Charizard"));
-    mensaje_get_pokemon(parametro2);
+
 //    parametro1->estructura_pokemon = new_pokemon_a_void(create_new_pokemon("Charmander",2,2,100));
 //    mensaje_new_pokemon(parametro1);
 //    estructura_para_hilo* parametro2 = malloc(sizeof(estructura_para_hilo));
@@ -546,8 +545,6 @@ void* mensaje_catch_pokemon(void* parametros){
     t_catch_pokemon* pokemon = void_a_catch_pokemon(datos_param->estructura_pokemon) ;
     uint32_t id = datos_param->id;
 
-
-
     char* path_file = obtener_path_file();
 
     char* path_archvio = string_new();
@@ -555,91 +552,108 @@ void* mensaje_catch_pokemon(void* parametros){
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
+    t_paquete * paquete = create_package(CAUGHT_POK);
+    t_caught_pokemon* caught_pokemon;
+    void* mensaje_serializado;
+
     //Verificar si existe el pokemon, sino informar el error
     if(!find_tall_grass(pokemon->nombre_pokemon)){
         //Informar del error
         printf("No existe directorio con ese nombre\n");
-    }
 
-    //Verificar si el archivo se puede abrir sino intentar en x tiempo
-    t_file* archivo = open_tall_grass(path_archvio);
-    if( archivo == NULL ){
-        free(path_file);
-        free(path_archvio);
-        sleep(configuracion.tiempo_reoperacion);
-        catch_pokemon_a_void(parametros);
+        //Genero el mensaje de error para mandarle al broker
+        caught_pokemon = create_caught_pokemon(0);
+        mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
 
-    }else{
-        //Busco la posicion en el archivo
-        t_pos_pokemon* pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
-        t_paquete * paquete = create_package(CAUGHT_POK);
-        t_caught_pokemon* caught_pokemon;
+        //Agrego los datos al paquete
+        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+        add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
 
-        //verifico si no existe la posicion
-        if(pos_pok == NULL){
-
-            //Fijar que hago con el error
-            printf("Error no existen esas coordenadas\n");
-            //Genero el mensaje de error para mandarle al broker
-            caught_pokemon = create_caught_pokemon(0);
-        }else{
-
-            //Creo un string con el registro en esa posicion
-            char* registro_agregar = string_new();
-            string_append(&registro_agregar,string_itoa(pokemon->pos_x));
-            string_append(&registro_agregar,"-");
-            string_append(&registro_agregar,string_itoa(pokemon->pos_y));
-            string_append(&registro_agregar,"=");
-
-            //Elimino la entrada vieja
-            delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam ); // Mas uno por el salto de linea
-
-            //Verifico que la posicion no quede sin entrada vacia
-            if((pos_pok->cant -1) > 0){
-
-                //Le agrego la cantidad que quiero al registro a agregar
-                string_append(&registro_agregar,string_itoa(pos_pok->cant - 1));
-                string_append(&registro_agregar,"\n");
-
-                if(archivo->metadata->size == 0){
-                    //Escribo el registro en la posicion 0
-                    write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) );
-                }else{
-
-                    //Escribo el registro pisando el tab y write escribe el tab al final
-                    write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size) - 1);
-                }
-
-            }
-
-            //Espero como dice enunciado paso 5
-            sleep(configuracion.tiempo_retardo_operacion);
-
-            //Cierro el archivo
-            close_tall_grass(archivo);
-
-            //Genero el mensaje de exito
-            caught_pokemon = create_caught_pokemon(1);
-
-            free(registro_agregar);
-        }
-
-//        //Le respondo al broker
-//        void* mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
-//
-//        //Agrego los datos al paquete
-//        add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-//        add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
-//
-//        //Si no se puede conectar informar por log
 //        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
-        //Libero
-        free(path_archvio);
-        free(path_file);
+        free_package(paquete);
 
-        //Libero el parametro poque ya no lo uso
-        free(datos_param);
+    }else {
+        //Verificar si el archivo se puede abrir sino intentar en x tiempo
+        t_file *archivo = open_tall_grass(path_archvio);
+        if (archivo == NULL) {
+            free(path_file);
+            free(path_archvio);
+            free_package(paquete);
+            sleep(configuracion.tiempo_reoperacion);
+            catch_pokemon_a_void(parametros);
+
+        } else {
+            //Busco la posicion en el archivo
+            t_pos_pokemon *pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
+
+            //verifico si no existe la posicion
+            if (pos_pok == NULL) {
+
+                //Fijar que hago con el error
+                printf("Error no existen esas coordenadas\n");
+                //Cierro el archivo
+                close_tall_grass(archivo);
+                //Genero el mensaje de error para mandarle al broker
+                caught_pokemon = create_caught_pokemon(0);
+            } else {
+
+                //Creo un string con el registro en esa posicion
+                char *registro_agregar = string_new();
+                string_append(&registro_agregar, string_itoa(pokemon->pos_x));
+                string_append(&registro_agregar, "-");
+                string_append(&registro_agregar, string_itoa(pokemon->pos_y));
+                string_append(&registro_agregar, "=");
+
+                //Elimino la entrada vieja
+                delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam); // Mas uno por el salto de linea
+
+                //Verifico que la posicion no quede sin entrada vacia
+                if ((pos_pok->cant - 1) > 0) {
+
+                    //Le agrego la cantidad que quiero al registro a agregar
+                    string_append(&registro_agregar, string_itoa(pos_pok->cant - 1));
+                    string_append(&registro_agregar, "\n");
+
+                    if (archivo->metadata->size == 0) {
+                        //Escribo el registro en la posicion 0
+                        write_tall_grass(archivo, registro_agregar, string_length(registro_agregar),
+                                         (archivo->metadata->size));
+                    } else {
+
+                        //Escribo el registro pisando el tab y write escribe el tab al final
+                        write_tall_grass(archivo, registro_agregar, string_length(registro_agregar),
+                                         (archivo->metadata->size) - 1);
+                    }
+
+                }
+
+                //Espero como dice enunciado paso 5
+                sleep(configuracion.tiempo_retardo_operacion);
+
+                //Cierro el archivo
+                close_tall_grass(archivo);
+
+                //Genero el mensaje de exito
+                caught_pokemon = create_caught_pokemon(1);
+
+                free(registro_agregar);
+            }
+
+            //Le respondo al broker
+            mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
+
+            //Agrego los datos al paquete
+            add_to_package(paquete, (void *) &id, sizeof(uint32_t));
+            add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
+//        envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
+            //Libero
+            free(path_archvio);
+            free(path_file);
+            free_package(paquete);
+            //Libero el parametro poque ya no lo uso
+            free(datos_param);
+        }
     }
 
     //Libero los datos del pokemon

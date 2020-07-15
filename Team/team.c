@@ -90,7 +90,7 @@ int tamanio_entrenadores = initialize_structures();
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
 
-    //Joineo el hilo main con el del servidor para el GameBoy
+    //Detacheo el hilo main con el del servidor para el GameBoy
     pthread_detach(server_thread);
 
     //Creo 3 hilos para suscribirme a las colas globales
@@ -725,7 +725,7 @@ int initialize_structures() {
         sem_init(&block_catch_transition[count], 0, 0);
 
         Entrenador* entrenador_actual = (Entrenador*) list_get(estado_new, count);
-        pthread_create(&threads_trainer[count], NULL, (void *) trainer_thread, (void *) entrenador_actual);
+        pthread_create(&threads_trainer[count], NULL, trainer_thread, (void*) entrenador_actual);
     }
 
     return tamanio_entrenadores;
@@ -1115,7 +1115,7 @@ void* trainer_thread(void* arg){
             log_info(logger,objetivos_nocumplidos_entrenador);
             free(objetivos_nocumplidos_entrenador);
             free(entrenador_tid_objetivos_nocumplidos);
-
+            bool se_desbloqueo;
             // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
 
@@ -1130,7 +1130,7 @@ void* trainer_thread(void* arg){
 
                 entrenador->razon_bloqueo = ESPERANDO_POKEMON;
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
-                algoritmo_de_cercania();
+                se_desbloqueo = algoritmo_de_cercania();
 
                 // No tengo mas espacio para recibir pokemones
             }else{
@@ -1141,11 +1141,14 @@ void* trainer_thread(void* arg){
                 entrenador->estado = BLOCK;
 
                 // LLamo al algoritmo de deadlock para ver si hay otro entrenador con cosillas que yo necesite
-                algoritmo_deadlock();
+                se_desbloqueo = algoritmo_deadlock();
             }
 
-            call_planner();
-
+            //TODO: Redefinir funciones de deadlock y cercania
+            //Si no encontramos nada para pasar a ready llamamos al planificador
+            if(!se_desbloqueo){
+                call_planner();
+            }
             //Me quedo bloqueado esperando a recibir un nuevo pokemon o algo para ejecutar
             sem_wait(&block_ready_transition[entrenador->tid]);
         }
@@ -1168,8 +1171,7 @@ void* trainer_thread(void* arg){
 
     // TODO: liberar la memoria reservada:
     //  - Tiempo de llegada
-    pthread_exit(NULL);
-
+    return NULL;
 }
 
 bool objetivos_cumplidos(Entrenador* entrenador){

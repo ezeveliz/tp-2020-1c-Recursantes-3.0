@@ -109,7 +109,8 @@ typedef struct tEntrenador{
     int cant_objetivos; // Cant de pokemones que debe atrapar
     RazonBloqueo razon_bloqueo;
     Pokemon* pokemon_objetivo; // Pokemon hacia el que me dirijo
-    struct tEntrenador* entrenador_objetivo; // Entrnador hacia el que me dirijo
+    struct tEntrenador* entrenador_objetivo; // Entrenador hacia el que me dirijo
+    int quantum;
 }Entrenador;
 
 /**

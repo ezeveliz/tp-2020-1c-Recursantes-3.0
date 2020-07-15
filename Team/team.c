@@ -966,6 +966,11 @@ void* trainer_thread(void* arg){
 
                 free(catch);
 
+                if(list_size(estado_ready) > 0)
+                    call_planner();
+                else
+                    algoritmo_de_cercania();
+
                 // Me bloqueo esperando la rta del Broker
                 sem_wait(&block_catch_transition[entrenador->tid]);
 
@@ -1457,7 +1462,9 @@ void sjf_sd_planner() {}
 
 void sjf_cd_planner() {}
 
-void rr_planner() {}
+void rr_planner() {
+
+}
 
 void appeared_pokemon(t_list* paquete){
 

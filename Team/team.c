@@ -643,6 +643,7 @@ int initialize_structures() {
         entrenador->acumulado_actual = 0;
         entrenador->ultima_ejecucion = 0;
         entrenador->ultimo_estimado = 0;
+        entrenador->vengo_de_ejecucion = false;
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -856,27 +857,8 @@ void* trainer_thread(void* arg){
         // Itero tantas veces como unidades se tenga que mover el entrenador a su posicion destino
         while (distancia_a_viajar > 0) {
 
-            if(config.algoritmo_planificacion == RR && entrenador->acumulado_total == config.quantum){
-                list_remove(estado_exec,0);
-                list_add(estado_ready, entrenador);
-                entrenador->estado = READY;
-                entrenador->vengo_de_ejecucion = true;
+            verificar_desalojo(entrenador);
 
-                loggear_ready(entrenador);
-
-                //Actualizo el tiempo de llegada
-                *(entrenador->tiempo_llegada) = get_time();
-                entrenador->acumulado_total+= entrenador->acumulado_actual;
-
-                call_planner();
-
-                sem_wait(&ready_exec_cd_transition[entrenador->tid]);
-                entrenador->acumulado_actual = 0;
-                entrenador->vengo_de_ejecucion = false;
-
-                loggear_exec(entrenador);
-
-            }
             // Duermo el entrenador durante un ciclo de CPU
             sleep(config.retardo_ciclo_cpu);
 
@@ -928,6 +910,8 @@ void* trainer_thread(void* arg){
             case (CATCH):;
 
                 // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
+
+                verificar_desalojo(entrenador);
 
                 // Duermo durante el tiempo que ocupa un ciclo de ejecucion correspondiente al envio de mensaje al broker
                 sleep(config.retardo_ciclo_cpu);
@@ -997,6 +981,8 @@ void* trainer_thread(void* arg){
                 int retardo_simulacion = 5;
                 while (retardo_simulacion > 0) {
 
+                    verificar_desalojo(entrenador);
+
                     // Duermo durante el tiepo que ocupa un ciclo de ejecucion
                     sleep(config.retardo_ciclo_cpu);
 
@@ -1051,6 +1037,7 @@ void* trainer_thread(void* arg){
 
                 log_info(logger, deadlock);
                 free(deadlock);
+                list_remove(estado_exec, 0);
 
                 break;
         }
@@ -1124,7 +1111,7 @@ void* trainer_thread(void* arg){
             log_info(logger,objetivos_nocumplidos_entrenador);
             free(objetivos_nocumplidos_entrenador);
             free(entrenador_tid_objetivos_nocumplidos);
-            bool se_desbloqueo = true;
+            bool se_desbloqueo;
             // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
 
@@ -1139,13 +1126,12 @@ void* trainer_thread(void* arg){
 
                 entrenador->razon_bloqueo = ESPERANDO_POKEMON;
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
-                //se_desbloqueo = algoritmo_de_cercania();
+                se_desbloqueo = algoritmo_de_cercania();
 
                 // No tengo mas espacio para recibir pokemones
             }else{
 
                 //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
-                list_remove(estado_exec, 0);
                 entrenador->razon_bloqueo = SIN_ESPACIO; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
 
@@ -1491,6 +1477,32 @@ void ordenar_tiempo_llegada(){
         }
     }
     list_sort(estado_ready, ordenar_por_llegada);
+}
+
+void verificar_desalojo(Entrenador* entrenador){
+
+    if(config.algoritmo_planificacion == RR && config.quantum == entrenador->acumulado_actual){
+        list_remove(estado_exec,0);
+        list_add(estado_ready, entrenador);
+        entrenador->estado = READY;
+        entrenador->vengo_de_ejecucion = true;
+
+        loggear_ready(entrenador);
+
+        //Actualizo el tiempo de llegada
+        *(entrenador->tiempo_llegada) = get_time();
+        entrenador->acumulado_total+= entrenador->acumulado_actual;
+
+        call_planner();
+
+        sem_wait(&ready_exec_cd_transition[entrenador->tid]);
+        entrenador->acumulado_actual = 0;
+        entrenador->vengo_de_ejecucion = false;
+
+        loggear_exec(entrenador);
+    }
+
+    //TODO: Realizarlo para SJF con desalojo
 }
 
 void appeared_pokemon(t_list* paquete){

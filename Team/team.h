@@ -240,6 +240,11 @@ void rr_planner();
 void ordenar_tiempo_llegada();
 
 /**
+ * Verifica si tiene que desalojar el hilo y realizar los cambios de estado.
+ */
+void verificar_desalojo(Entrenador* entrenador);
+
+/**
  * Se llama a esta funcion cuando el servidor recibe un APPEARED
  * @param paquete: Se le pasa una lista para despues dividirlo en especie, pos_x y pos_y
  */

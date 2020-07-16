@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <signal.h>
+#include <math.h>
 
 #include <commons/config.h>
 #include <commons/log.h>
@@ -164,4 +165,11 @@ void algoritmo_de_reemplazo();
 particion* find_particion_by_id_mensaje(int id_mensaje);
 bool existe_mensaje_subscriptor(int id_mensaje, int id_subs);
 MessageType sub_to_men(MessageType cola);
+t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam);
+t_nodo* buscar_nodo_tam(struct t_nodo* nodo, int tam);
+particion* asignar_particion_buddy(t_nodo* raiz, size_t tam);
+t_nodo* buddy_dividir_raiz(t_nodo* raiz);
+void particion_destroy(particion * unaparticion);
+void buddy_destroy(t_nodo* un_nodo);
+
 #endif //TEAM_BROKER_H

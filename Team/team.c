@@ -1511,11 +1511,13 @@ void sjf_cd_planner() {
             if(entrenador_ready->vengo_de_ejecucion){
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
+                entrenador_ready->tengo_que_desalojar = false;
                 sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
             }
             else{
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
+                entrenador_ready->tengo_que_desalojar = false;
                 sem_post(&ready_exec_transition[entrenador_ready->tid] );
             }
         } else {
@@ -1539,6 +1541,7 @@ void sjf_cd_planner() {
 
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
+                entrenador_ready->tengo_que_desalojar = false;
 
                 if(entrenador_ready->vengo_de_ejecucion){
                     sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
@@ -1825,14 +1828,14 @@ bool algoritmo_deadlock(){
                 //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
                 t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
-                log_info(logger, "Se calculo los pokemons que tiene el entrenador segundo y necesita el primero");
-
                 if (list_size(repeat_pokemon) > 0) {
+                    log_info(logger, "Se calculo los pokemons que tiene el entrenador segundo y necesita el primero");
+
                     //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
                     t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
-                    log_info(logger, "Se calculo la lista que necesita el primer entrenador y no necesita el segundo entrenador (lista definitiva)");
 
                     if (list_size(unnecesary_pokemon) > 0) {
+                        log_info(logger, "Se calculo la lista que necesita el primer entrenador y no necesita el segundo entrenador (lista definitiva)");
 
                         //Calculo que pokemon no le sirve al primer entrenador
                         char* pokemon_primer_entrenador_no_necesita;

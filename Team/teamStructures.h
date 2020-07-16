@@ -26,6 +26,7 @@ typedef struct {
     int retardo_ciclo_cpu;
     planner_algorithm algoritmo_planificacion;
     int quantum;
+    double alpha;
     int estimacion_inicial;
     char* ip_broker;
     int puerto_broker;
@@ -98,7 +99,8 @@ typedef struct tEntrenador{
     int acumulado_total; // Aca voy acumulando todos los ciclos de todas las rafagas del entrenador
     int acumulado_actual; // Aca voy acumulando los ciclos de la rafaga actual
     int ultima_ejecucion; // Aca tengo guardado solo el largo de la ultima rafaga
-    float ultimo_estimado; // Aca guardo el ultimo estimado del planificador
+    double ultimo_estimado; // Aca guardo el ultimo estimado del planificador
+    double estimado_actual; //Aca guardo el estimado actual del planificador SJF con desalojo
     Coordenada pos_actual; // Posicion en la que se encuentra actualmente
     RazonMovimiento razon_movimiento; // Razon por la que se esta ejecutando el hilo del entrenador
     t_dictionary* objetivos_particular; // Objetivos del entrenador
@@ -110,7 +112,9 @@ typedef struct tEntrenador{
     RazonBloqueo razon_bloqueo;
     Pokemon* pokemon_objetivo; // Pokemon hacia el que me dirijo
     struct tEntrenador* entrenador_objetivo; // Entrenador hacia el que me dirijo
-    bool vengo_de_ejecucion; //Se usa para los algoritmos con desalojo para saber si fui desalojado en la ejecucion anterior
+    bool vengo_de_ejecucion; // Se usa para los algoritmos con desalojo para saber si fui desalojado en la ejecucion anterior
+    bool tengo_que_desalojar; // Se usa para el SJF con desalojo para verificar si tengo que desalojar el hilo o no
+    bool calcular_estimado; // Se usa para saber cuando recalcular el estimado de un hilo
 }Entrenador;
 
 /**

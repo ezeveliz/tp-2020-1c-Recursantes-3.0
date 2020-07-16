@@ -1182,11 +1182,17 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         // No hay una particion del tamaño buscado
         // Vamos a buscar, entre las que tenemos, cual tiene tamaño mas cercano a lo que buscamos
 
-        t_nodo* nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, tam);
+        int nuevo_tam_buscado = tam_buscado * 2;
+        t_nodo* nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
         while (nodo_a_dividir == NULL) {
             // Si no encuentro una particion mas grande, aumento el tamaño y vuelvo a buscar
             int nuevo_tam_buscado = tam_buscado * 2;
             nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
+            if (nuevo_tam_buscado > config.mem_size){
+                // SI LLEGO ACA ES QUE NO HAY SUFICIENTE TAMAÑO PARA ASIGNAR
+                // llamar al algoritmo de reemplazo si esta funcion retorna null
+                return NULL;
+            }
         }
 
         // Dividimos la particion y probamos devuelta

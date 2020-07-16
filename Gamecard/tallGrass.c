@@ -7,6 +7,12 @@
 //TODO Armar test para mantener esto estable
 
 char* carpeta_montaje;
+
+t_list* archivos_abiertos;
+
+//Bloquea el uso de la lista
+sem_t* bloque_archivos_abiertos;
+
 //
 //int main(){
 //    montar("..");
@@ -74,6 +80,11 @@ int montar(char* punto_montaje){
     char* path_tall_grass = concatenar_strings(punto_montaje,"/Tall_Grass");
 
     limpiar_unidades_antiguas(path_tall_grass);
+
+    //Inicializo la lista de archivos abiertos
+    archivos_abiertos = list_create();
+    bloque_archivos_abiertos = malloc(sizeof(sem_t));
+    sem_init (bloque_archivos_abiertos, 0, 1);
 
     //Creo la carpeta donde va a estar el fileSystem
     int resultado_tall_grass = crear_carpeta(path_tall_grass , ACCESSPERMS);
@@ -144,6 +155,7 @@ int crear_metadata(char* path){
         FILE * archivo_bitmap = fopen(path_bitmap_bin,"w+");
         t_bitarray* bitmap = create_bitmap(BLOCKS);
         escribir_bitmap(bitmap, archivo_bitmap);
+
         //Libero
         free(bitmap->bitarray);
         bitarray_destroy(bitmap);
@@ -323,8 +335,15 @@ bool find_tall_grass(char* nombre_archivo){
             break;
         }
     }
+    char* elemento;
 
-    list_clean_and_destroy_elements(archivos,free);
+    for(int i = 0; i < archivos->elements_count; i++){
+        elemento = list_get(archivos,i);
+        free(elemento);
+    }
+
+    list_destroy(archivos);
+    free(files);
     return resultado;
 }
 
@@ -373,30 +392,61 @@ int create_tall_grass(char* path){
 t_file* open_tall_grass(char* path){
     char* path_archivo_metadata = concatenar_strings(path,"/Metadata.bin");
     t_file * retorno = malloc(sizeof(t_file));
-    retorno->pos = 0;
-    retorno->path = malloc(strlen(path_archivo_metadata)+1);
-    retorno->metadata = obtener_metadata_archivo(path_archivo_metadata);
 
-    //r+ lectura-escritura || w+ archivo en blanco
-    FILE* archivo = fopen(path_archivo_metadata,"r+");
-    memcpy(retorno->path, path_archivo_metadata,strlen(path_archivo_metadata)+1);
+    int pos = buscar_archivo_abierto(path_archivo_metadata);
 
-//    LOCK_EX es para que sea bloque exclusivo
-//    LOCK_NB es para que sea no bloqueante si esta bloqueado
-    if( flock(archivo->_fileno, LOCK_EX | LOCK_NB) == 0){
-        fclose(archivo);
+    if(pos == -1){
+        agregar_archivo_abierto(path_archivo_metadata);
+        //Genero el retorno
+        retorno->pos = 0;
+        retorno->path = malloc(strlen(path_archivo_metadata)+1);
+        retorno->metadata = obtener_metadata_archivo(path_archivo_metadata);
         t_config* metadata = config_create(path_archivo_metadata);
+        memcpy(retorno->path, path_archivo_metadata,strlen(path_archivo_metadata)+1);
+
         config_set_value(metadata,"OPEN", "Y");
         config_save(metadata);
         config_destroy(metadata);
 
+        free(path_archivo_metadata);
         return retorno;
     }else{
-        fclose(archivo);
+        free(retorno);
+        free(path_archivo_metadata);
         return NULL;
     }
 
-    free(path_archivo_metadata);
+
+//    //r+ lectura-escritura || w+ archivo en blanco
+//    FILE* archivo = fopen(path_archivo_metadata,"r+");
+//
+////    LOCK_EX es para que sea bloque exclusivo
+////    LOCK_NB es para que sea no bloqueante si esta bloqueado
+//    if( flock(archivo->_fileno, LOCK_EX | LOCK_NB) == 0){
+//        //Cierro el archivo con el log
+//        fclose(archivo);
+//
+//        //Genero el retorno
+//        retorno->pos = 0;
+//        retorno->path = malloc(strlen(path_archivo_metadata)+1);
+//        retorno->metadata = obtener_metadata_archivo(path_archivo_metadata);
+//        t_config* metadata = config_create(path_archivo_metadata);
+//        memcpy(retorno->path, path_archivo_metadata,strlen(path_archivo_metadata)+1);
+//
+//        config_set_value(metadata,"OPEN", "Y");
+//        config_save(metadata);
+//        config_destroy(metadata);
+//
+//        free(path_archivo_metadata);
+//        return retorno;
+//    }else{
+//        fclose(archivo);
+//        free(retorno);
+//        free(path_archivo_metadata);
+//        return NULL;
+//    }
+
+
 }
 
 int close_tall_grass(t_file * fd ){
@@ -404,14 +454,77 @@ int close_tall_grass(t_file * fd ){
     config_set_value(metadata,"OPEN", "N");
     config_save(metadata);
     config_destroy(metadata);
-    FILE* archivo = fopen(fd->path,"r+");
+//    FILE* archivo = fopen(fd->path,"r+");
+//
+//    if(flock(archivo->_fileno, LOCK_UN) != 0){
+//        return -1;
+//    }
+    int res = sacar_lista_archivos_abiertos(fd->path);
 
-    if(flock(archivo->_fileno, LOCK_UN) != 0){
+    free(fd->path);
+    free(fd->metadata->bloques);
+    free(fd->metadata);
+    free(fd);
+    return res ;
+}
+
+int agregar_archivo_abierto(char* path){
+    int resultado;
+    char* path_a_agregar = malloc(string_length(path)+1);
+    strcpy(path_a_agregar,path);
+
+    sem_wait(bloque_archivos_abiertos);
+
+    resultado = list_add(archivos_abiertos,path_a_agregar);
+
+    sem_post(bloque_archivos_abiertos);
+
+    return 0;
+}
+
+int buscar_archivo_abierto(char* path){
+    char* path_iteritor;
+    int i = 0;
+    bool resultado = false;
+    sem_wait(bloque_archivos_abiertos);
+
+    //Busco en la lista
+    while( i < list_size(archivos_abiertos)){
+        path_iteritor = (char *) list_get(archivos_abiertos,i);
+        if(string_equals_ignore_case(path,path_iteritor)){
+            resultado = true;
+            break;
+        }
+        i++;
+    }
+
+    sem_post(bloque_archivos_abiertos);
+
+
+    return resultado ? i:-1;
+}
+
+int sacar_lista_archivos_abiertos(char* path){
+    int pos = buscar_archivo_abierto(path);
+
+    if(pos >= 0){
+        char* path_a_eliminar;
+        //Bloqueo por uso de la lista
+
+        sem_wait(bloque_archivos_abiertos);
+
+        path_a_eliminar = list_get(archivos_abiertos,pos);
+        list_remove(archivos_abiertos,pos);
+
+        sem_post(bloque_archivos_abiertos);
+
+        free(path_a_eliminar);
+
+        return pos;
+    }else {
         return -1;
     }
 
-    free(fd->path);
-    return fclose(archivo) ;
 }
 
 
@@ -484,15 +597,6 @@ int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escr
             agregar_byte_archivo(archivo, byte_bloque_extra);
         }
 
-        //Es para agregarle EOF al archivo si no esta agregado
-        char* ultimo_byte = read_tall_grass(archivo,1,(archivo->metadata->size)-1);
-        if( ultimo_byte[0] != '\t' ){
-            char* eof_a_agregar= malloc(1);
-            eof_a_agregar[0] = '\t';
-            write_tall_grass(archivo,eof_a_agregar,1,archivo->metadata->size);
-            free(eof_a_agregar);
-        }
-        free(ultimo_byte);
 
         //Retorno los bytes que escribi
         return size_a_escribir;
@@ -512,8 +616,10 @@ int next(t_file* archivo){
 
     //Controlo que la pos siguiente este en otro bloque
     if(nro_bloque_actual == -1){
+
         //Pido un bloque libre
         t_list* bloques_libres = obtener_bloques_libres(1);
+
         //Controlo que haya bloques libres
         if(list_size(bloques_libres) != 0){
             nro_bloque_actual = *(int*)list_get(bloques_libres,0);
@@ -523,8 +629,11 @@ int next(t_file* archivo){
             //Si no hay bloques libres devuelvo error
             nro_bloque_actual = -1;
         }
+
         list_destroy_and_destroy_elements(bloques_libres,free);
+
     }else{
+
         //Si no hay bloques para agregar muevo el puntero en uno
         archivo->pos++;
     }
@@ -798,7 +907,6 @@ int truncate_tall_grass(t_file* archivo, uint32_t off_set){
         liberar_bloque(bloque_a_liberar);
         //Incremento el i para liberar el siguiente
         i++;
-        printf("Bloque liberado:%d\n",bloque_a_liberar);//TODO sacar en algun momento
 
         //Obtengo el siguiente bloque a liberar
         bloque_a_liberar = obtener_bloque(archivo->metadata->bloques, i);
@@ -853,15 +961,23 @@ void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
         string_append(&bloques_que_van_archivo,blocks[bloque_usado_en_array]);
         string_append(&bloques_que_van_archivo,"]");// Lo cierro con el ultimo chorchete
     }
-        free(archivo->metadata->bloques);
-        //Asigno version nueva ya guardada de bloques
-        archivo->metadata->bloques = bloques_que_van_archivo;
 
-        //Lo abro como config seteo el nuevo array, guardo en archivo y libero
-        config_set_value(metadata,"BLOCKS", bloques_que_van_archivo);
-        config_save(metadata);
+    free(archivo->metadata->bloques);
+    //Asigno version nueva ya guardada de bloques
+    archivo->metadata->bloques = bloques_que_van_archivo;
 
+    //Lo abro como config seteo el nuevo array, guardo en archivo y libero
+    config_set_value(metadata,"BLOCKS", bloques_que_van_archivo);
+    config_save(metadata);
     config_destroy(metadata);
+
+    //Libero el puntero a puntero
+    int i = 0;
+    while(blocks[i] != NULL){
+        free(blocks[i]);
+        i++;
+    }
+    free(blocks);
 
 }
 
@@ -969,8 +1085,11 @@ int liberar_bloque(uint32_t nro_bloque){
 
         //Cierro el archivo
         fclose(archivo_bitmap);
+        free(path_bitmap);
+        bitarray_destroy(bitmap);
         return 0;
     }else{
+        free(path_bitmap);
         return -1;
     }
 }

@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
 
-//    tests_broker();
+    tests_broker();
 
     pthread_join(server_thread, NULL);
 
@@ -451,8 +451,7 @@ void tests_broker(){
     log_debug(logger, "LOCALIZED_POKEMON");
     t_localized_pokemon* loc_pika3 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size5 = sizeof_localized_pokemon(loc_pika3);
-    int base5= asignar_particion(partition_size5);
-    log_debug(logger, "Base: %d", base5);
+    particion* base5= asignar_particion(partition_size5);
     printPartList();
     /*
      *
@@ -465,6 +464,8 @@ void tests_broker(){
     printPartList();
     particion_delete(56);
     printPartList();
+
+    particion_destroy(base5);
 
 //    log_debug(logger, "Eliminamos LOCALIZED_POKEMON(base:%d)", 36);
 //    particion_delete(36);
@@ -800,13 +801,13 @@ void particion_delete(int base){
 }
 
 particion* buscar_particion_libre(int tam){
-    if(strcmp(config.free_partition_algorithm, "FF") == 0){
+    if (strcmp(config.free_partition_algorithm, "FF") == 0) {
         log_debug(logger, "First fit search starts...");
         return first_fit_search(tam);
-    }else if (strcmp(config.free_partition_algorithm, "BF") == 0){
+    } else if (strcmp(config.free_partition_algorithm, "BF") == 0) {
         log_debug(logger, "Best fit search starts...");
         return best_fit_search(tam);
-    }else{
+    } else {
         log_error(logger, "Unexpected algorithm");
     }
 }
@@ -839,11 +840,10 @@ particion* best_fit_search(int tam){
     int candidatos_size = list_size(candidatos);
     if(candidatos_size != 0){
         particion* best_fit;
-        int best_fit_diff = 9999;
+        int best_fit_diff = 999999;
         for(int i=0; i<candidatos_size; i++){
             particion* y = list_get(candidatos, i);
             int diff = y->tam - tam;
-            if(diff == 0){log_info(logger, "Best fit partition found!(base:%d)", y->base);return y;}
             if(best_fit_diff > diff){
                 best_fit_diff = diff;
                 best_fit = y;
@@ -901,7 +901,7 @@ particion* asignar_particion(size_t tam) {
             log_info(logger, "Partition assigned(base: %d)", particion_libre->base);
             return particion_libre;
         }
-            //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
+        //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
         else {
             tam = tam >= MIN_PART_LEN ? tam : MIN_PART_LEN;
             particion* nueva_particion = particion_create(particion_libre->base, tam, false);
@@ -918,6 +918,7 @@ particion* asignar_particion(size_t tam) {
             log_info(logger, "Partition assigned(base: %d)", nueva_particion->base);
             log_info(logger, "Rearranging partitions...");
             ordenar_particiones();
+            mergear_particiones_libres();
             log_info(logger, "Ready");
             return nueva_particion;
         }
@@ -928,13 +929,14 @@ particion* asignar_particion(size_t tam) {
             INTENTOS = 0;
         } else{
             algoritmo_de_reemplazo();
+            mergear_particiones_libres();
             INTENTOS++;
         }
         // La recursivistica concha de tu hermana como nuestras cursadas de operativos
         return asignar_particion(tam);
     }
-
 }
+
 // Ordena las particiones y mergea las particiones libres
 void ordenar_particiones(){
     bool particion_anterior(particion* particion_antes, particion* particion_despues) {
@@ -943,7 +945,6 @@ void ordenar_particiones(){
 
     list_sort(PARTICIONES, (void*) particion_anterior);
 
-    mergear_particiones_libres();
     return;
 }
 
@@ -1024,6 +1025,7 @@ void compactar_particiones(){
                             particion_libre->mensaje->tam);
 
                     ordenar_particiones();
+                    mergear_particiones_libres();
                     //  printPartList();
                     size = list_size(PARTICIONES);
                     break;
@@ -1110,18 +1112,15 @@ particion* get_lru(){
 ╚═════╝  ╚═════╝ ╚═════╝ ╚═════╝    ╚═╝
 */
 
+//Si no lo uso en otro lado borrar
 t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam){
     // Si es null devuelvo null
     if(nodo == NULL){
         return NULL;
     }
-    // si no es una hoja devuelvo null
-    if(!nodo->es_hoja){
-        return NULL;
-    }
     // Si la particion esta libre y hay espacio devuelvo ese nodo
     particion* una_particion = nodo->particion;
-    if(una_particion->tam > tam && una_particion->libre){
+    if(nodo->es_hoja && una_particion->tam > tam && una_particion->libre){
         return nodo;
     }
     // Si no busco a izquierda
@@ -1134,4 +1133,114 @@ t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam){
     if(res_der){
         return res_der;
     }
+}
+
+// Devuelve el nodo que tiene una particion de IGUAL tamaño
+t_nodo* buscar_nodo_tam(struct t_nodo* nodo, int tam){
+    // Si es null devuelvo null
+    if(nodo == NULL){
+        return NULL;
+    }
+    // Si la particion esta libre y hay espacio devuelvo ese nodo
+    particion* una_particion = nodo->particion;
+    if(nodo->es_hoja && una_particion->tam == tam && una_particion->libre){
+        return nodo;
+    }
+    // Si no busco a izquierda
+    t_nodo* res_izq = buscar_nodo_tam(nodo->izq, tam);
+    if(res_izq){
+        return res_izq;
+    }
+    // Si no busco a derecha
+    t_nodo* res_der = buscar_nodo_tam(nodo->der, tam);
+    if(res_der){
+        return res_der;
+    }
+}
+
+particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
+    log_info(logger, "Empiezo con el Buddy system");
+    int potencia = 0;
+    while (tam > pow(2, potencia)){
+        potencia++;
+    }
+    int tam_buscado = pow(2, potencia);
+    log_info(logger, "La potencia mas chica que cumple el tamaño es: %d", tam_buscado);
+
+    t_nodo* nodo_respuesta = buscar_nodo_tam(raiz, tam_buscado);
+    if (nodo_respuesta != NULL){
+        log_info(logger, "Caso lindo: encontramos una particion del tamaño %d", tam_buscado);
+
+        //Cambio el estado de la libre a falso y actualiza su ultimo uso.
+        nodo_respuesta->particion->libre = false;
+        nodo_respuesta->particion->ultimo_uso = unix_epoch();
+
+        log_info(logger, "Particion asignada (base: %d)", nodo_respuesta->particion->base);
+        return nodo_respuesta->particion;
+    } else {
+        log_info(logger, "Caso feo: No encontramos una particion del tamaño %d", tam_buscado);
+        // Vamos a dividir las particiones hasta que consigamos una de tamaño buscado
+
+        t_nodo* hijo_izq = buddy_dividir_raiz(raiz);
+        log_info(logger, "Dividimos el nodo y nos metemos recursivamente en Asignar Buddy");
+        return asignar_particion_buddy(hijo_izq, tam);
+    }
+
+}
+
+// Divide el nodo y devuelve el hijo izquierdo
+t_nodo* buddy_dividir_raiz(t_nodo* raiz){
+    t_nodo* hijo_izq = malloc(sizeof(t_nodo));
+    t_nodo* hijo_der = malloc(sizeof(t_nodo));
+
+    raiz->izq = hijo_izq;
+    raiz->der = hijo_der;
+    hijo_izq->buddy = hijo_der;
+    hijo_der->buddy = hijo_izq;
+    hijo_izq->padre = raiz;
+    hijo_der->padre = raiz;
+    hijo_izq->es_hoja = true;
+    hijo_der->es_hoja = true;
+    raiz->es_hoja = false;
+
+    int tam = raiz->particion->tam / 2;
+    particion* particion_izq = particion_create(raiz->particion->base, tam, true);
+    particion* particion_der = particion_create(raiz->particion->base+tam, tam, true);
+    list_add(PARTICIONES, particion_izq);
+    list_add(PARTICIONES, particion_der);
+    particion_destroy(raiz->particion);
+
+    hijo_izq->particion = particion_izq;
+    hijo_der->particion = particion_der;
+
+    ordenar_particiones();
+    return hijo_izq;
+}
+
+// Mergea dos particiones, como como el inverso de la funcion de ariba
+void buddy_mergear(t_nodo* nodo){
+    t_nodo* papuchi = nodo->padre;
+    t_nodo* amigo = nodo->buddy;
+    papuchi->izq = null;
+    papuchi->der = null;
+    papuchi->es_hoja = true;
+
+    particion* particion_padre = particion_create(nodo->particion->base, nodo->particion->tam*2, true);
+    list_add(PARTICIONES, particion_padre);
+    particion_destroy(nodo->particion);
+    particion_destroy(amigo->particion);
+
+    ordenar_particiones();
+
+    free(nodo);
+    free(amigo);
+}
+
+
+void particion_destroy(particion * unaparticion){
+    bool id_search(void* p){
+        particion* sub = (particion*) p;
+        return sub == unaparticion;
+    }
+    list_remove_by_condition(PARTICIONES, id_search);
 }

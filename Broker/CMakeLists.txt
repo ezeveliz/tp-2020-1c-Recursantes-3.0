@@ -7,4 +7,4 @@ include_directories("/usr/include/commons" "/usr/include/commLib")
 
 add_executable(broker broker.c broker.h)
 
-target_link_libraries(broker "/usr/lib/libcommons.so" pthread "/usr/lib/libcommLib.so")
+target_link_libraries(broker "/usr/lib/libcommons.so" pthread "/usr/lib/libcommLib.so" m)

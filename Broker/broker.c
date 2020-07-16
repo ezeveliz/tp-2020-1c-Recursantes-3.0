@@ -1179,9 +1179,18 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         return nodo_respuesta->particion;
     } else {
         log_info(logger, "Caso feo: No encontramos una particion del tamaño %d", tam_buscado);
-        // Vamos a dividir las particiones hasta que consigamos una de tamaño buscado
+        // No hay una particion del tamaño buscado
+        // Vamos a buscar, entre las que tenemos, cual tiene tamaño mas cercano a lo que buscamos
 
-        t_nodo* hijo_izq = buddy_dividir_raiz(raiz);
+        t_nodo* nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, tam);
+        while (nodo_a_dividir == NULL) {
+            // Si no encuentro una particion mas grande, aumento el tamaño y vuelvo a buscar
+            int nuevo_tam_buscado = tam_buscado * 2;
+            nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
+        }
+
+        // Dividimos la particion y probamos devuelta
+        t_nodo* hijo_izq = buddy_dividir_raiz(nodo_a_dividir);
         log_info(logger, "Dividimos el nodo y nos metemos recursivamente en Asignar Buddy");
         return asignar_particion_buddy(hijo_izq, tam);
     }
@@ -1220,20 +1229,21 @@ t_nodo* buddy_dividir_raiz(t_nodo* raiz){
 // Mergea dos particiones, como como el inverso de la funcion de ariba
 void buddy_mergear(t_nodo* nodo){
     t_nodo* papuchi = nodo->padre;
-    t_nodo* amigo = nodo->buddy;
+    t_nodo* nodo_izq = papuchi->izq;
+    t_nodo* nodo_der = papuchi->der;
     papuchi->izq = null;
     papuchi->der = null;
     papuchi->es_hoja = true;
 
-    particion* particion_padre = particion_create(nodo->particion->base, nodo->particion->tam*2, true);
+    particion* particion_padre = particion_create(nodo_izq->particion->base, nodo_izq->particion->tam*2, true);
     list_add(PARTICIONES, particion_padre);
-    particion_destroy(nodo->particion);
-    particion_destroy(amigo->particion);
+    particion_destroy(nodo_izq->particion);
+    particion_destroy(nodo_der->particion);
 
     ordenar_particiones();
 
-    free(nodo);
-    free(amigo);
+    free(nodo_izq);
+    free(nodo_der);
 }
 
 

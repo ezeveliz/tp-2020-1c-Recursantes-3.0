@@ -13,62 +13,6 @@ t_list* archivos_abiertos;
 //Bloquea el uso de la lista
 sem_t* bloque_archivos_abiertos;
 
-//
-//int main(){
-//    montar("..");
-//    /*
-//     * PRUEBA 1
-//     */
-//    //New Pikachu
-//
-//    char* path_pikachu = concatenar_strings(obtener_path_file(),"/Pikachu");
-//    create_tall_grass(path_pikachu);
-//    t_file* archivo_pikachu = open_tall_grass(path_pikachu) ;
-//    write_tall_grass(archivo_pikachu, "5-5=5\n" , strlen("5-5=5") + 1, 0);
-//
-//    /*
-//     * PRUEBA 2
-//     */
-//    //crear varios archivos y agregarles datos
-//
-//    char* path_charmander = concatenar_strings(obtener_path_file(),"/Charmander");
-//    write_tall_grass(archivo_pikachu, "1-1=1\n" , strlen("1-1=1") + 1, 6);
-//    create_tall_grass(path_charmander);
-//    t_file* archivo_charmander = open_tall_grass(path_charmander) ;
-//    write_tall_grass(archivo_charmander, "2-3=3\n" , 6, 0);
-//    write_tall_grass(archivo_charmander, "3-4=4\n" , 6, 6);
-//    write_tall_grass(archivo_charmander, "4-5=5\n" , 6, 12);
-//    write_tall_grass(archivo_charmander, "5-6=6\n" , 6, 18);
-//    write_tall_grass(archivo_charmander, "6-7=7\n" , 6, 24);
-//
-//    /*
-//     * PRUEBA 3
-//     */
-//    //Eliminar un pedaso de memoria del archivo
-//
-//    delet_tall_grass(archivo_pikachu,0,6);
-//    delet_tall_grass(archivo_pikachu,0,7);
-//    delet_tall_grass(archivo_charmander,0,12);
-//
-//    close_tall_grass(archivo_charmander);
-//    free(path_charmander);
-//
-//    close_tall_grass(archivo_pikachu);
-//    free(path_pikachu);
-//
-//    int cantidad_bloques = obtener_cantidad_bloques();
-//    char *path_bitmap = obtener_path_bitmap();
-//    t_list *bloques_libres = list_create();
-//
-//    FILE *archivo_bitmap = fopen(path_bitmap, "r+");
-//
-//    t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
-//                                         tamanio_bitmap(cantidad_bloques));
-//
-//
-//    doom_bitmap(bitmap);
-//
-//}
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
  * Los errores los muestra imprimiendo en consola
@@ -79,6 +23,7 @@ int montar(char* punto_montaje){
     //Creo el path del fileSystem
     char* path_tall_grass = concatenar_strings(punto_montaje,"/Tall_Grass");
 
+    //Venga lo nuevo fuera lo viejo
     limpiar_unidades_antiguas(path_tall_grass);
 
     //Inicializo la lista de archivos abiertos
@@ -89,6 +34,7 @@ int montar(char* punto_montaje){
     //Creo la carpeta donde va a estar el fileSystem
     int resultado_tall_grass = crear_carpeta(path_tall_grass , ACCESSPERMS);
 
+    //Verifico el resultado
     if(resultado_tall_grass == 0){
         //Creo las carpetas que lo componen y devuelvo el resultado
         int resultado_met = crear_metadata( path_tall_grass);
@@ -199,11 +145,6 @@ int crear_file(char* path){
     char* path_file = concatenar_strings(path,"/Files");
 
     mkdir_tall_grass(path_file);
-    /* EStooo hay que sacarlo */
-//    char* algo = concatenar_strings(path_file,"/pikachu");
-//    create_tall_grass(algo);
-//    free(algo);
-    /* Hasta aca */
     free(path_file);
     return 0;
 }
@@ -216,12 +157,15 @@ int crear_file(char* path){
 char* obtener_path_file(){
     return concatenar_strings(carpeta_montaje,"/Files");
 }
+
 char* obtener_path_blocks(){
     return concatenar_strings(carpeta_montaje,"/Blocks");
 }
+
 char* obtener_path_metadata(){
     return concatenar_strings(carpeta_montaje,"/Metadata/Metadata.bin");
 }
+
 char* obtener_path_bitmap(){
     return concatenar_strings(carpeta_montaje,"/Metadata/Bitmap.bin");
 }
@@ -235,6 +179,7 @@ int obtener_cantidad_bloques(){
 
     return blocks;
 }
+
 int obtener_tamanio_bloques(){
     char* path_methadata = obtener_path_metadata();
     t_config* metadata = config_create(path_methadata);
@@ -249,6 +194,7 @@ int obtener_tamanio_bloques(){
 int crear_ficheto(char* path, int tipo){
     int resultado = crear_carpeta(path, ACCESSPERMS);
 
+    //Verifico lo que tengo que crear si directorio o archivo
     if(resultado == 0){
         char* path_metadata = concatenar_strings(path, "/Metadata.bin");
         FILE * archivo_metadata = fopen(path_metadata,"w+");
@@ -328,13 +274,15 @@ bool find_tall_grass(char* nombre_archivo){
 
     //Recorro la lista buscando coincidencia con el nombre que busco
     for(int i = 0; i < numero_archivos; i++){
-        if(strcmp(nombre_archivo,(char*)list_get(archivos,i)) == 0){
 
+        if(strcmp(nombre_archivo,(char*)list_get(archivos,i)) == 0){
             //Ante coincidencia pongo el resultado en true y rompo el ciclo
             resultado = true;
             break;
         }
+
     }
+
     char* elemento;
 
     for(int i = 0; i < archivos->elements_count; i++){
@@ -355,12 +303,15 @@ t_list* ls_tall_grass(char* path){
 
     //Abro el directorio
     dp = opendir (path);
+
     //Verifico si lo pude abrir
     if (dp != NULL)
     {
         t_list * respuesta = list_create();
+
         //Recorro el directorio y voy cargando los archivos que contiene
         while (ep = readdir (dp)){
+
             //Los nombres de los direcotrios terminan en null
             //Recorro el strin en busca del null y ver el espacio que ocupa
 
@@ -416,49 +367,16 @@ t_file* open_tall_grass(char* path){
         return NULL;
     }
 
-
-//    //r+ lectura-escritura || w+ archivo en blanco
-//    FILE* archivo = fopen(path_archivo_metadata,"r+");
-//
-////    LOCK_EX es para que sea bloque exclusivo
-////    LOCK_NB es para que sea no bloqueante si esta bloqueado
-//    if( flock(archivo->_fileno, LOCK_EX | LOCK_NB) == 0){
-//        //Cierro el archivo con el log
-//        fclose(archivo);
-//
-//        //Genero el retorno
-//        retorno->pos = 0;
-//        retorno->path = malloc(strlen(path_archivo_metadata)+1);
-//        retorno->metadata = obtener_metadata_archivo(path_archivo_metadata);
-//        t_config* metadata = config_create(path_archivo_metadata);
-//        memcpy(retorno->path, path_archivo_metadata,strlen(path_archivo_metadata)+1);
-//
-//        config_set_value(metadata,"OPEN", "Y");
-//        config_save(metadata);
-//        config_destroy(metadata);
-//
-//        free(path_archivo_metadata);
-//        return retorno;
-//    }else{
-//        fclose(archivo);
-//        free(retorno);
-//        free(path_archivo_metadata);
-//        return NULL;
-//    }
-
-
 }
 
 int close_tall_grass(t_file * fd ){
+
+    //Modifico el archivo de metadata
     t_config* metadata = config_create(fd->path);
     config_set_value(metadata,"OPEN", "N");
     config_save(metadata);
     config_destroy(metadata);
-//    FILE* archivo = fopen(fd->path,"r+");
-//
-//    if(flock(archivo->_fileno, LOCK_UN) != 0){
-//        return -1;
-//    }
+
     int res = sacar_lista_archivos_abiertos(fd->path);
 
     free(fd->path);
@@ -471,6 +389,8 @@ int close_tall_grass(t_file * fd ){
 int agregar_archivo_abierto(char* path){
     int resultado;
     char* path_a_agregar = malloc(string_length(path)+1);
+
+    //Copio el path en su propia porcion de memoria
     strcpy(path_a_agregar,path);
 
     sem_wait(bloque_archivos_abiertos);
@@ -507,6 +427,7 @@ int buscar_archivo_abierto(char* path){
 int sacar_lista_archivos_abiertos(char* path){
     int pos = buscar_archivo_abierto(path);
 
+    //Reviso que pos no sea -1 por el error
     if(pos >= 0){
         char* path_a_eliminar;
         //Bloqueo por uso de la lista
@@ -521,12 +442,14 @@ int sacar_lista_archivos_abiertos(char* path){
         free(path_a_eliminar);
 
         return pos;
+
     }else {
+
         return -1;
+
     }
 
 }
-
 
 int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_de_aparicion){
     int i =0;
@@ -708,12 +631,16 @@ void disminuir_byte_archivo(t_file* archivo, int cantidad){
     t_config* metadata = config_create(archivo->path);
     int size_anterior = config_get_int_value(metadata,"SIZE");
     char* size = string_itoa(size_anterior - cantidad);
+
     //Modifico el t_config con el nuevo valor
     config_set_value(metadata,"SIZE", size);
+
     //modifico la estructura t_file tambien
     archivo->metadata->size = config_get_int_value(metadata,"SIZE");
+
     //Salvo el archivo
     config_save(metadata);
+
     //Libero el t_config
     config_destroy(metadata);
     free(size);
@@ -722,14 +649,18 @@ void disminuir_byte_archivo(t_file* archivo, int cantidad){
 FILE* obtener_file_bloque(int numero_bloque,char* flag){
     char* path_bloques = obtener_path_blocks();
     char* numero_bloque_s = string_itoa(numero_bloque) ;
+
     //Genero el path del bloque
     char* nombre_archivo_bloque = string_from_format("%s/%s%s",path_bloques,numero_bloque_s,".bin");
+
     //Lo abro para escribir
     FILE * archivo_bloque = fopen(nombre_archivo_bloque,flag);
+
     //Libero
     free(path_bloques);
     free(numero_bloque_s);
     free(nombre_archivo_bloque);
+
    // free(nombre_archivo_bloque);
     //Retorno el file descriptor
     return archivo_bloque;
@@ -816,7 +747,6 @@ char** cortar_bloques_array(char* array){
     }
     return bloques_split;
 }
-
 
 char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion){
 
@@ -1007,14 +937,8 @@ int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) 
 
 }
 
-int rmfile_tall_grass(){
-/*
- * NO creo que sea necesaria esta funcion
- */
-}
-
 //Te devuelve la lista con los que hay
-t_list* obtener_bloques_libres(int cantidad_pedida) {
+t_list* obtener_bloques_libres( int cantidad_pedida ) {
     int cantidad_bloques = obtener_cantidad_bloques();
     char *path_bitmap = obtener_path_bitmap();
     t_list *bloques_libres = list_create();
@@ -1098,16 +1022,22 @@ t_metadata* obtener_metadata_archivo(char* path){
     //Trato a la metadata del archivo como un config
     t_config* conf = config_create(path);
     t_metadata* metadata = malloc(sizeof(t_metadata));
+
     //sete el tamanio
     metadata->size= config_get_int_value(conf,"SIZE");
+
     //calculo el largo del string de bloques
     int  largo_string = strlen(config_get_string_value(conf,"BLOCKS"));
+
     //Pido memoria para los bloques
     char* bloques_viejos = malloc(largo_string + 1);
+
     //Copio la info del archivo en el puntero que agarre recien
     memcpy(bloques_viejos,config_get_string_value(conf,"BLOCKS"),largo_string+1);
+
     //Asigno los bloques a la metadata
     metadata->bloques = bloques_viejos;
+
     //Libero y retorno
     config_destroy(conf);
     return metadata;
@@ -1129,16 +1059,6 @@ int calcular_bloques_archivo(t_metadata* metadata){
 
     return resultado;
 }
-
-//int calcular_bloques(int byts){
-//    int tamanio_bloque = obtener_tamanio_bloques();
-//    int resultado = byts/tamanio_bloque;
-//    if(byts % tamanio_bloque != 0 ){
-//        resultado ++;
-//    }
-//    return resultado;
-//}
-
 
 void metadata_destroy(t_metadata* metadata){
     //free(metadata->bloques);

@@ -364,6 +364,9 @@ void incoming_gameboy(int server_socket, char* ip, int port, MessageHeader * hea
     int idMensaje = *(int *) list_get(paquete_recibido, 0);
     int idCorrelativo = *(int *) list_get(paquete_recibido, 1);
 
+    free(list_get(paquete_recibido,0));
+    free(list_get(paquete_recibido,1));
+
     // Creo paquete para responderle al GameBoy
     t_paquete *package = create_package(headerStruct->type);
     add_to_package(package, &id_gamecard, sizeof(int));
@@ -424,36 +427,45 @@ void* server_function_gamecard(void* arg) {
 
 void* mensaje_new_pokemon(void* parametros ){
 
+    //Asigno los parametros para trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
-
     t_new_pokemon* pokemon = void_a_new_pokemon(datos_param->estructura_pokemon) ;
     uint32_t id = datos_param->id;
 
+    //Genero el path del archivo desde la raiz tall grass
     char* path_file = obtener_path_file();
-
     char* path_archvio = string_new();
     string_append(&path_archvio, path_file);
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
     //Verificar si existe pokemon sino crearlo
-    if(!find_tall_grass(pokemon->nombre_pokemon)){// --> paso 1
+    if(!find_tall_grass(pokemon->nombre_pokemon)){
+        log_debug(logger,"Hilo: %d Crea el directorio %s", pthread_self(),pokemon->nombre_pokemon);
         create_tall_grass(path_archvio);
     }
+
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
     t_file* archivo = open_tall_grass(path_archvio);
 
     //Hago una recursividad llamando a la funcion hasta que se pueda conectar
-    if( archivo == NULL ){ // --> paso 4
+    if( archivo == NULL ){
+
+        // Libero memoria pedida y que no voy a usar
         free(path_file);
         free(path_archvio);
         free(pokemon->nombre_pokemon);
         free(pokemon);
-        log_debug(logger,"recursividad mi amigo %d", pthread_self());
+
+        log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
         sleep(configuracion.tiempo_reoperacion);
         mensaje_new_pokemon(parametros);
 
     }else{
+
+        log_debug(logger,"Hilo: %d Entro a la ejecucion de new pokemon", pthread_self());
+        //sleep(3);
+
         //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
         t_pos_pokemon* pos_pok = buscar_coordenadas(pokemon->pos_x, pokemon->pos_y, archivo);
 
@@ -470,21 +482,18 @@ void* mensaje_new_pokemon(void* parametros ){
         //Verifico si esta el registro con esa posicion
         if( pos_pok == NULL ){
 
+            log_debug(logger,"Hilo: %d Posicion no encontrada se va a crear una entrada nueva", pthread_self());
+
             //Le agrego la cantidad al string y lo escribo en el archivo
             char* aux_itoa_cant = string_itoa(pokemon->cantidad);
             string_append(&registro_agregar,aux_itoa_cant);
             free(aux_itoa_cant);
             string_append(&registro_agregar,"\n");
 
-            //Verifico si el archivo esta vacio por tema de posicion a escribir
-            if(archivo->metadata->size > 0){
-                write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size );
-            }else{
-                write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size);
-            }
-
+            write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size);
 
         }else{
+            log_debug(logger,"Hilo: %d Posicion encontrada se va a incrementar", pthread_self());
 
             //Elimino la entrada vieja
             delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam );
@@ -502,20 +511,19 @@ void* mensaje_new_pokemon(void* parametros ){
         //Enviar mensaje APPEARED_POKEMON
         t_paquete * paquete = create_package(APPEARED_POK);
 
-
+        //Creo el appear pokemon y serializo en un puntero a void
         t_appeared_pokemon* appeared_pokemon = create_appeared_pokemon(pokemon->nombre_pokemon,pokemon->pos_x,pokemon->pos_y);
         void* mensaje_serializado = appeared_pokemon_a_void(appeared_pokemon);
 
-
+        //Agrego los datos al paquete
         add_to_package(paquete, (void *) &id, sizeof(uint32_t));
         add_to_package(paquete, mensaje_serializado, sizeof_appeared_pokemon(appeared_pokemon));
 
-        //Si no se puede conectar informar por log
+        //Envio el paquete
         envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
-        free_package(paquete);
-
         //Libero
+        free_package(paquete);
         free(mensaje_serializado);
         free(appeared_pokemon->nombre_pokemon);
         free(appeared_pokemon);
@@ -523,42 +531,45 @@ void* mensaje_new_pokemon(void* parametros ){
         free(path_file);
         free(registro_agregar);
 
+        //Debugeo
+        log_debug(logger,"Hilo: %d Finalizo a la ejecucion de new pokemon", pthread_self());
+
         //Cerrar el archivo
         close_tall_grass(archivo);
-
-
         free(pokemon);
+        free(datos_param->estructura_pokemon);
         free(parametros);
-
     }
 
-
+    //Para terminar el hilo
     return null;
 
 }
 
 void* mensaje_catch_pokemon(void* parametros){
 
+    //Asigno los datos a la estructura para trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
-
     t_catch_pokemon* pokemon = void_a_catch_pokemon(datos_param->estructura_pokemon) ;
     uint32_t id = datos_param->id;
 
+    //Genero el path del archivo desde la raiz tall grass
     char* path_file = obtener_path_file();
-
     char* path_archvio = string_new();
     string_append(&path_archvio, path_file);
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
+    //Creo el paquete a enviar al broker
     t_paquete * paquete = create_package(CAUGHT_POK);
     t_caught_pokemon* caught_pokemon;
     void* mensaje_serializado;
 
     //Verificar si existe el pokemon, sino informar el error
     if(!find_tall_grass(pokemon->nombre_pokemon)){
+
         //Informar del error
-        printf("No existe directorio con ese nombre\n");
+        log_error(logger,"No se encontro el archivo", pokemon->nombre_pokemon);
 
         //Genero el mensaje de error para mandarle al broker
         caught_pokemon = create_caught_pokemon(0);
@@ -570,21 +581,23 @@ void* mensaje_catch_pokemon(void* parametros){
 
         envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
+        //Libero
         free_package(paquete);
-
         free(caught_pokemon);
         free(mensaje_serializado);
         free(datos_param->estructura_pokemon);
         free(parametros);
 
     }else {
+
         //Verificar si el archivo se puede abrir sino intentar en x tiempo
         t_file *archivo = open_tall_grass(path_archvio);
         if (archivo == NULL) {
+
             free(path_file);
             free(path_archvio);
             free_package(paquete);
-            log_debug(logger,"Archivo cerrado, me voy a dormir y llamo a la funcion");
+            log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
             sleep(configuracion.tiempo_reoperacion);
             catch_pokemon_a_void(parametros);
 
@@ -594,13 +607,15 @@ void* mensaje_catch_pokemon(void* parametros){
 
             //verifico si no existe la posicion
             if (pos_pok == NULL) {
+                log_error(logger,"Hilo: %d No se encontraron las coordenadas x:%d y:%d", pthread_self(), pos_pok->x, pos_pok->y);
+                log_debug(logger, "Hilo: %d Genera el mensaje de error para mandar al broker ", pthread_self());
 
-                //Fijar que hago con el error
-                printf("Error no existen esas coordenadas\n");
                 //Cierro el archivo
                 close_tall_grass(archivo);
+
                 //Genero el mensaje de error para mandarle al broker
                 caught_pokemon = create_caught_pokemon(0);
+
             } else {
 
                 //Creo un string con el registro en esa posicion
@@ -620,6 +635,8 @@ void* mensaje_catch_pokemon(void* parametros){
                 //Verifico que la posicion no quede sin entrada vacia
                 if ((pos_pok->cant - 1) > 0) {
 
+                    log_debug(logger, "Hilo: %d va a decrementar en una a la cantidad de esa posicion ", pthread_self());
+
                     //Le agrego la cantidad que quiero al registro a agregar
                     string_append(&registro_agregar, string_itoa(pos_pok->cant - 1));
                     string_append(&registro_agregar, "\n");
@@ -634,6 +651,10 @@ void* mensaje_catch_pokemon(void* parametros){
                         write_tall_grass(archivo, registro_agregar, string_length(registro_agregar),
                                          (archivo->metadata->size));
                     }
+
+                }else{
+
+                    log_debug(logger, "Hilo: %d va a eliminar la posicion por no tener nada", pthread_self());
 
                 }
 
@@ -663,10 +684,12 @@ void* mensaje_catch_pokemon(void* parametros){
             free(caught_pokemon);
             free_package(paquete);
             free(pos_pok);
+
             //Libero el parametro poque ya no lo uso
             free(datos_param->estructura_pokemon);
             free(parametros);
         }
+        log_debug(logger, "Hilo: %d Finalizo a la ejecucion de new pokemon de catch pokemon ", pthread_self());
     }
 
     //Libero los datos del pokemon
@@ -680,8 +703,8 @@ void* mensaje_catch_pokemon(void* parametros){
 
 void* mensaje_get_pokemon(void* parametros){
 
+    //Asigno las estructuras para poder trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
-
     t_get_pokemon* pokemon = void_a_get_pokemon(datos_param->estructura_pokemon) ;
     uint32_t id = datos_param->id;
 
@@ -694,11 +717,17 @@ void* mensaje_get_pokemon(void* parametros){
     string_append(&path_archvio, "/");
     string_append(&path_archvio, pokemon->nombre_pokemon);
 
+    //Creo la estructura localized para mandar al broker
     t_localized_pokemon* localized_pokemon;
     t_paquete* paquete = create_package(LOCALIZED_POK);
     void* mensaje_serializado;
+
     //Verificar si existe el pokemon, sino devolver el mensaje sin posiciones ni cantidades
     if(!find_tall_grass(pokemon->nombre_pokemon)){
+
+        log_debug(logger,"Hilo: %d Entro a la ejecucion de get pokemon", pthread_self());
+        log_error(logger,"Hilo: %d No se encontro el archivo %s", pthread_self(), pokemon->nombre_pokemon);
+
         //Generlo el mensaje de error
         uint32_t* vacio;
         localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon, 0, vacio);
@@ -711,22 +740,25 @@ void* mensaje_get_pokemon(void* parametros){
         //Si no se puede conectar informar por log
         envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
+        log_debug(logger,"Hilo: %d Finalizo la ejecucion de get pokemon", pthread_self());
+
+        //Libero
         free_package(paquete);
         free(mensaje_serializado);
         free(datos_param->estructura_pokemon);
         free(parametros);
     }else{
+
         //Abro el archivo
         t_file* archivo = open_tall_grass(path_archvio);
 
         //Verificar si el archivo se puede abrir sino intentar en x tiempo
         if( archivo == NULL ){
-
             //Libero lo pedido
             free(path_file);
             free(path_archvio);
 
-            log_debug(logger,"Archivo cerrado, me voy a dormir y llamo a la funcion");
+            log_debug(logger,"Hilo: %d  Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
 
             //Espero x segundos antes de reintentar
             sleep(configuracion.tiempo_reoperacion);
@@ -735,6 +767,8 @@ void* mensaje_get_pokemon(void* parametros){
             mensaje_get_pokemon(parametros);
 
         } else{
+            log_debug(logger,"Hilo: %d Entro a la ejecucion de get pokemon", pthread_self());
+
             //Obtengo todas las coordenadas
             t_list* lista_pos = obtener_todas_coordenadas(archivo);
             uint32_t* array_posiciones = malloc(lista_pos->elements_count * 2);
@@ -762,12 +796,13 @@ void* mensaje_get_pokemon(void* parametros){
             //Si no se puede conectar informar por log
             envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
+            //Libero el parametro poque ya no lo uso
             free_package(paquete);
             free(mensaje_serializado);
-
-            //Libero el parametro poque ya no lo uso
             free(datos_param->estructura_pokemon);
             free(parametros);
+
+            log_debug(logger,"Hilo: %d Finalizo a la ejecucion de get pokemon", pthread_self());
         }
     }
 
@@ -897,7 +932,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
 
     //Creo el socket
     if (server_socket == -1) {
-        printf("Error al crear el socket\n");
+        log_error(logger, "Error al crear socket ");
         return -1;
     }
 
@@ -918,7 +953,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
     // Trato de recibir el encabezado de la respuesta
     MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
     if(receive_header(server_socket, buffer_header) <= 0) {
-        log_info(logger, "No recibi un header");
+        log_error(logger, "No recibi un header");
         return -1;
     }
 
@@ -933,6 +968,9 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
     list_destroy_and_destroy_elements(rta_list, free);
 
     close_socket(server_socket);
+
+    //Debbugeo
+    log_debug(logger,"Mensaje enviado al broker");
     return 1;
 
 }

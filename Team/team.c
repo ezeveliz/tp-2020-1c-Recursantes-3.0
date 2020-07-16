@@ -597,6 +597,8 @@ void incoming(int server_socket, char* ip, int port, MessageHeader * headerStruc
     send_package(paquete, server_socket);
 
     free(rta);
+    free_package(paquete);
+    free_package(package);
 }
 
 //----------------------------------------ENTRENADORES----------------------------------------//
@@ -1379,7 +1381,12 @@ void caught_pokemon(int tid, int atrapado) {
             dictionary_put(entrenador->stock_pokemons, pok_name, (void*) necesidad);
         }
 
-        // TODO: falta restarlo de los pokemons globales
+        if(*(int*)dictionary_get(objetivo_global, pok_name) > 1){
+            *(int*) dictionary_get(objetivo_global, pok_name)-=1;
+        }
+        else{
+            dictionary_remove(objetivo_global, pok_name);
+        }
 
         // En este caso no pude atrapar el pokemon
     } else {
@@ -1391,9 +1398,9 @@ void caught_pokemon(int tid, int atrapado) {
     }
     char* trainer = string_itoa(entrenador->tid);
     string_append(&caught, trainer);
-    free(trainer);
     log_info(logger, caught);
 
+    free(trainer);
     free(caught);
 
     // TODO: decidir que hacer con el pokemon aca
@@ -1523,10 +1530,7 @@ void sjf_cd_planner() {
         } else {
             Entrenador *entrenador_ready = (Entrenador *) list_get(estado_ready, 0);
             log_info(logger, "Habia alguien en ejecucion ");
-            log_info(logger, string_itoa(list_size(estado_exec)));
             Entrenador *entrenador_exec = (Entrenador *) list_get(estado_exec, 0);
-            log_info(logger, string_itoa(entrenador_exec->tid));
-            log_info(logger, string_itoa(list_size(estado_block)));
             if ((entrenador_exec->ultimo_estimado - entrenador_exec->acumulado_actual) > (entrenador_ready->ultimo_estimado - entrenador_ready->acumulado_actual)) {
 
                 list_remove(estado_ready, 0);
@@ -1664,6 +1668,7 @@ void appeared_pokemon(t_list* paquete){
     log_info(logger, appeared);
 
     free(appeared);
+    free(appeared_void);
     //TODO: Librerar paquete_recibido
 
     // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
@@ -1843,8 +1848,8 @@ bool algoritmo_deadlock(){
                         void no_necesita(char* key, void*value){
                             //Busco el pokemon que no necesita el entrenador, es decir el pokemon que tiene en stock pero no esta en sus objetivos. La variable i es para agarrar al primero que encuentre
                             if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                pokemon_primer_entrenador_no_necesita = (char*) malloc(strlen(key) * sizeof(char));
-                                strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                pokemon_primer_entrenador_no_necesita = strdup(key);
+                                //strcpy(pokemon_primer_entrenador_no_necesita, key);
                                 i++;
                             }
                             else{
@@ -1853,8 +1858,8 @@ bool algoritmo_deadlock(){
                                     int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
                                     int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
                                     if(cantidad_stock > cantidad_objetivo){
-                                        pokemon_primer_entrenador_no_necesita = (char*) malloc(strlen(key) * sizeof(char));
-                                        strcpy(pokemon_primer_entrenador_no_necesita, key);
+                                        pokemon_primer_entrenador_no_necesita = strdup(key);
+                                        //strcpy(pokemon_primer_entrenador_no_necesita, key);
                                         i++;
                                     }
                                 }
@@ -1878,6 +1883,7 @@ bool algoritmo_deadlock(){
 
                         entrenador_primero->entrenador_objetivo = entrenador_segundo;
                         char* pokemon_objetivo_primer_entrenador = (char*) list_get(unnecesary_pokemon,0);
+                        //entrenador_primero->pokemon_objetivo->especie = strdup(pokemon_objetivo_primer_entrenador);
                         strcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_objetivo_primer_entrenador);
 
                         entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
@@ -1900,9 +1906,11 @@ bool algoritmo_deadlock(){
                         se_desbloqueo = true;
                         break;
                     }
+                    list_destroy(unnecesary_pokemon);
                 }
                 //No hay ningun pokemon ni se cumplieron las condiciones para que se realice el intercambio
                 cont_segundo++;
+                list_destroy(repeat_pokemon);
             }
 
             cont_primero++;

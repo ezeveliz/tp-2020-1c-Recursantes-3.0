@@ -112,8 +112,9 @@ typedef struct tEntrenador{
     RazonBloqueo razon_bloqueo;
     Pokemon* pokemon_objetivo; // Pokemon hacia el que me dirijo
     struct tEntrenador* entrenador_objetivo; // Entrenador hacia el que me dirijo
-    bool vengo_de_ejecucion; //Se usa para los algoritmos con desalojo para saber si fui desalojado en la ejecucion anterior
-    bool tengo_que_desalojar; //Se usa para el SJF con desalojo para verificar si tengo que desalojar el hilo o no
+    bool vengo_de_ejecucion; // Se usa para los algoritmos con desalojo para saber si fui desalojado en la ejecucion anterior
+    bool tengo_que_desalojar; // Se usa para el SJF con desalojo para verificar si tengo que desalojar el hilo o no
+    bool calcular_estimado; // Se usa para saber cuando recalcular el estimado de un hilo
 }Entrenador;
 
 /**

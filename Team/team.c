@@ -645,6 +645,8 @@ int initialize_structures() {
         entrenador->ultima_ejecucion = 0;
         entrenador->ultimo_estimado = config.estimacion_inicial;
         entrenador->vengo_de_ejecucion = false;
+        entrenador->tengo_que_desalojar = false;
+        entrenador->calcular_estimado = true;
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -822,13 +824,13 @@ void* trainer_thread(void* arg){
     // Bloqueo la transicion new - ready hasta que haya algun pokemon a capturar(proveniente de mensajes Appeared o Localized)
     sem_wait( &new_ready_transition[entrenador->tid] );
 
-    loggear_ready(entrenador);
-
     // Reservo memoria, para el tiempo de llegada, aca guardo cuando entra a Ready
     entrenador->tiempo_llegada = malloc(sizeof(struct timespec));
 
     // Me quedo iterando hasta que este en estado Finish
     while(entrenador->estado != FINISH){
+
+        loggear_ready(entrenador);
 
         // Marco el momento en que el entrenador llego a Ready
         *(entrenador->tiempo_llegada) = get_time();
@@ -854,6 +856,8 @@ void* trainer_thread(void* arg){
                 distancia_a_viajar = distancia(entrenador->pos_actual, entrenador->entrenador_objetivo->pos_actual);
                 break;
         }
+
+        entrenador->vengo_de_ejecucion = true;
 
         // Itero tantas veces como unidades se tenga que mover el entrenador a su posicion destino
         while (distancia_a_viajar > 0) {
@@ -925,16 +929,15 @@ void* trainer_thread(void* arg){
                 entrenador->ultima_ejecucion = entrenador->acumulado_actual;
                 entrenador->acumulado_actual = 0;
 
-                if(config.algoritmo_planificacion == SJF_CD){
-                    entrenador->vengo_de_ejecucion = false;
-                }
-
                 // Creo la estructura t_catch_pokemon para enviarle al Broker
                 Pokemon* pok = entrenador->pokemon_objetivo;
                 t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, pok->coordenada.pos_x, pok->coordenada.pos_y);
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
                 send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
+                entrenador->vengo_de_ejecucion = false;
+                // Me quito de la lista de ejecucion
+                list_remove(estado_exec, 0);
 
                 // Logueo el catch
                 char* catch = string_new();
@@ -958,17 +961,12 @@ void* trainer_thread(void* arg){
                 log_info(logger, catch);
 
                 free(catch);
-                //TODO: Pensar que pasaria si un hilo quiere sacarme de ejecucion en estas 20 lineas que yo eventualmente me sacaria, me quedaria bloqueador?
-                // QUe pasaria? un misterio. Agregar mutex? nose. Lo veremos en el proximo capitulo de la serie "Recursar operativos por 4 vez"
-
-                // Me quito de la lista de ejecucion
-                list_remove(estado_exec, 0);
 
                 // Me asigno la razon de bloqueo ESPERANDO_CATCH y me agrego a la lista de bloqueo
                 entrenador->estado = BLOCK;
                 entrenador->razon_bloqueo = ESPERANDO_CATCH;
                 list_add(estado_block, entrenador);
-
+                entrenador->calcular_estimado = true;
                 loggear_block(entrenador);
 
                 if(list_size(estado_ready) > 0)
@@ -1025,6 +1023,7 @@ void* trainer_thread(void* arg){
                 (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
                 (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
 
+                list_remove(estado_exec, 0);
                 entrenador->razon_bloqueo = SIN_ESPACIO;
                 entrenador->entrenador_objetivo-> razon_bloqueo = SIN_ESPACIO;
 
@@ -1045,8 +1044,10 @@ void* trainer_thread(void* arg){
 
                 log_info(logger, deadlock);
                 free(deadlock);
-                list_remove(estado_exec, 0);
 
+                list_add(estado_block, entrenador);
+                entrenador->calcular_estimado = true;
+                loggear_block(entrenador);
                 break;
         }
 
@@ -1067,18 +1068,13 @@ void* trainer_thread(void* arg){
                 // Si esperaba un catch me tengo que quitar de la lista de Bloqueados
                 case (CATCH):;
 
-                    bool removedor(void* _trainer) {
-                        Entrenador* trainer = (Entrenador*)_trainer;
-                        return trainer->tid == entrenador->tid;
-                    }
-                    list_remove_by_condition(estado_block, removedor);
+
                     break;
 
                     // Si estaba resolviendo un DeadLock, me tengo que quita de la lista de ejecucion
                 case (RESOLUCION_DEADLOCK):;
-                    //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
-                    list_remove(estado_exec, 0);
 
+                    // Verifico si el entrenador con el que intercambie pokemones tambien cumplio sus objetivos
                     if(objetivos_cumplidos(entrenador->entrenador_objetivo)){
                         char* objetivos_cumplidos_entrenador = string_new();
                         string_append(&objetivos_cumplidos_entrenador, "El entrenador ");
@@ -1103,10 +1099,17 @@ void* trainer_thread(void* arg){
                     break;
             }
 
+            // Me quito de la lista de bloqueado
+            bool removedor(void* _trainer) {
+                Entrenador* trainer = (Entrenador*)_trainer;
+                return trainer->tid == entrenador->tid;
+            }
+            list_remove_by_condition(estado_block, removedor);
+
             // Le asigno el estado finish
             entrenador->estado = FINISH;
             list_add(estado_finish, entrenador);
-            // TODO: agregar a la lista de Finish?
+            //TODO: loggear paso a exit
 
             // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
@@ -1139,7 +1142,6 @@ void* trainer_thread(void* arg){
                 // No tengo mas espacio para recibir pokemones
             }else{
 
-                //TODO: Verificar si el otro entrenador que vino de una resolucion de deadlock termino sus objetivos y sacarlo de la lista correspondiente
                 entrenador->razon_bloqueo = SIN_ESPACIO; // En realidad esto significa que no tengo mas lugar para atrapar
                 entrenador->estado = BLOCK;
 
@@ -1465,11 +1467,17 @@ void sjf_sd_planner() {
 
 void calcular_estimacion_y_ordenamiento(){
 
-    //TODO: No sobreescribir la variable ultimo estimado si el entrenador viene de ejecucion
+    log_info(logger, "Calculo estimados y ordeno readys");
+
     //Hallo el ultimo estimado de los entrenadores
     void iterador(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
-        entrenador->ultimo_estimado = entrenador->ultima_ejecucion * config.alpha + (1-config.alpha) * entrenador->ultimo_estimado;
+
+        // Solo calculamos una vez hasta que entre a block
+        if (entrenador->calcular_estimado) {
+            entrenador->ultimo_estimado = entrenador->ultima_ejecucion * config.alpha + (1 - config.alpha) * entrenador->ultimo_estimado;
+            entrenador->calcular_estimado = false;
+        }
     }
     list_iterate(estado_ready,iterador);
 
@@ -1477,6 +1485,8 @@ void calcular_estimacion_y_ordenamiento(){
     bool ordenador(void* _entrenador1, void* _entrenador2){
         Entrenador* entrenador_primero = (Entrenador*) _entrenador1;
         Entrenador* entrenador_segundo = (Entrenador*) _entrenador2;
+
+        // Si los estimados son iguales desempato por FIFO
         if(entrenador_primero->ultimo_estimado == entrenador_segundo->ultimo_estimado){
             if ((entrenador_primero->tiempo_llegada)->tv_sec == (entrenador_segundo->tiempo_llegada)->tv_sec) {
                 return (entrenador_primero->tiempo_llegada)->tv_nsec < (entrenador_segundo->tiempo_llegada)->tv_nsec;
@@ -1491,29 +1501,13 @@ void calcular_estimacion_y_ordenamiento(){
 
 void sjf_cd_planner() {
 
-    calcular_estimacion_y_ordenamiento();
-    Entrenador *entrenador_ready = (Entrenador *) list_get(estado_ready, 0);
-    if(list_size(estado_exec) == 0) {
-        if(entrenador_ready->vengo_de_ejecucion){
-            list_add(estado_exec,entrenador_ready);
-            entrenador_ready->estado = EXEC;
-            sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
-        }
-        else{
-            list_add(estado_exec,entrenador_ready);
-            entrenador_ready->estado = EXEC;
-            sem_post(&ready_exec_transition[entrenador_ready->tid] );
-        }
-    }
-    else{
-        Entrenador *entrenador_exec = (Entrenador *) list_get(estado_exec, 0);
-        if ((entrenador_exec->ultimo_estimado - entrenador_exec->acumulado_actual) > (entrenador_ready->ultimo_estimado - entrenador_ready->acumulado_actual)) {
-            list_remove(estado_exec,0);
-            list_add(estado_ready, entrenador_exec);
-            entrenador_exec->estado = READY;
-            entrenador_exec->vengo_de_ejecucion = true;
-            entrenador_exec->tengo_que_desalojar = true;
-
+    log_info(logger, "Entre al planificador SJF-CD");
+    if (list_size(estado_ready) > 0) {
+        calcular_estimacion_y_ordenamiento();
+        log_info(logger, "Ready ordenado");
+        if(list_size(estado_exec) == 0) {
+            Entrenador *entrenador_ready = (Entrenador *) list_remove(estado_ready, 0);
+            log_info(logger, "No habia nadie en ejecucion");
             if(entrenador_ready->vengo_de_ejecucion){
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
@@ -1522,7 +1516,39 @@ void sjf_cd_planner() {
             else{
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
-                sem_post(&ready_exec_transition[entrenador_ready->tid]);
+                sem_post(&ready_exec_transition[entrenador_ready->tid] );
+            }
+        } else {
+            Entrenador *entrenador_ready = (Entrenador *) list_get(estado_ready, 0);
+            log_info(logger, "Habia alguien en ejecucion ");
+            log_info(logger, string_itoa(list_size(estado_exec)));
+            Entrenador *entrenador_exec = (Entrenador *) list_get(estado_exec, 0);
+            log_info(logger, string_itoa(entrenador_exec->tid));
+            log_info(logger, string_itoa(list_size(estado_block)));
+            if ((entrenador_exec->ultimo_estimado - entrenador_exec->acumulado_actual) > (entrenador_ready->ultimo_estimado - entrenador_ready->acumulado_actual)) {
+
+                list_remove(estado_ready, 0);
+                if (entrenador_exec->vengo_de_ejecucion) {
+                    list_remove(estado_exec,0);
+                    list_add(estado_ready, entrenador_exec);
+                    *entrenador_exec->tiempo_llegada = get_time();
+                    entrenador_exec->estado = READY;
+                    entrenador_exec->vengo_de_ejecucion = true;
+                    entrenador_exec->tengo_que_desalojar = true;
+                }
+
+                list_add(estado_exec,entrenador_ready);
+                entrenador_ready->estado = EXEC;
+
+                if(entrenador_ready->vengo_de_ejecucion){
+                    sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
+                }
+                else{
+                    sem_post(&ready_exec_transition[entrenador_ready->tid]);
+                }
+                log_info(logger, "Desalojo al que estaba en ejecucion");
+            } else {
+                log_info(logger, "Continua el que estaba en ejecucion");
             }
         }
     }
@@ -1575,7 +1601,6 @@ void verificar_desalojo(Entrenador* entrenador){
         list_remove(estado_exec,0);
         list_add(estado_ready, entrenador);
         entrenador->estado = READY;
-        entrenador->vengo_de_ejecucion = true;
 
         loggear_ready(entrenador);
 
@@ -1587,7 +1612,6 @@ void verificar_desalojo(Entrenador* entrenador){
 
         sem_wait(&ready_exec_cd_transition[entrenador->tid]);
         entrenador->acumulado_actual = 0;
-        entrenador->vengo_de_ejecucion = false;
 
         loggear_exec(entrenador);
     }
@@ -1597,7 +1621,6 @@ void verificar_desalojo(Entrenador* entrenador){
         loggear_ready(entrenador);
 
         sem_wait(&ready_exec_cd_transition[entrenador->tid]);
-        //entrenador->vengo_de_ejecucion = false;
 
         loggear_exec(entrenador);
     }
@@ -1921,7 +1944,6 @@ t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
 
     return pokemons_innecesarios;
 }
-
 
 t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons){
 

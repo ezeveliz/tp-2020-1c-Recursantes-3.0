@@ -180,42 +180,54 @@ void *server_function(void *arg) {
             case SUB_NEW:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de NEW");
+                    pthread_mutex_lock(&M_LIST_NEW_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_NEW_POKEMON, SUB_NEW);
+                    pthread_mutex_unlock(&M_LIST_NEW_POKEMON);
                     break;
                 }
 
             case SUB_APPEARED:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de APPEARED");
+                    pthread_mutex_lock(&M_LIST_APPEARED_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_APPEARED_POKEMON, SUB_APPEARED);
+                    pthread_mutex_unlock(&M_LIST_APPEARED_POKEMON);
                     break;
                 }
 
             case SUB_LOCALIZED:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de LOCALIZED");
+                    pthread_mutex_lock(&M_LIST_LOCALIZED_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_LOCALIZED_POKEMON, SUB_LOCALIZED);
+                    pthread_mutex_unlock(&M_LIST_LOCALIZED_POKEMON);
                     break;
                 }
 
             case SUB_CAUGHT:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de CAUGHT");
+                    pthread_mutex_lock(&M_LIST_LOCALIZED_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CAUGHT_POKEMON, SUB_CAUGHT);
+                    pthread_mutex_unlock(&M_LIST_LOCALIZED_POKEMON);
                     break;
                 }
 
             case SUB_GET:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de GET");
+                    pthread_mutex_lock(&M_LIST_GET_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_GET_POKEMON, SUB_GET);
+                    pthread_mutex_unlock(&M_LIST_GET_POKEMON);
                     break;
                 }
 
             case SUB_CATCH:;
                 {
                     log_info(tp_logger, "Nuevo subscriptor de CATCH");
+                    pthread_mutex_lock(&M_LIST_CATCH_POKEMON);
                     subscribir_a_cola(cosas, ip, port, fd, LIST_CATCH_POKEMON, SUB_CATCH);
+                    pthread_mutex_unlock(&M_LIST_CATCH_POKEMON);
                     break;
                 }
 
@@ -232,7 +244,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, new_pokemon_a_void(new_pokemon), sizeof_new_pokemon(new_pokemon));
 
                     // Cargamos el un_mensaje a la lista de New_pokemon
+                    pthread_mutex_lock(&LIST_NEW_POKEMON);
                     cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&LIST_NEW_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -258,7 +272,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, appeared_pokemon_a_void(appeared_pokemon), sizeof_appeared_pokemon(appeared_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Appeared_pokemon
+                    pthread_mutex_lock(&M_LIST_APPEARED_POKEMON);
                     cargar_mensaje(LIST_APPEARED_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&M_LIST_APPEARED_POKEMON);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
@@ -284,7 +300,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, localized_pokemon_a_void(localized_pokemon), sizeof_localized_pokemon(localized_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Localized_pokemon
+                    pthread_mutex_lock(&M_LIST_LOCALIZED_POKEMON);
                     cargar_mensaje(LIST_LOCALIZED_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&M_LIST_LOCALIZED_POKEMON);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
@@ -310,7 +328,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, caught_pokemon_a_void(caught_pokemon), sizeof_caught_pokemon(caught_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Caught_pokemon
+                    pthread_mutex_lock(&M_LIST_CAUGHT_POKEMON);
                     cargar_mensaje(LIST_CAUGHT_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&M_LIST_CAUGHT_POKEMON);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
@@ -335,7 +355,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, get_pokemon_a_void(get_pokemon), sizeof_get_pokemon(get_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Get_pokemon
+                    pthread_mutex_lock(&M_LIST_GET_POKEMON);
                     cargar_mensaje(LIST_GET_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&M_LIST_GET_POKEMON);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
@@ -360,7 +382,9 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, catch_pokemon_a_void(catch_pokemon), sizeof_catch_pokemon(catch_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Catch_pokemon
+                    pthread_mutex_lock(&M_LIST_CATCH_POKEMON);
                     cargar_mensaje(LIST_CATCH_POKEMON, un_mensaje);
+                    pthread_mutex_unlock(&M_LIST_CATCH_POKEMON);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
@@ -508,8 +532,10 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     mensaje* nuevo_mensaje = malloc(sizeof(mensaje));
 
     if(id == 0){
+        pthread_mutex_lock(&M_IDENTIFICADOR_MENSAJE);
         id = IDENTIFICADOR_MENSAJE;
         IDENTIFICADOR_MENSAJE++;
+        pthread_mutex_unlock(&M_IDENTIFICADOR_MENSAJE);
     }
 
     nuevo_mensaje->id = id;
@@ -522,16 +548,21 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_libre = asignar_particion(tam);
     } else if(strcmp(config.mem_algorithm, "BS") == 0){
-        particion_libre = asignar_particion_buddy(ARBOL_BUDDY, tam);
+        int _tam = tam >= MIN_PART_LEN ? tam : MIN_PART_LEN;
+        particion_libre = asignar_particion_buddy(ARBOL_BUDDY, _tam);
     } else{
         log_error(logger, "Unexpected algorithm");
         exit(EXIT_FAILURE);
     }
 
     particion_libre->mensaje = nuevo_mensaje;
+    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
     nuevo_mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
+    pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
 
+    pthread_mutex_lock(&M_MENSAJES);
     list_add(MENSAJES, nuevo_mensaje);
+    pthread_mutex_unlock(&M_MENSAJES);
 
     log_info(tp_logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
     log_debug(logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
@@ -627,6 +658,8 @@ void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
 
 }
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
+    pthread_mutex_lock(&M_SUBSCRIPTORES);
+    pthread_mutex_lock(&M_MENSAJES);
     int id = *((int*) list_get(cosas, 0));
 
     // Si cambia el puerto o la ip lo borro y vuelvo a crearlo
@@ -653,10 +686,13 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     }
 
     recursar_operativos();
+    pthread_mutex_lock(&M_MENSAJES);
+    pthread_mutex_lock(&M_SUBSCRIPTORES);
 }
 
 // Carga mensajes si no estaban antes
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
+    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
     int cantidad_subs = list_size(una_cola);
     for (int i = 0; i < cantidad_subs; ++i) {
         subscriptor* un_subscriptor = list_get(una_cola, i);
@@ -665,6 +701,7 @@ void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
         }
         cantidad_subs = list_size(una_cola);
     }
+    pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
 }
 
 bool existe_mensaje_subscriptor(int id_mensaje, int id_subs){
@@ -700,6 +737,11 @@ subscriptor* find_subscriptor(int id){
 
 // Esta funcion recorre la lista MENSAJE_SUBSCRIPTORE mandando los mensajes pendientes
 void recursar_operativos(){
+    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
+    pthread_mutex_lock(&M_MENSAJES);
+    pthread_mutex_lock(&M_SUBSCRIPTORES);
+    pthread_mutex_lock(&M_PARTICIONES);
+
     int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     for (int i = 0; i < cantidad_mensajes; ++i) {
         mensaje_subscriptor* coso = list_get(MENSAJE_SUBSCRIPTORE, i);
@@ -716,6 +758,10 @@ void recursar_operativos(){
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     }
+    pthread_mutex_lock(&M_PARTICIONES);
+    pthread_mutex_lock(&M_SUBSCRIPTORES);
+    pthread_mutex_lock(&M_MENSAJES);
+    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
 }
 int send_message_test(t_paquete* paquete, int socket){
     return 1;
@@ -932,6 +978,10 @@ void algoritmo_de_reemplazo(){
  */
 
 particion* asignar_particion(size_t tam) {
+    pthread_mutex_lock(&M_INTENTOS);
+    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_lock(&M_PARTICIONES);
+    pthread_mutex_lock(&M_PARTICIONES_QUEUE);
     particion *particion_libre = buscar_particion_libre(tam);
     if (particion_libre != NULL) {
         log_info(logger, "Doing the job..");
@@ -944,6 +994,10 @@ particion* asignar_particion(size_t tam) {
 
 
             log_info(logger, "Partition assigned(base: %d)", particion_libre->base);
+            pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+            pthread_mutex_unlock(&M_PARTICIONES);
+            pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
+            pthread_mutex_unlock(&M_INTENTOS);
             return particion_libre;
         }
         //Si no es de igual tamano, debo crear una nueva particion con base en la libre y reacomodar la base y tamanio de la libre.
@@ -965,6 +1019,10 @@ particion* asignar_particion(size_t tam) {
             ordenar_particiones();
             mergear_particiones_libres();
             log_info(logger, "Ready");
+            pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+            pthread_mutex_unlock(&M_PARTICIONES);
+            pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
+            pthread_mutex_unlock(&M_INTENTOS);
             return nueva_particion;
         }
     } else {
@@ -977,6 +1035,10 @@ particion* asignar_particion(size_t tam) {
             mergear_particiones_libres();
             INTENTOS++;
         }
+        pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+        pthread_mutex_unlock(&M_PARTICIONES);
+        pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
+        pthread_mutex_unlock(&M_INTENTOS);
         // La recursivistica concha de tu hermana como nuestras cursadas de operativos
         return asignar_particion(tam);
     }
@@ -1158,29 +1220,6 @@ particion* get_lru(){
 ╚═════╝  ╚═════╝ ╚═════╝ ╚═════╝    ╚═╝
 */
 
-//Si no lo uso en otro lado borrar
-t_nodo* buscar_nodo_libre(struct t_nodo* nodo, int tam){
-    // Si es null devuelvo null
-    if(nodo == NULL){
-        return NULL;
-    }
-    // Si la particion esta libre y hay espacio devuelvo ese nodo
-    particion* una_particion = nodo->particion;
-    if(nodo->es_hoja && una_particion->tam > tam && una_particion->libre){
-        return nodo;
-    }
-    // Si no busco a izquierda
-    t_nodo* res_izq = buscar_nodo_libre(nodo->izq, tam);
-    if(res_izq){
-        return res_izq;
-    }
-    // Si no busco a derecha
-    t_nodo* res_der = buscar_nodo_libre(nodo->der, tam);
-    if(res_der){
-        return res_der;
-    }
-}
-
 // Devuelve el nodo que tiene una particion de IGUAL tamaño
 t_nodo* buscar_nodo_tam(struct t_nodo* nodo, int tam){
     // Si es null devuelvo null
@@ -1205,6 +1244,10 @@ t_nodo* buscar_nodo_tam(struct t_nodo* nodo, int tam){
 }
 
 particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
+    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+    pthread_mutex_lock(&M_PARTICIONES);
+    pthread_mutex_lock(&M_PARTICIONES_QUEUE);
+    pthread_mutex_lock(&M_ARBOL_BUDDY);
     log_info(logger, "Empiezo con el Buddy system");
     int potencia = 0;
     while (tam > pow(2, potencia)){
@@ -1223,6 +1266,10 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nodo_respuesta->particion);}
 
         log_info(logger, "Particion asignada (base: %d)", nodo_respuesta->particion->base);
+        pthread_mutex_lock(&M_ARBOL_BUDDY);
+        pthread_mutex_lock(&M_PARTICIONES_QUEUE);
+        pthread_mutex_lock(&M_PARTICIONES);
+        pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
         return nodo_respuesta->particion;
     } else {
         log_info(logger, "Caso feo: No encontramos una particion del tamaño %d", tam_buscado);
@@ -1239,6 +1286,10 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
                 // SI LLEGO ACA ES QUE NO HAY SUFICIENTE TAMAÑO PARA ASIGNAR
                 // llamar al algoritmo de reemplazo y vuelvo a correr el asignar particiones
                 algoritmo_de_reemplazo();
+                pthread_mutex_lock(&M_ARBOL_BUDDY);
+                pthread_mutex_lock(&M_PARTICIONES_QUEUE);
+                pthread_mutex_lock(&M_PARTICIONES);
+                pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
                 return asignar_particion_buddy(raiz, tam);
             }
         }
@@ -1246,6 +1297,11 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         // Dividimos la particion y probamos devuelta
         t_nodo* hijo_izq = buddy_dividir_raiz(nodo_a_dividir);
         log_info(logger, "Dividimos el nodo y nos metemos recursivamente en Asignar Buddy");
+
+        pthread_mutex_lock(&M_ARBOL_BUDDY);
+        pthread_mutex_lock(&M_PARTICIONES_QUEUE);
+        pthread_mutex_lock(&M_PARTICIONES);
+        pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
         return asignar_particion_buddy(hijo_izq, tam);
     }
 

@@ -67,7 +67,7 @@ int main(int argc, char **argv) {
     ARBOL_BUDDY->padre = NULL;
     ARBOL_BUDDY->es_hoja = true;
 
-    printPartList();
+    //printPartList();
 
 
     // Inicializamos las colas
@@ -83,22 +83,23 @@ int main(int argc, char **argv) {
     }
 
 //    tests_broker();
-    particion* A = asignar_particion_buddy(ARBOL_BUDDY, 100);
-    raise(SIGUSR1);
-    particion* B = asignar_particion_buddy(ARBOL_BUDDY, 200);
-    raise(SIGUSR1);
-    particion* C = asignar_particion_buddy(ARBOL_BUDDY, 50);
-    raise(SIGUSR1);
-    particion* D = asignar_particion_buddy(ARBOL_BUDDY, 500);
-    raise(SIGUSR1);
-    buddy_liberar_particion(C);
-    raise(SIGUSR1);
-    buddy_liberar_particion(D);
-    raise(SIGUSR1);
-    buddy_liberar_particion(A);
-    raise(SIGUSR1);
-    buddy_liberar_particion(B);
-    raise(SIGUSR1);
+
+//    particion* A = asignar_particion_buddy(ARBOL_BUDDY, 100);
+//    raise(SIGUSR1);
+//    particion* B = asignar_particion_buddy(ARBOL_BUDDY, 200);
+//    raise(SIGUSR1);
+//    particion* C = asignar_particion_buddy(ARBOL_BUDDY, 50);
+//    raise(SIGUSR1);
+//    particion* D = asignar_particion_buddy(ARBOL_BUDDY, 500);
+//    raise(SIGUSR1);
+//    buddy_liberar_particion(C);
+//    raise(SIGUSR1);
+//    buddy_liberar_particion(D);
+//    raise(SIGUSR1);
+//    buddy_liberar_particion(A);
+//    raise(SIGUSR1);
+//    buddy_liberar_particion(B);
+//    raise(SIGUSR1);
 
     pthread_join(server_thread, NULL);
 
@@ -515,9 +516,18 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     nuevo_mensaje->id_correlacional = id_correlacional;
     nuevo_mensaje->tipo = tipo;
     nuevo_mensaje->tam = tam;
-    nuevo_mensaje->lru = unix_epoch();
 
-    particion* particion_libre = asignar_particion(tam);
+    // Asignamos la particion
+    particion* particion_libre;
+    if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
+        particion_libre = asignar_particion(tam);
+    } else if(strcmp(config.mem_algorithm, "BS") == 0){
+        particion_libre = asignar_particion_buddy(ARBOL_BUDDY, tam);
+    } else{
+        log_error(logger, "Unexpected algorithm");
+        exit(EXIT_FAILURE);
+    }
+
     particion_libre->mensaje = nuevo_mensaje;
     nuevo_mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
 
@@ -581,10 +591,10 @@ void printMenSubList(){
 //    }
 //}
 void printPartList() {
-    int size = list_size(PARTICIONES);
+    int size = list_size(PARTICIONES_QUEUE);
     printf("<--------------------------------------------\n");
     for(int i=0; i<size; i++) {
-        particion *s = list_get(PARTICIONES, i);
+        particion *s = list_get(PARTICIONES_QUEUE, i);
         printf("base: %d, tam: %d, is_free: %s, ultimo_uso: % " PRIu64 "\n", s->base, s->tam,
                s->libre ? "true" : "false", s->ultimo_uso);
     }
@@ -722,7 +732,6 @@ void mandar_mensaje(void* cosito){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
         // Actualizo el LRU
-        un_mensaje->lru = unix_epoch();
         particion* una_particion = find_particion_by_id_mensaje(un_mensaje->id);
         una_particion->ultimo_uso = unix_epoch();
     }
@@ -731,9 +740,11 @@ void mandar_mensaje(void* cosito){
 particion* find_particion_by_id_mensaje(int id_mensaje){
     bool id_search(void* una_part){
         particion* part_encontrada = (particion*) una_part;
+        if (part_encontrada->mensaje == null){return false;}
         return part_encontrada->mensaje->id == id_mensaje;
     }
-
+    log_error(logger, "PARTICIONES");
+    printPartList();
     subscriptor* encontrado = list_find(PARTICIONES, id_search);
     return encontrado;
 }
@@ -807,6 +818,7 @@ particion* particion_create(int base, int tam, bool is_free){
     nueva_particion->tam = tam;
     nueva_particion->libre = is_free;
     nueva_particion->ultimo_uso = unix_epoch();
+    nueva_particion->mensaje = null;
 
     return nueva_particion;
 }
@@ -885,6 +897,7 @@ void algoritmo_de_reemplazo(){
     if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
         log_debug(logger, "FIFO victim search starts...");
         una_particion = get_fifo();
+        log_error(logger, "BASE %d", una_particion->base);
     }else if (strcmp(config.mem_swap_algorithm, "LRU") == 0){
         log_debug(logger, "LRU victim search starts...");
         una_particion = get_lru();
@@ -892,7 +905,16 @@ void algoritmo_de_reemplazo(){
         log_error(logger, "Unexpected algorithm");
         exit(EXIT_FAILURE);
     }
-    particion_delete(una_particion->base);
+
+    if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
+        particion_delete(una_particion->base);
+    } else if(strcmp(config.mem_algorithm, "BS") == 0){
+        buddy_liberar_particion(una_particion);
+        printPartList();
+    } else{
+        log_error(logger, "Unexpected algorithm");
+        exit(EXIT_FAILURE);
+    }
 }
 
 /*
@@ -1197,6 +1219,7 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         //Cambio el estado de la libre a falso y actualiza su ultimo uso.
         nodo_respuesta->particion->libre = false;
         nodo_respuesta->particion->ultimo_uso = unix_epoch();
+        if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nodo_respuesta->particion);}
 
         log_info(logger, "Particion asignada (base: %d)", nodo_respuesta->particion->base);
         return nodo_respuesta->particion;
@@ -1213,8 +1236,9 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
             nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
             if (nuevo_tam_buscado > config.mem_size){
                 // SI LLEGO ACA ES QUE NO HAY SUFICIENTE TAMAÑO PARA ASIGNAR
-                // llamar al algoritmo de reemplazo si esta funcion retorna null
-                return NULL;
+                // llamar al algoritmo de reemplazo y vuelvo a correr el asignar particiones
+                algoritmo_de_reemplazo();
+                return asignar_particion_buddy(raiz, tam);
             }
         }
 
@@ -1300,6 +1324,7 @@ void particion_destroy(particion * unaparticion){
         return sub == unaparticion;
     }
     list_remove_by_condition(PARTICIONES, id_search);
+    if(strcmp(config.mem_swap_algorithm, "FIFO")==0){quitarVictimaFIFO(unaparticion->base);}
 }
 
 void buddy_liberar_particion(particion* particion_victima){

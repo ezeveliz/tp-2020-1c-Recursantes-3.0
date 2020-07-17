@@ -84,7 +84,6 @@ typedef struct mensaje {
     MessageType tipo;
     size_t tam;
     void* puntero_a_memoria;
-    unsigned long lru;
 } mensaje;
 t_list* MENSAJES;
 pthread_mutex_t M_MENSAJES;

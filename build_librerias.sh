@@ -5,6 +5,7 @@
 # Buscanos en redes sociales
 #
 
+clear
 echo "     __             __                        "
 echo " .--|  .-----.-----|  .-----.--.--.-----.----."
 echo " |  _  |  -__|  _  |  |  _  |  |  |  -__|   _|"

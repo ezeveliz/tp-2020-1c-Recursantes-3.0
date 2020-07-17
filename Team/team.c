@@ -74,6 +74,9 @@ pthread_mutex_t mutex_algoritmo_cercania;
 //Semaforo mutex deadlock
 pthread_mutex_t mutex_deadlock;
 
+//Semaforo mutex planificador
+pthread_mutex_t mutex_planificador;
+
 int main() {
     int i = 0;
     pthread_t server_thread;
@@ -91,7 +94,7 @@ int main() {
     }
 
     // Inicializo estructuras, semaforos e hilos
-int tamanio_entrenadores = initialize_structures();
+    int tamanio_entrenadores = initialize_structures();
 
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
@@ -126,9 +129,44 @@ int tamanio_entrenadores = initialize_structures();
         i++;
     }
 
-    printf("Todos los entrenadores cumplieron sus objetivos \n");
+    char* log_final = string_new();
+    string_append(&log_final, "Cantidad de ciclos de CPU totales: ");
 
-    log_info(logger, "Todos los entrenadores cumplieron sus objetivos ");
+    char* detalles_entrenador = string_new();
+    string_append(&detalles_entrenador, "Cantidad de ciclos de CPU por entrenador: \n");
+
+    int total_ejecutado = 0;
+    void sumador(void* _entrenador) {
+        Entrenador* entrenador = (Entrenador*) _entrenador;
+        total_ejecutado += entrenador->acumulado_total;
+
+        string_append(&detalles_entrenador, "-----Entrenador ");
+        char* tid = string_itoa(entrenador->tid);
+        string_append(&detalles_entrenador, tid);
+        string_append(&detalles_entrenador, ": ");
+        char* ciclos = string_itoa(entrenador->acumulado_total);
+        string_append(&detalles_entrenador, ciclos);
+        string_append(&detalles_entrenador, "\n");
+
+        free(tid);
+        free(ciclos);
+    }
+    list_iterate(estado_finish, sumador);
+
+    char* ciclos_totales = string_itoa(total_ejecutado);
+    string_append(&log_final, ciclos_totales);
+    string_append(&log_final, "\n");
+
+    printf("%s", log_final);
+    printf("%s", detalles_entrenador);
+
+    free(ciclos_totales);
+
+    log_info(logger, log_final);
+    log_info(logger, detalles_entrenador);
+
+    free(log_final);
+    free(detalles_entrenador);
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
@@ -630,6 +668,7 @@ int initialize_structures() {
     //TODO: Despues ver si esto se queda o se borra
     pthread_mutex_init(&mutex_algoritmo_cercania, NULL);
     pthread_mutex_init(&mutex_deadlock, NULL);
+    pthread_mutex_init(&mutex_planificador, NULL);
 
     // Hallo la cantidad de listas de stock de pokemones hay
     int cant_listas_pokemones_stock = funcion_de_mierda(config.pokemon_entrenadores);
@@ -1006,14 +1045,14 @@ void* trainer_thread(void* arg){
                 entrenador->vengo_de_ejecucion = false;
 
                 //Hago un vector porque add_to_dictionary recibe un char**
-                char** pokemon_first_trainer = (char**) malloc(sizeof(char*) * 2);
+                char* pokemon_first_trainer[2];
                 pokemon_first_trainer[0] = entrenador->pokemon_objetivo->especie;
                 pokemon_first_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
                 add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
-                char** pokemon_second_trainer = (char**) malloc(sizeof(char*) * 2);
+                char* pokemon_second_trainer[2];
                 pokemon_second_trainer[0] = entrenador->entrenador_objetivo->pokemon_objetivo->especie;
                 pokemon_second_trainer[1] = NULL;
 
@@ -1454,6 +1493,7 @@ void fifo_planner() {
 
 void sjf_sd_planner() {
 
+    pthread_mutex_lock(&mutex_planificador);
     log_info(logger, "Se llamo al algoritmo SFJ sin desalojo ");
 
     // Busco si no hay ningun entrenador en ejecucion
@@ -1469,7 +1509,7 @@ void sjf_sd_planner() {
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
     }
-
+    pthread_mutex_unlock(&mutex_planificador);
 }
 
 void calcular_estimacion_y_ordenamiento(){
@@ -1508,6 +1548,7 @@ void calcular_estimacion_y_ordenamiento(){
 
 void sjf_cd_planner() {
 
+    pthread_mutex_lock(&mutex_planificador);
     log_info(logger, "Entre al planificador SJF-CD");
     if (list_size(estado_ready) > 0) {
         calcular_estimacion_y_ordenamiento();
@@ -1559,7 +1600,7 @@ void sjf_cd_planner() {
             }
         }
     }
-
+    pthread_mutex_unlock(&mutex_planificador);
 }
 
 void rr_planner() {
@@ -1683,7 +1724,9 @@ void appeared_pokemon(t_list* paquete){
 
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
-            pokemon->especie = appearedPokemon->nombre_pokemon;
+            //memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            //pokemon->especie = appearedPokemon->nombre_pokemon;
+            pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length + 1);
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 
@@ -1697,8 +1740,11 @@ void appeared_pokemon(t_list* paquete){
         }
     }
 
+    free(appearedPokemon->nombre_pokemon);
+    free(appearedPokemon);
+
     // Destruyo el paquete recibido
-    //list_destroy(paquete); Si lo destruyo despues no voy a tener el id para confirmarle la recepcion al Broker
+    list_destroy(paquete);
 }
 
 bool algoritmo_de_cercania() {
@@ -2081,9 +2127,21 @@ int distancia(Coordenada actual, Coordenada siguiente) {
 
 void free_resources(){
 
+    list_destroy(estado_new);
+    list_destroy(estado_ready);
+    list_destroy(estado_exec);
+    list_destroy(estado_block);
+    //void destructor_de_entrenadores(void* _entrenador){
+
+    //}
+    //list_destroy_and_destroy_elements(estado_finish, destructor_de_entrenadores);
     config_destroy(config_file);
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);
+    pthread_mutex_destroy(&mutex_waiting_list);
+    pthread_mutex_destroy(&mutex_algoritmo_cercania);
+    pthread_mutex_destroy(&mutex_deadlock);
+    pthread_mutex_destroy(&mutex_planificador);
 }
 
 void free_splitted_arrays(char ** elements, int cant) {

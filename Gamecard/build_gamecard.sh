@@ -5,6 +5,6 @@
 # Buscanos en redes sociales
 #
 
-#Compilo
+# Compilo
 cmake CMakeLists.txt
 make

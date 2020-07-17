@@ -15,7 +15,7 @@ pthread_t localized_thread;
 pthread_t caught_thread;
 
 int main() {
-    montar("..");
+    montar("");
 
     pthread_t server_thread;
 
@@ -32,7 +32,7 @@ int main() {
 //    LOG_LEVEL_WARNING
 //    LOG_LEVEL_ERROR
 
-    logger = log_create("gamecard_log", "Gamecard", 1, LOG_LEVEL_DEBUG);
+    logger = log_create("gamecard_log", "Gamecard", 1, LOG_LEVEL_INFO);
     if (logger == NULL) {
         printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
         return -1;
@@ -607,7 +607,6 @@ void* mensaje_catch_pokemon(void* parametros){
         if (archivo == NULL) {
 
             free(path_file);
-            free(path_archvio);
             free_package(paquete);
 
             log_info(logger,"Se quizo abrir un archivo abierto");
@@ -711,7 +710,6 @@ void* mensaje_catch_pokemon(void* parametros){
             //Libero el parametro poque ya no lo uso
             free(datos_param->estructura_pokemon);
             free(parametros);
-            free(path_archvio);
             free(path_file);
 
         }
@@ -720,7 +718,7 @@ void* mensaje_catch_pokemon(void* parametros){
     //Libero los datos del pokemon
     free(pokemon->nombre_pokemon);
     free(pokemon);
-
+    free(path_archvio);
     //TODO bitmap
 //    mostrar_bitmap();
 
@@ -990,8 +988,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
 
     //Conecto el socket al broker
     if (connect_socket(server_socket, ip, puerto) == -1) {
-        log_info(logger,"No se pudo establecer conexion con el Boker");
-        log_error(logger, "Conexion fallida Broker ip:%s, puerto:%d", ip, puerto);
+        log_error(logger, "No se pudo establecer conexion con el Boker Broker ip:%s, puerto:%d", ip, puerto);
         close_socket(server_socket);
         return -1;
     }

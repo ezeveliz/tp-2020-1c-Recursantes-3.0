@@ -290,11 +290,12 @@ t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivo
 
 //----------------------------------------HELPERS----------------------------------------//
 
-/**
- * Loggea el cambio de estado de un entrenador a Ready
- * @param entrenador
- */
 void loggear_ready(Entrenador* entrenador);
+
+/**
+ * Loggear el cambio de estado de un entrenador a Finish
+ */
+void loggear_finish(Entrenador* entrenador);
 
 /**
  * Loggear el cambio de estado de un entrenador a Ejecucion

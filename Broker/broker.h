@@ -171,5 +171,8 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam);
 t_nodo* buddy_dividir_raiz(t_nodo* raiz);
 void particion_destroy(particion * unaparticion);
 void buddy_destroy(t_nodo* un_nodo);
+t_nodo* buscar_nodo_particion(struct t_nodo* nodo, particion* una_particion);
+void buddy_liberar_particion(particion* particion_victima);
+t_nodo* crear_nodo(particion* particion, struct t_nodo* izq, struct t_nodo* der, struct t_nodo* padre, struct t_nodo* buddy, bool es_hoja);
 
 #endif //TEAM_BROKER_H

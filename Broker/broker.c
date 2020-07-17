@@ -60,6 +60,13 @@ int main(int argc, char **argv) {
     log_debug(logger, "Creo la particin inicial del tamanio total de la memoria");
     particion* principal = particion_create(0, config.mem_size, true);
     list_add(PARTICIONES, principal);
+    ARBOL_BUDDY = malloc(sizeof(t_nodo));
+    ARBOL_BUDDY->particion = principal;
+    ARBOL_BUDDY->der = NULL;
+    ARBOL_BUDDY->izq = NULL;
+    ARBOL_BUDDY->padre = NULL;
+    ARBOL_BUDDY->es_hoja = true;
+
     printPartList();
 
 
@@ -75,7 +82,23 @@ int main(int argc, char **argv) {
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
 
-    tests_broker();
+//    tests_broker();
+    particion* A = asignar_particion_buddy(ARBOL_BUDDY, 100);
+    raise(SIGUSR1);
+    particion* B = asignar_particion_buddy(ARBOL_BUDDY, 200);
+    raise(SIGUSR1);
+    particion* C = asignar_particion_buddy(ARBOL_BUDDY, 50);
+    raise(SIGUSR1);
+    particion* D = asignar_particion_buddy(ARBOL_BUDDY, 500);
+    raise(SIGUSR1);
+    buddy_liberar_particion(C);
+    raise(SIGUSR1);
+    buddy_liberar_particion(D);
+    raise(SIGUSR1);
+    buddy_liberar_particion(A);
+    raise(SIGUSR1);
+    buddy_liberar_particion(B);
+    raise(SIGUSR1);
 
     pthread_join(server_thread, NULL);
 
@@ -991,12 +1014,12 @@ void dump_cache(int sig){
                               i+1, s->base, s->base+s->tam,
                               s->libre ? "L" : "X",
                               s->tam);
-        if(!s->libre){
-            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
-                    s->ultimo_uso,
-                    cola_to_string(s->mensaje->tipo),
-                    s->mensaje->id);
-        }
+//        if(!s->libre){
+//            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
+//                    s->ultimo_uso,
+//                    cola_to_string(s->mensaje->tipo),
+//                    s->mensaje->id);
+//        }
         fprintf(archivo_dump, "\n");
     }
     fprintf(archivo_dump, "\n");
@@ -1186,7 +1209,7 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         t_nodo* nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
         while (nodo_a_dividir == NULL) {
             // Si no encuentro una particion mas grande, aumento el tamaño y vuelvo a buscar
-            int nuevo_tam_buscado = tam_buscado * 2;
+            nuevo_tam_buscado = nuevo_tam_buscado * 2;
             nodo_a_dividir = buscar_nodo_tam(ARBOL_BUDDY, nuevo_tam_buscado);
             if (nuevo_tam_buscado > config.mem_size){
                 // SI LLEGO ACA ES QUE NO HAY SUFICIENTE TAMAÑO PARA ASIGNAR
@@ -1205,8 +1228,8 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
 
 // Divide el nodo y devuelve el hijo izquierdo
 t_nodo* buddy_dividir_raiz(t_nodo* raiz){
-    t_nodo* hijo_izq = malloc(sizeof(t_nodo));
-    t_nodo* hijo_der = malloc(sizeof(t_nodo));
+    t_nodo* hijo_izq = crear_nodo(null, null, null, null, null, null);
+    t_nodo* hijo_der = crear_nodo(null, null, null, null, null, null);
 
     raiz->izq = hijo_izq;
     raiz->der = hijo_der;
@@ -1224,6 +1247,7 @@ t_nodo* buddy_dividir_raiz(t_nodo* raiz){
     list_add(PARTICIONES, particion_izq);
     list_add(PARTICIONES, particion_der);
     particion_destroy(raiz->particion);
+    raiz->particion = null;
 
     hijo_izq->particion = particion_izq;
     hijo_der->particion = particion_der;
@@ -1232,8 +1256,21 @@ t_nodo* buddy_dividir_raiz(t_nodo* raiz){
     return hijo_izq;
 }
 
-// Mergea dos particiones, como como el inverso de la funcion de ariba
+// Como como el inverso de la funcion de ariba
+// Mergea dos particiones si ambos buddy estan libres
 void buddy_mergear(t_nodo* nodo){
+    // Si el buddy no esta libre o no es una hoja o es la raiz del arbol no hay que mergear
+    if(nodo == ARBOL_BUDDY){
+        return;
+    }
+    if (!nodo->buddy->es_hoja) {
+        return;
+    }
+    if (!nodo->buddy->particion->libre){
+        return;
+    }
+
+
     t_nodo* papuchi = nodo->padre;
     t_nodo* nodo_izq = papuchi->izq;
     t_nodo* nodo_der = papuchi->der;
@@ -1243,13 +1280,17 @@ void buddy_mergear(t_nodo* nodo){
 
     particion* particion_padre = particion_create(nodo_izq->particion->base, nodo_izq->particion->tam*2, true);
     list_add(PARTICIONES, particion_padre);
+    papuchi->particion = particion_padre;
     particion_destroy(nodo_izq->particion);
+    free(nodo_izq->particion);
     particion_destroy(nodo_der->particion);
+    free(nodo_der->particion);
 
     ordenar_particiones();
 
     free(nodo_izq);
     free(nodo_der);
+    buddy_mergear(papuchi);
 }
 
 
@@ -1259,4 +1300,45 @@ void particion_destroy(particion * unaparticion){
         return sub == unaparticion;
     }
     list_remove_by_condition(PARTICIONES, id_search);
+}
+
+void buddy_liberar_particion(particion* particion_victima){
+    // Libero la particion
+    particion_victima->libre = true;
+
+    // Busco el nodo que contenia la particion y mergeo si corresponde
+    t_nodo* nodo_que_contenia_la_particion = buscar_nodo_particion(ARBOL_BUDDY, particion_victima);
+    buddy_mergear(nodo_que_contenia_la_particion);
+}
+
+t_nodo* buscar_nodo_particion(struct t_nodo* nodo, particion* una_particion){
+    // Si es null devuelvo null
+    if(nodo == NULL){
+        return NULL;
+    }
+    // Si es la particion que buscamos devuelvo ese nodo
+    if(nodo->particion == una_particion){
+        return nodo;
+    }
+    // Si no busco a izquierda
+    t_nodo* res_izq = buscar_nodo_particion(nodo->izq, una_particion);
+    if(res_izq){
+        return res_izq;
+    }
+    // Si no busco a derecha
+    t_nodo* res_der = buscar_nodo_particion(nodo->der, una_particion);
+    if(res_der){
+        return res_der;
+    }
+}
+
+t_nodo* crear_nodo(particion* particion, struct t_nodo* izq, struct t_nodo* der, struct t_nodo* padre, struct t_nodo* buddy, bool es_hoja){
+    t_nodo* nuevo_nodo = malloc(sizeof(t_nodo));
+    nuevo_nodo->particion = particion;
+    nuevo_nodo->izq = izq;
+    nuevo_nodo->der = der;
+    nuevo_nodo->padre = padre;
+    nuevo_nodo->buddy = buddy;
+    nuevo_nodo->es_hoja = es_hoja;
+    return nuevo_nodo;
 }

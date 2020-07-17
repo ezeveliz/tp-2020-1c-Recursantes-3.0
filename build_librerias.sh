@@ -23,7 +23,7 @@ then
 fi
 
 # Installar las commons
-https://github.com/sisoputnfrba/so-commons-library.git
+git clone https://github.com/sisoputnfrba/so-commons-library.git
 
 cd so-commons-library.git
 

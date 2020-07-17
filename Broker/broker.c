@@ -591,10 +591,10 @@ void printMenSubList(){
 //    }
 //}
 void printPartList() {
-    int size = list_size(PARTICIONES_QUEUE);
+    int size = list_size(PARTICIONES);
     printf("<--------------------------------------------\n");
     for(int i=0; i<size; i++) {
-        particion *s = list_get(PARTICIONES_QUEUE, i);
+        particion *s = list_get(PARTICIONES, i);
         printf("base: %d, tam: %d, is_free: %s, ultimo_uso: % " PRIu64 "\n", s->base, s->tam,
                s->libre ? "true" : "false", s->ultimo_uso);
     }
@@ -743,8 +743,6 @@ particion* find_particion_by_id_mensaje(int id_mensaje){
         if (part_encontrada->mensaje == null){return false;}
         return part_encontrada->mensaje->id == id_mensaje;
     }
-    log_error(logger, "PARTICIONES");
-    printPartList();
     subscriptor* encontrado = list_find(PARTICIONES, id_search);
     return encontrado;
 }
@@ -897,7 +895,6 @@ void algoritmo_de_reemplazo(){
     if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
         log_debug(logger, "FIFO victim search starts...");
         una_particion = get_fifo();
-        log_error(logger, "BASE %d", una_particion->base);
     }else if (strcmp(config.mem_swap_algorithm, "LRU") == 0){
         log_debug(logger, "LRU victim search starts...");
         una_particion = get_lru();
@@ -905,6 +902,7 @@ void algoritmo_de_reemplazo(){
         log_error(logger, "Unexpected algorithm");
         exit(EXIT_FAILURE);
     }
+    log_error(logger, "Se borra la particion con base: %d", una_particion->base);
 
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_delete(una_particion->base);
@@ -1324,12 +1322,12 @@ void particion_destroy(particion * unaparticion){
         return sub == unaparticion;
     }
     list_remove_by_condition(PARTICIONES, id_search);
-    if(strcmp(config.mem_swap_algorithm, "FIFO")==0){quitarVictimaFIFO(unaparticion->base);}
 }
 
 void buddy_liberar_particion(particion* particion_victima){
     // Libero la particion
     particion_victima->libre = true;
+    if(strcmp(config.mem_swap_algorithm, "FIFO")==0){quitarVictimaFIFO(particion_victima->base);}
 
     // Busco el nodo que contenia la particion y mergeo si corresponde
     t_nodo* nodo_que_contenia_la_particion = buscar_nodo_particion(ARBOL_BUDDY, particion_victima);

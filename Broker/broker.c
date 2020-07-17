@@ -240,14 +240,14 @@ void *server_function(void *arg) {
                     // Cargamos el un_mensaje en nuestro sistema
                     mensaje* un_mensaje = mensaje_create(0, 0, NEW_POK, sizeof_new_pokemon(new_pokemon));
 
+
                     // Guardamos el contenido del mensaje en la memoria principal
                     memcpy(un_mensaje->puntero_a_memoria, new_pokemon_a_void(new_pokemon), sizeof_new_pokemon(new_pokemon));
-
+                  
                     // Cargamos el un_mensaje a la lista de New_pokemon
-                    pthread_mutex_lock(&LIST_NEW_POKEMON);
+                    pthread_mutex_lock(&M_LIST_NEW_POKEMON);
                     cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&LIST_NEW_POKEMON);
-
+                    pthread_mutex_unlock(&M_LIST_NEW_POKEMON);
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(NEW_POK);
@@ -685,9 +685,11 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
         }
     }
 
+
+    pthread_mutex_unlock(&M_MENSAJES);
+    pthread_mutex_unlock(&M_SUBSCRIPTORES);
     recursar_operativos();
-    pthread_mutex_lock(&M_MENSAJES);
-    pthread_mutex_lock(&M_SUBSCRIPTORES);
+
 }
 
 // Carga mensajes si no estaban antes
@@ -758,10 +760,10 @@ void recursar_operativos(){
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     }
-    pthread_mutex_lock(&M_PARTICIONES);
-    pthread_mutex_lock(&M_SUBSCRIPTORES);
-    pthread_mutex_lock(&M_MENSAJES);
-    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
+    pthread_mutex_unlock(&M_PARTICIONES);
+    pthread_mutex_unlock(&M_SUBSCRIPTORES);
+    pthread_mutex_unlock(&M_MENSAJES);
+    pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
 }
 int send_message_test(t_paquete* paquete, int socket){
     return 1;

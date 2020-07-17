@@ -25,7 +25,7 @@ fi
 # Installar las commons
 git clone https://github.com/sisoputnfrba/so-commons-library.git
 
-cd so-commons-library.git
+cd so-commons-library
 
 echo "Ingrese password para instalar las commons..."
 

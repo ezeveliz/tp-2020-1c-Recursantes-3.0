@@ -123,7 +123,6 @@ int main() {
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
-    // TODO: joinear hilos de entrenadores
     while(i < tamanio_entrenadores){
         pthread_join(threads_trainer[i], NULL);
         i++;
@@ -135,6 +134,7 @@ int main() {
     char* detalles_entrenador = string_new();
     string_append(&detalles_entrenador, "Cantidad de ciclos de CPU por entrenador: \n");
 
+    //Loggeo de ciclos por entrenador
     int total_ejecutado = 0;
     void sumador(void* _entrenador) {
         Entrenador* entrenador = (Entrenador*) _entrenador;
@@ -153,20 +153,31 @@ int main() {
     }
     list_iterate(estado_finish, sumador);
 
+    //Loggeo de ciclos totales
     char* ciclos_totales = string_itoa(total_ejecutado);
     string_append(&log_final, ciclos_totales);
     string_append(&log_final, "\n");
 
+    char* deadlocks_totales_log = string_new();
+    string_append(&deadlocks_totales_log,"Los deadlocks totales resueltos fueron ");
+    char* numero_deadlocks = string_itoa(deadlocks_totales);
+    string_append(&deadlocks_totales_log, numero_deadlocks);
+    string_append(&deadlocks_totales_log, "\n");
+
     printf("%s", log_final);
     printf("%s", detalles_entrenador);
+    printf("%s", deadlocks_totales_log);
 
     free(ciclos_totales);
 
     log_info(logger, log_final);
     log_info(logger, detalles_entrenador);
+    log_info(logger, deadlocks_totales_log);
 
     free(log_final);
     free(detalles_entrenador);
+    free(deadlocks_totales_log);
+    free(numero_deadlocks);
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
@@ -835,7 +846,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
             *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
 
-            //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
+            //TODO: verificar que no pongan un pokemon que nadie va a utilizar
             // Si no existia la necesidad la creo(con valor de -1)
         } else {
 
@@ -1753,7 +1764,6 @@ bool algoritmo_de_cercania() {
 
     if (list_size(pokemons) > 0) {
         pthread_mutex_lock(&mutex_algoritmo_cercania);
-        log_info(logger, "Se ha iniciado el algoritmo de cercania ");
 
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
         bool puede_ir_ready(void *_entreador) {
@@ -1832,9 +1842,6 @@ bool algoritmo_de_cercania() {
                 cant_pok--;
 
             }
-            log_info(logger, "Ha terminado el algoritmo de cercania");
-        }else{
-            log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
         }
         list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
@@ -1862,8 +1869,6 @@ bool algoritmo_deadlock(){
     // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
     if(tamanio_ent > 1 ) {
 
-        log_info(logger,"Hay mas de un entrenador en deadlock");
-
         int cont_primero = 0;
         int cont_segundo = 1;
         bool cumplio_condiciones = false;
@@ -1880,13 +1885,11 @@ bool algoritmo_deadlock(){
                 t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
                 if (list_size(repeat_pokemon) > 0) {
-                    log_info(logger, "Se calculo los pokemons que tiene el entrenador segundo y necesita el primero");
 
                     //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
                     t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
 
                     if (list_size(unnecesary_pokemon) > 0) {
-                        log_info(logger, "Se calculo la lista que necesita el primer entrenador y no necesita el segundo entrenador (lista definitiva)");
 
                         //Calculo que pokemon no le sirve al primer entrenador
                         char* pokemon_primer_entrenador_no_necesita;
@@ -1947,7 +1950,6 @@ bool algoritmo_deadlock(){
                         entrenador_primero->estado = READY;
                         deadlocks_totales+=1;
                         cumplio_condiciones = true;
-                        //TODO: Liberar listas falopa que hicimos
                         sem_post(&block_ready_transition[entrenador_primero->tid]);
                         se_desbloqueo = true;
                         break;
@@ -2131,10 +2133,14 @@ void free_resources(){
     list_destroy(estado_ready);
     list_destroy(estado_exec);
     list_destroy(estado_block);
+    list_destroy(waiting_list);
+    list_destroy(pokemons);
+    list_destroy(pokemons_received);
     //void destructor_de_entrenadores(void* _entrenador){
 
     //}
     //list_destroy_and_destroy_elements(estado_finish, destructor_de_entrenadores);
+
     config_destroy(config_file);
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);

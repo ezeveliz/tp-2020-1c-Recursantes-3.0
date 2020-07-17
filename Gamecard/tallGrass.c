@@ -850,7 +850,6 @@ int truncate_tall_grass(t_file* archivo, uint32_t off_set){
         //Obtengo el archivo de ese bloque lo abro como si fuera nuevo
         bloque_a_liberar_archivo= obtener_file_bloque(bloque_a_liberar,"w+");
         fclose(bloque_a_liberar_archivo);
-        printf("Archivo vacio: bloque eliminado %d\n",bloque_a_liberar);
 
         //Libero el bloque del bitmap
         liberar_bloque(bloque_a_liberar);

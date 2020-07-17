@@ -65,7 +65,7 @@ void mostrar_bitmap(){
                                          tamanio_bitmap(cantidad_bloques));
 
     doom_bitmap(bitmap);
-    fclose(path_bitmap);
+    fclose(archivo_bitmap);
 
 }
 
@@ -457,6 +457,7 @@ void* mensaje_new_pokemon(void* parametros ){
         free(pokemon->nombre_pokemon);
         free(pokemon);
 
+        log_info(logger,"Se quizo abrir un archivo abierto");
         log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
         sleep(configuracion.tiempo_reoperacion);
         mensaje_new_pokemon(parametros);
@@ -508,6 +509,13 @@ void* mensaje_new_pokemon(void* parametros ){
             write_tall_grass(archivo,registro_agregar, string_length(registro_agregar),(archivo->metadata->size));
             free(pos_pok);
         }
+
+        //Espero el tiempo especificado para simular acceso a disco
+        sleep(configuracion.tiempo_retardo_operacion);
+
+        //Cerrar el archivo
+        close_tall_grass(archivo);
+
         //Enviar mensaje APPEARED_POKEMON
         t_paquete * paquete = create_package(APPEARED_POK);
 
@@ -534,12 +542,13 @@ void* mensaje_new_pokemon(void* parametros ){
         //Debugeo
         log_debug(logger,"Hilo: %d Finalizo a la ejecucion de new pokemon", pthread_self());
 
-        //Cerrar el archivo
-        close_tall_grass(archivo);
         free(pokemon);
         free(datos_param->estructura_pokemon);
         free(parametros);
     }
+
+    //TODO bitmap
+//    mostrar_bitmap();
 
     //Para terminar el hilo
     return null;
@@ -571,6 +580,9 @@ void* mensaje_catch_pokemon(void* parametros){
         //Informar del error
         log_error(logger,"No se encontro el archivo", pokemon->nombre_pokemon);
 
+        //Informacion para la presentacion del tp
+        log_info(logger, "No existe el pokemno: %s que se pidio",pokemon->nombre_pokemon);
+
         //Genero el mensaje de error para mandarle al broker
         caught_pokemon = create_caught_pokemon(0);
         mensaje_serializado = caught_pokemon_a_void(caught_pokemon);
@@ -597,9 +609,11 @@ void* mensaje_catch_pokemon(void* parametros){
             free(path_file);
             free(path_archvio);
             free_package(paquete);
+
+            log_info(logger,"Se quizo abrir un archivo abierto");
             log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
             sleep(configuracion.tiempo_reoperacion);
-            catch_pokemon_a_void(parametros);
+            mensaje_catch_pokemon(parametros);
 
         } else {
             //Busco la posicion en el archivo
@@ -607,8 +621,13 @@ void* mensaje_catch_pokemon(void* parametros){
 
             //verifico si no existe la posicion
             if (pos_pok == NULL) {
-                log_error(logger,"Hilo: %d No se encontraron las coordenadas x:%d y:%d", pthread_self(), pos_pok->x, pos_pok->y);
-                log_debug(logger, "Hilo: %d Genera el mensaje de error para mandar al broker ", pthread_self());
+
+                //Informacion para la presentacion del tp
+                log_info(logger, "No se encontraron las coordenadas x:%d y:%d", pokemon->pos_x, pokemon->pos_y);
+                log_error(logger,"Hilo: %d No se encontraron las coordenadas x:%d y:%d", pthread_self(), pokemon->pos_x, pokemon->pos_y);
+
+                //Espero el tiempo especificado para simular acceso a disco
+                sleep(configuracion.tiempo_retardo_operacion);
 
                 //Cierro el archivo
                 close_tall_grass(archivo);
@@ -638,7 +657,9 @@ void* mensaje_catch_pokemon(void* parametros){
                     log_debug(logger, "Hilo: %d va a decrementar en una a la cantidad de esa posicion ", pthread_self());
 
                     //Le agrego la cantidad que quiero al registro a agregar
-                    string_append(&registro_agregar, string_itoa(pos_pok->cant - 1));
+                    char* itoa_aux = string_itoa(pos_pok->cant - 1);
+                    string_append(&registro_agregar, itoa_aux);
+                    free(itoa_aux);
                     string_append(&registro_agregar, "\n");
 
                     if (archivo->metadata->size == 0) {
@@ -679,6 +700,8 @@ void* mensaje_catch_pokemon(void* parametros){
             add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
             envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
+            log_debug(logger, "Hilo: %d Finalizo a la ejecucion de new pokemon de catch pokemon ", pthread_self());
+
             //Libero
             free(mensaje_serializado);
             free(caught_pokemon);
@@ -688,15 +711,18 @@ void* mensaje_catch_pokemon(void* parametros){
             //Libero el parametro poque ya no lo uso
             free(datos_param->estructura_pokemon);
             free(parametros);
+            free(path_archvio);
+            free(path_file);
+
         }
-        log_debug(logger, "Hilo: %d Finalizo a la ejecucion de new pokemon de catch pokemon ", pthread_self());
     }
 
     //Libero los datos del pokemon
     free(pokemon->nombre_pokemon);
     free(pokemon);
-    free(path_archvio);
-    free(path_file);
+
+    //TODO bitmap
+//    mostrar_bitmap();
 
     return null;
 }
@@ -758,6 +784,7 @@ void* mensaje_get_pokemon(void* parametros){
             free(path_file);
             free(path_archvio);
 
+            log_info(logger,"Se quizo abrir un archivo abierto");
             log_debug(logger,"Hilo: %d  Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
 
             //Espero x segundos antes de reintentar
@@ -771,12 +798,16 @@ void* mensaje_get_pokemon(void* parametros){
 
             //Obtengo todas las coordenadas
             t_list* lista_pos = obtener_todas_coordenadas(archivo);
-            uint32_t* array_posiciones = malloc(lista_pos->elements_count * 2);
+            uint32_t* array_posiciones = malloc(sizeof(uint32_t) * list_size(lista_pos) * 2);
 
+            int contador_pos_array = 0;
             for(int i = 0; i < lista_pos->elements_count; i++){
+
                 t_pos_pokemon* pok_pos = list_get(lista_pos, i);
-                array_posiciones[i] = pok_pos->x;
-                array_posiciones[i + 1] = pok_pos->y;
+                array_posiciones[contador_pos_array] = pok_pos->x;
+                contador_pos_array ++;
+                array_posiciones[contador_pos_array] = pok_pos->y;
+                contador_pos_array++;
 
                 printf("Pos x:%d Pos y:%d\n",pok_pos->x,pok_pos->y);
             }
@@ -785,22 +816,28 @@ void* mensaje_get_pokemon(void* parametros){
 
             mensaje_serializado = localized_pokemon_a_void(localized_pokemon);
 
-            //Espero x segundos antes de cerrar el archivo
+            //Espero el tiempo especificado para simular acceso a disco
             sleep(configuracion.tiempo_retardo_operacion);
             close_tall_grass(archivo);
 
             //Agrego los datos al paquete
             add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-            add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(localized_pokemon));
+            add_to_package(paquete, mensaje_serializado, sizeof_localized_pokemon(localized_pokemon));
 
             //Si no se puede conectar informar por log
             envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
             //Libero el parametro poque ya no lo uso
             free_package(paquete);
+            free(localized_pokemon->coordenadas);
+            free(localized_pokemon);
+            free(array_posiciones);
+            free(path_file);
+            free(path_archvio);
             free(mensaje_serializado);
             free(datos_param->estructura_pokemon);
             free(parametros);
+            list_destroy_and_destroy_elements(lista_pos,free);
 
             log_debug(logger,"Hilo: %d Finalizo a la ejecucion de get pokemon", pthread_self());
         }
@@ -809,6 +846,9 @@ void* mensaje_get_pokemon(void* parametros){
     //Libero los datos del pokemon
     free(pokemon->nombre_pokemon);
     free(pokemon);
+
+    //TODO sacar
+//    mostrar_bitmap();
 
     return null;
 }
@@ -825,23 +865,30 @@ t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
         //String para acumular el registro(12-3=212\n)
         char *string_con_pos = string_new();
 
-        // lee de a un char del archivo, porque no se el largo exacto
-        char *char_leido = read_tall_grass(archivo, 1, archivo->pos);
+        char *char_leido ;
+
+        bool entro_al_while = false;
 
         //Comparo que no sea el final del archivo ni un salto de linea
-        while (strcmp(char_leido, "\n") != 0 && archivo->pos < archivo->metadata->size  && archivo->metadata->size != 0) {
+        while (archivo->pos < archivo->metadata->size  && archivo->metadata->size != 0) {
+            entro_al_while = true;
+            // lee de a un char del archivo, porque no se el largo exacto
+            char_leido = read_tall_grass(archivo, 1, archivo->pos);
+
+            //Rompe el ciclo si encuentra el salto de linea
+            if(strcmp(char_leido, "\n") == 0 ){
+                break;
+            }
+
             //acumulo de a un char
             string_append(&string_con_pos, char_leido);
 
             //Libero el char leido para pooder leer otro
             free(char_leido);
-
-            //Leo el siguiente char
-            char_leido = read_tall_grass(archivo, 1, archivo->pos);
         }
 
         //Controlo que no haya llegado al final de archivo
-        if (archivo->pos != archivo->metadata->size ) {
+        if (entro_al_while) {
 
             //Tiene las posiciones con un - entre ellas en pos 0
             //Tiene la cantidad en la pos 1
@@ -868,11 +915,16 @@ t_pos_pokemon* obtener_sig_coordenada(t_file* archivo){
             free(string_pos[0]);
             free(string_pos[1]);
             free(string_pos);
+
+            //Para evitar el error de valgrind
+            if( archivo->pos  == (archivo->metadata->size -1 )){
+                archivo->pos++;
+            }
+
             return pos;
         }
 
         //Si no se encontro libero y devuelvo null
-        free(char_leido);
         free(string_con_pos);
         free(pos);
         return NULL;
@@ -938,6 +990,7 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
 
     //Conecto el socket al broker
     if (connect_socket(server_socket, ip, puerto) == -1) {
+        log_info(logger,"No se pudo establecer conexion con el Boker");
         log_error(logger, "Conexion fallida Broker ip:%s, puerto:%d", ip, puerto);
         close_socket(server_socket);
         return -1;
@@ -957,6 +1010,9 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
         return -1;
     }
 
+    //Debbugeo
+    log_debug(logger,"Mensaje enviado al broker");
+
     //Esto solo si es el proceso broker creo
     // Recibo la confirmacion
     t_list* rta_list = receive_package(server_socket, buffer_header);
@@ -969,8 +1025,6 @@ int envio_mensaje(t_paquete *paquete, char *ip, uint32_t puerto) {
 
     close_socket(server_socket);
 
-    //Debbugeo
-    log_debug(logger,"Mensaje enviado al broker");
     return 1;
 
 }

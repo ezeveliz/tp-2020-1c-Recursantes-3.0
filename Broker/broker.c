@@ -533,6 +533,8 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
 
     list_add(MENSAJES, nuevo_mensaje);
 
+    log_info(tp_logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
+    log_debug(logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
     return nuevo_mensaje;
 }
 
@@ -1051,6 +1053,7 @@ void dump_cache(int sig){
 
 void compactar_particiones(){
     log_debug(logger, "COMPACTAMO LO COSO");
+    log_info(tp_logger, "COMPACTAMOS");
     int size = list_size(PARTICIONES);
     for(int i=0; i<size;i++){
         particion* particion_libre = list_get(PARTICIONES, i);
@@ -1299,6 +1302,8 @@ void buddy_mergear(t_nodo* nodo){
     papuchi->izq = null;
     papuchi->der = null;
     papuchi->es_hoja = true;
+    log_info(tp_logger, "Buddy: Se asociaron los bloques con base %d y %d",
+            nodo_izq->particion->base, nodo_der->particion->base);
 
     particion* particion_padre = particion_create(nodo_izq->particion->base, nodo_izq->particion->tam*2, true);
     list_add(PARTICIONES, particion_padre);

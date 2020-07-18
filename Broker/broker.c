@@ -28,9 +28,6 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
     pthread_mutex_init(&M_INTENTOS, NULL);
 
-    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
-    pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
-
     signal(SIGUSR1, dump_cache);
 
     // Logs que piden en el TP
@@ -401,7 +398,9 @@ void *server_function(void *arg) {
                 {
                     int id_subscriptor = *(int*) list_get(cosas, 0);
                     int id_mensaje = *(int*) list_get(cosas, 1);
+                    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
                     flag_ack(id_subscriptor, id_mensaje);
+                    pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
                     log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d",
                              id_mensaje, id_subscriptor);
                     break;
@@ -1090,6 +1089,7 @@ void dump_cache(int sig){
     fflush(archivo_dump);
 
     // Printeo el contenido de la cache
+    pthread_mutex_lock(&M_PARTICIONES);
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++) {
         particion *s = list_get(PARTICIONES, i);
@@ -1100,14 +1100,15 @@ void dump_cache(int sig){
                               i+1, s->base, s->base+s->tam,
                               s->libre ? "L" : "X",
                               s->tam);
-//        if(!s->libre){
-//            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
-//                    s->ultimo_uso,
-//                    cola_to_string(s->mensaje->tipo),
-//                    s->mensaje->id);
-//        }
+        if(!s->libre){
+            fprintf(archivo_dump, "\tLRU: %" PRIu64 "\tCola: %s\tID: %d",
+                    s->ultimo_uso,
+                    cola_to_string(s->mensaje->tipo),
+                    s->mensaje->id);
+        }
         fprintf(archivo_dump, "\n");
     }
+    pthread_mutex_unlock(&M_PARTICIONES);
     fprintf(archivo_dump, "\n");
 
     // Cierro el archivo y libero la memoria
@@ -1268,10 +1269,10 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, nodo_respuesta->particion);}
 
         log_info(logger, "Particion asignada (base: %d)", nodo_respuesta->particion->base);
-        pthread_mutex_lock(&M_ARBOL_BUDDY);
-        pthread_mutex_lock(&M_PARTICIONES_QUEUE);
-        pthread_mutex_lock(&M_PARTICIONES);
-        pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+        pthread_mutex_unlock(&M_ARBOL_BUDDY);
+        pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+        pthread_mutex_unlock(&M_PARTICIONES);
+        pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
         return nodo_respuesta->particion;
     } else {
         log_info(logger, "Caso feo: No encontramos una particion del tamaño %d", tam_buscado);
@@ -1288,10 +1289,10 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
                 // SI LLEGO ACA ES QUE NO HAY SUFICIENTE TAMAÑO PARA ASIGNAR
                 // llamar al algoritmo de reemplazo y vuelvo a correr el asignar particiones
                 algoritmo_de_reemplazo();
-                pthread_mutex_lock(&M_ARBOL_BUDDY);
-                pthread_mutex_lock(&M_PARTICIONES_QUEUE);
-                pthread_mutex_lock(&M_PARTICIONES);
-                pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+                pthread_mutex_unlock(&M_ARBOL_BUDDY);
+                pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+                pthread_mutex_unlock(&M_PARTICIONES);
+                pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
                 return asignar_particion_buddy(raiz, tam);
             }
         }
@@ -1300,10 +1301,10 @@ particion* asignar_particion_buddy(t_nodo* raiz, size_t tam) {
         t_nodo* hijo_izq = buddy_dividir_raiz(nodo_a_dividir);
         log_info(logger, "Dividimos el nodo y nos metemos recursivamente en Asignar Buddy");
 
-        pthread_mutex_lock(&M_ARBOL_BUDDY);
-        pthread_mutex_lock(&M_PARTICIONES_QUEUE);
-        pthread_mutex_lock(&M_PARTICIONES);
-        pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
+        pthread_mutex_unlock(&M_ARBOL_BUDDY);
+        pthread_mutex_unlock(&M_PARTICIONES_QUEUE);
+        pthread_mutex_unlock(&M_PARTICIONES);
+        pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
         return asignar_particion_buddy(hijo_izq, tam);
     }
 

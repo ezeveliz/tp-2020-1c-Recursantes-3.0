@@ -689,7 +689,7 @@ mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
 
 void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
     bool multiple_id_search(void* un_men_sub){
-        mensaje_subscriptor* men_sub = (subscriptor*) un_men_sub;
+        mensaje_subscriptor* men_sub = (mensaje_subscriptor*) un_men_sub;
         return men_sub->id_mensaje == id_mensaje && men_sub->id_subscriptor == id_sub;
     }
     void element_destroyer(void* element){
@@ -810,12 +810,11 @@ void recursar_operativos(){
 
             pthread_t mensaje_thread;
             pthread_create(&mensaje_thread, NULL, mandar_mensaje, (void*)cosito);
-            pthread_join(mensaje_thread, NULL);
+            pthread_detach(mensaje_thread);
 
         }
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
-        free(cosito);
     }
     pthread_mutex_unlock(&M_PARTICIONES);
     pthread_mutex_unlock(&M_SUBSCRIPTORES);
@@ -825,7 +824,7 @@ void recursar_operativos(){
 int send_message_test(t_paquete* paquete, int socket){
     return 1;
 }
-void mandar_mensaje(void* cosito){
+void* mandar_mensaje(void* cosito){
     mensaje_subscriptor* coso = void_a_mensaje_subscriptor(cosito);
     subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
     mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
@@ -843,7 +842,9 @@ void mandar_mensaje(void* cosito){
         una_particion->ultimo_uso = unix_epoch();
     }
     free(coso);
+    free(cosito);
     free_package(paquete);
+    return null;
 }
 
 particion* find_particion_by_id_mensaje(int id_mensaje){
@@ -852,7 +853,7 @@ particion* find_particion_by_id_mensaje(int id_mensaje){
         if (part_encontrada->mensaje == null){return false;}
         return part_encontrada->mensaje->id == id_mensaje;
     }
-    subscriptor* encontrado = list_find(PARTICIONES, id_search);
+    particion* encontrado = list_find(PARTICIONES, id_search);
     return encontrado;
 }
 
@@ -954,7 +955,7 @@ particion* buscar_particion_libre(int tam){
     }
 }
 
-particion* first_fit_search(tam){
+particion* first_fit_search(int tam){
     int size = list_size(PARTICIONES);
     for(int i=0; i<size; i++){
         particion* x = list_get(PARTICIONES, i);

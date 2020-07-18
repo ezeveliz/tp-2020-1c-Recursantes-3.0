@@ -142,7 +142,7 @@ subscriptor* find_subscriptor(int id);
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje);
 void descargar_mensaje(t_list* una_cola, int un_mensaje);
 void recursar_operativos();
-void mandar_mensaje(void* coso);
+void* mandar_mensaje(void* coso);
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub);
 mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream);
 void* flag_enviado(uint32_t id_sub, uint32_t id_men);

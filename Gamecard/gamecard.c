@@ -72,7 +72,7 @@ void mostrar_bitmap(){
 
 int leer_opciones_configuracion() {
 
-    config_file = config_create("../gamecard.config");
+    config_file = config_create("gamecard.config");
     if (!config_file) {
         return -1;
     }

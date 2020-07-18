@@ -1767,10 +1767,8 @@ void appeared_pokemon(t_list* paquete){
 
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
-            //memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, (appearedPokemon->nombre_pokemon_length)+1);
+            //memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
             //pokemon->especie = appearedPokemon->nombre_pokemon;
-            //strcpy(pokemon->especie,appearedPokemon->nombre_pokemon);
-            //string_append(pokemon->especie, "\0");
             pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length + 1);
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;

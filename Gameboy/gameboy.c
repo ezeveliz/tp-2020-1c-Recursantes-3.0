@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 }
 
 void leer_configuracion(){
-    t_config * archConfig = config_create("gameboy_config");
+    t_config * archConfig = config_create("../gameboy_config");
 
     config_params.ip_broker = config_get_string_value(archConfig, "IP_GAMECARD");
     config_params.puerto_broker = config_get_int_value(archConfig, "PUERTO_BROKER");
@@ -558,7 +558,7 @@ int suscribir_broker(int broker_socket,char *cola_mensaje){
 
 void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     int id_correlativo = *(int *) list_get(rta_list, 0);
-    void *mensaje = list_get(rta_list, 1);
+    void *mensaje = list_get(rta_list, 2);
 
     switch (buffer_header->type) {
         case NEW_POK: {

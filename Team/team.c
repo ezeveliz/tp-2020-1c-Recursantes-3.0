@@ -475,7 +475,7 @@ void* subscribe_to_queue_thread(void* arg) {
             // Envio confirmacion al Broker
             send_package(paquete, broker);
             free_package(paquete);
-            list_destroy(rta_list);
+            //list_destroy(rta_list);
 
             // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {

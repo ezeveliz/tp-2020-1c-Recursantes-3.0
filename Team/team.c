@@ -1770,7 +1770,8 @@ void appeared_pokemon(t_list* paquete){
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
             //pokemon->especie = appearedPokemon->nombre_pokemon;
-            pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length +1);
+            pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            string_append(&pokemon->especie, "\0");
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 

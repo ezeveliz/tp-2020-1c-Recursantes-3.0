@@ -30,7 +30,6 @@ typedef struct {
     int estimacion_inicial;
     char* ip_broker;
     int puerto_broker;
-    char* ip_team;
     int puerto_team;
     char* log_file;
     int team_id;

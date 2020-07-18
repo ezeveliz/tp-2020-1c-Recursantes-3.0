@@ -59,8 +59,12 @@ echo "Ingrese el puerto del Gamecard"
 
 echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"
 
-./gameboy
+#Datos propios
+echo "Ingrese el id del proceso"
+	echo -n "> "
+	read MAC
 
+echo "MAC=$MAC" >> "$CONFIG"
 
 
 

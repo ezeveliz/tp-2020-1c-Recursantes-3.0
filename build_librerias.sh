@@ -16,12 +16,11 @@ echo " "
 
 
 # Instalar cmake 
-if [ "$1" = "-c" ]
-then
-		echo "Ingrese password para instalar las commons..."
-		sudo apt-get -y install cmake
-		cmake --version
-fi
+
+echo "Ingrese password para instalar las commons..."
+sudo apt-get -y install cmake
+cmake --version
+
 
 # Installar las commons
 git clone https://github.com/sisoputnfrba/so-commons-library.git

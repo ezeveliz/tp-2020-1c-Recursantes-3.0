@@ -1789,6 +1789,8 @@ bool algoritmo_de_cercania() {
     if (list_size(pokemons) > 0) {
         pthread_mutex_lock(&mutex_algoritmo_cercania);
 
+        t_list* lista_intermedia = list_create();
+
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
         bool puede_ir_ready(void *_entreador) {
             Entrenador *entrenador = (Entrenador *) _entreador;
@@ -1798,32 +1800,34 @@ bool algoritmo_de_cercania() {
         t_list *entrenadores_con_margen = list_filter(estado_block, puede_ir_ready);
 
         //Pongo todos en una lista asi es mas facil trabajar
-        list_add_all(entrenadores_con_margen, estado_new);
+        list_add_all(lista_intermedia, estado_new);
+        list_add_all(lista_intermedia, entrenadores_con_margen);
 
         //Verifico que la lista de entrenadores no sea vacia
-        if (list_size(entrenadores_con_margen) > 0) {
+        if (list_size(lista_intermedia) > 0) {
             int cant_pok = list_size(pokemons);
             while (cant_pok > 0) {
                 Pokemon *pokemon = (Pokemon *) list_get(pokemons, 0);
 
                 //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
-                if (list_size(entrenadores_con_margen) > 1) {
+                if (list_size(lista_intermedia) > 1) {
 
                     //Ordeno a los entrenadores por cercania al pokemon
                     bool entrenador_mas_cerca(void *_entrenador_actual, void *_entrenador_siguiente) {
                         Entrenador *entrenador_actual = (Entrenador *) _entrenador_actual;
                         Entrenador *entrenador_siguiente = (Entrenador *) _entrenador_siguiente;
 
-                        return distancia(entrenador_actual->pos_actual, pokemon->coordenada) <
-                               distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                        int dist_ent_actual = distancia(entrenador_actual->pos_actual, pokemon->coordenada);
+                        int dist_ent_sig = distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                        if(dist_ent_actual == dist_ent_sig){
+                            return entrenador_actual->estado == NEW;
+                        }
+                        return dist_ent_actual < dist_ent_sig;
                     }
-                    list_sort(entrenadores_con_margen, entrenador_mas_cerca);
+                    list_sort(lista_intermedia, entrenador_mas_cerca);
                 }
                 //Obtengo el primero que es el mas cercano
-                Entrenador *entrenador_cercano = (Entrenador *) list_get(entrenadores_con_margen, 0);
-
-                //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
-                list_remove(entrenadores_con_margen, 0);
+                Entrenador *entrenador_cercano = (Entrenador *) list_remove(lista_intermedia, 0);;
 
                 bool remover(void *_entrenador) {
                     Entrenador *entrenador = (Entrenador *) _entrenador;
@@ -1881,6 +1885,7 @@ bool algoritmo_de_cercania() {
         }
         list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
+        list_destroy(lista_intermedia);
         return se_desbloqueo;
     }
 }
@@ -2044,7 +2049,6 @@ t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivo
 
     t_list* pokemons_estimado = list_create();
 
-    //TODO: Sacar la clave cuando el value es 0
     void iterador(char* key, void* _value){
         if(dictionary_has_key(stock_pokemons,key) && (*(int*) _value > 0)){
             list_add(pokemons_estimado,key);

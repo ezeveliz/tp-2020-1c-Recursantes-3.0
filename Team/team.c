@@ -1907,6 +1907,7 @@ bool algoritmo_deadlock(){
 
     bool se_desbloqueo = false;
 
+
     pthread_mutex_lock(&mutex_deadlock);
     // Logueo el inicio del algoritmo de deteccion de deadlock
     log_info(logger,"Se ha iniciado el algoritmo de deteccion de deadlock");

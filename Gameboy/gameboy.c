@@ -474,7 +474,6 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
             send_package(paquete, broker);
 
-            send_package(paquete, broker);
             free_package(paquete);
         }
     }

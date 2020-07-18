@@ -1729,6 +1729,13 @@ void appeared_pokemon(t_list* paquete){
     // Paso el void* recibido a t_appeared_pokemon
     t_appeared_pokemon* appearedPokemon = void_a_appeared_pokemon(appeared_void);
 
+    char* nombre_pok = malloc(appearedPokemon->nombre_pokemon_length +1);
+    memcpy(nombre_pok, appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+    nombre_pok[appearedPokemon->nombre_pokemon_length] = '\0';
+
+    free(appearedPokemon->nombre_pokemon);
+    appearedPokemon->nombre_pokemon = nombre_pok;
+
     // Logueo la llegada de un mensaje appeared
     char* appeared = string_new();
 
@@ -1769,8 +1776,8 @@ void appeared_pokemon(t_list* paquete){
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
-            //pokemon->especie = appearedPokemon->nombre_pokemon;
-            pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            pokemon->especie = appearedPokemon->nombre_pokemon;
+            //pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 

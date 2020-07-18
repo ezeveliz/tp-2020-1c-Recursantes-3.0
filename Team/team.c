@@ -2006,6 +2006,7 @@ bool algoritmo_deadlock(){
                     sem_post(&block_ready_transition[entrenador_primero->tid]);
                     se_desbloqueo = true;
                     list_destroy(pokemones_innecesarios_primer);
+                    list_destroy(pokemons_innecesario_segundo);
                     break;
                 }
                 cont_segundo++;

@@ -981,6 +981,7 @@ void* trainer_thread(void* arg){
                 // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
 
                 verificar_desalojo(entrenador);
+                entrenador->vengo_de_ejecucion = false;
 
                 // Duermo durante el tiempo que ocupa un ciclo de ejecucion correspondiente al envio de mensaje al broker
                 sleep(config.retardo_ciclo_cpu);
@@ -999,7 +1000,6 @@ void* trainer_thread(void* arg){
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
                 send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
-                entrenador->vengo_de_ejecucion = false;
                 // Me quito de la lista de ejecucion
                 list_remove(estado_exec, 0);
 
@@ -1685,6 +1685,11 @@ void verificar_desalojo(Entrenador* entrenador){
         string_append(&ready, entrenador_tid_ready);
         string_append(&ready, " ha entrado a Ready porque se le termino el Quantum");
 
+        log_info(logger, ready);
+
+        free(ready);
+        free(entrenador_tid_ready);
+
         //Actualizo el tiempo de llegada
         *(entrenador->tiempo_llegada) = get_time();
         entrenador->acumulado_total+= entrenador->acumulado_actual;
@@ -1703,6 +1708,11 @@ void verificar_desalojo(Entrenador* entrenador){
         char *entrenador_tid_ready = string_itoa(entrenador->tid);
         string_append(&ready, entrenador_tid_ready);
         string_append(&ready, " ha entrado a Ready porque fue desalojado por un hilo que tenia un menor estimado");
+
+        log_info(logger, ready);
+
+        free(ready);
+        free(entrenador_tid_ready);
 
         sem_wait(&ready_exec_cd_transition[entrenador->tid]);
 
@@ -1803,10 +1813,10 @@ bool algoritmo_de_cercania() {
         list_add_all(lista_intermedia, estado_new);
         list_add_all(lista_intermedia, entrenadores_con_margen);
 
-        //Verifico que la lista de entrenadores no sea vacia
-        if (list_size(lista_intermedia) > 0) {
-            int cant_pok = list_size(pokemons);
-            while (cant_pok > 0) {
+        int tamanio_intermedia = list_size(lista_intermedia);
+        int cant_pok = list_size(pokemons);
+
+        while (cant_pok > 0 && tamanio_intermedia > 0) {
                 Pokemon *pokemon = (Pokemon *) list_get(pokemons, 0);
 
                 //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
@@ -1827,7 +1837,7 @@ bool algoritmo_de_cercania() {
                     list_sort(lista_intermedia, entrenador_mas_cerca);
                 }
                 //Obtengo el primero que es el mas cercano
-                Entrenador *entrenador_cercano = (Entrenador *) list_remove(lista_intermedia, 0);;
+                Entrenador *entrenador_cercano = (Entrenador *) list_remove(lista_intermedia, 0);
 
                 bool remover(void *_entrenador) {
                     Entrenador *entrenador = (Entrenador *) _entrenador;
@@ -1880,9 +1890,8 @@ bool algoritmo_de_cercania() {
                 list_remove(pokemons, 0);
                 pthread_mutex_unlock(&mutex_pokemon);
                 cant_pok--;
-
+                tamanio_intermedia--;
             }
-        }
         list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
         list_destroy(lista_intermedia);
@@ -2005,6 +2014,10 @@ bool algoritmo_deadlock(){
             cont_primero++;
             cont_segundo = cont_primero + 1;
             list_destroy(pokemones_necesarios_primer);
+        }
+
+        if(!se_desbloqueo){
+            log_info(logger, "No hay dos entrenadores para realizar el intercambio.");
         }
     }else {
         log_info(logger, "No hay dos entrenadores para realizar el intercambio.");

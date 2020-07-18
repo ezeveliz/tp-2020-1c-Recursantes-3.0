@@ -211,7 +211,6 @@ int read_config_options() {
     config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
     config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
     config.puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
-    config.ip_team = config_get_string_value(config_file, "IP_TEAM");
     config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
     config.team_id = config_get_int_value(config_file, "TEAM_ID");
@@ -264,6 +263,7 @@ void subscribe_to_queues() {
 }
 
 void* subscribe_to_queue_thread(void* arg) {
+
     MessageType cola = *(MessageType*)arg;
 
     // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre
@@ -278,13 +278,13 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionPerdida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (APPEARED_POK):;
+        case (SUB_APPEARED):;
             string_append(&conexionPerdida, "Appeared ");
             break;
-        case (LOCALIZED_POK):;
+        case (SUB_LOCALIZED):;
             string_append(&conexionPerdida, "Localized ");
             break;
-        case (CAUGHT_POK):;
+        case (SUB_CAUGHT):;
             string_append(&conexionPerdida, "Caught ");
             break;
         default:;
@@ -298,13 +298,13 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionReestablecida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (APPEARED_POK):;
+        case (SUB_APPEARED):;
             string_append(&conexionReestablecida, "Appeared ");
             break;
-        case (LOCALIZED_POK):;
+        case (SUB_LOCALIZED):;
             string_append(&conexionReestablecida, "Localized ");
             break;
-        case (CAUGHT_POK):;
+        case (SUB_CAUGHT):;
             string_append(&conexionReestablecida, "Caught ");
             break;
         default:;
@@ -338,7 +338,7 @@ void* subscribe_to_queue_thread(void* arg) {
             }
 
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
-            switch (cola) {
+            switch (buffer_header->type) {
 
                 case (APPEARED_POK):;
 
@@ -513,6 +513,7 @@ int connect_and_subscribe(MessageType cola) {
 
             // Si no me pude conectar al Broker, me duermo y vuelvo a intentar en unos segundos
         } else {
+            log_info(logger, "Broker no disponible, conexion fallida");
             sleep(config.tiempo_reconexion);
         }
     }

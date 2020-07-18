@@ -31,9 +31,13 @@ int main(int argc, char **argv) {
     signal(SIGUSR1, dump_cache);
 
     // Logs que piden en el TP
+    FILE* s = fopen("broker.log", "w"); // Reinicio los logs
+    fclose(s);
     tp_logger = log_create("broker.log", "BROKER", 1, LOG_LEVEL_TRACE);
 
     // Logs propios
+    s = fopen(".broker-log-propio.log", "w");
+    fclose(s);
     logger = log_create(".broker-log-propio.log", "BROKER", 1, LOG_LEVEL_TRACE);
     log_info(logger,"Log started.");
 
@@ -978,6 +982,7 @@ void algoritmo_de_reemplazo(){
         exit(EXIT_FAILURE);
     }
     log_error(logger, "Se borra la particion con base: %d", una_particion->base);
+    log_info(tp_logger, "Se borra la particion con base: %d", una_particion->base);
 
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_delete(una_particion->base);
@@ -1018,7 +1023,7 @@ particion* asignar_particion(size_t tam) {
             //Cambio el estado de la libre a falso y actualiza su ultimo uso.
             particion_libre->libre = false;
             particion_libre->ultimo_uso = unix_epoch();
-
+            if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){list_add(PARTICIONES_QUEUE, particion_libre);}
 
             log_info(logger, "Partition assigned(base: %d)", particion_libre->base);
             pthread_mutex_unlock(&M_PARTICIONES_QUEUE);

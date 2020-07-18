@@ -5,9 +5,13 @@
 # Buscanos en redes sociales
 #
 
+#Bajo las pruebas 
+git clone https://github.com/sisoputnfrba/delibird-pruebas.git
+cd delibird-pruebas
+
 # Compilo
-#cmake CMakeLists.txt
-make
+cmake ..
+make 
 
 #Asigno una variable con el path del archivo de configuracion
 CONFIG="gameboy_config"
@@ -42,8 +46,6 @@ echo "PUERTO_TEAM=$PUERTO_TEAM" >> "$CONFIG"
 
 
 #Datos proceso gamecard
-
-IP_GAMECARD
 
 echo "Ingrese la ip del Gamecard"
 	echo -n "> "

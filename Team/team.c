@@ -1038,7 +1038,7 @@ void* trainer_thread(void* arg){
 
                 // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
                 send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
-
+                free(pokemon_to_catch);
                 // Me bloqueo esperando la rta del Broker
                 sem_wait(&block_catch_transition[entrenador->tid]);
 
@@ -1332,7 +1332,6 @@ void* message_function(void* message_package){
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 
-                // TODO: Limpieza
             }
         }
 
@@ -1412,7 +1411,7 @@ void caught_pokemon(int tid, int atrapado) {
             *(int*) dictionary_get(objetivo_global, pok_name)-=1;
         }
         else{
-            dictionary_remove(objetivo_global, pok_name);
+            free(dictionary_remove(objetivo_global, pok_name));
         }
 
         // En este caso no pude atrapar el pokemon
@@ -1768,8 +1767,10 @@ void appeared_pokemon(t_list* paquete){
 
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
-            //memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            //memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, (appearedPokemon->nombre_pokemon_length)+1);
             //pokemon->especie = appearedPokemon->nombre_pokemon;
+            //strcpy(pokemon->especie,appearedPokemon->nombre_pokemon);
+            //string_append(pokemon->especie, "\0");
             pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length + 1);
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
@@ -2033,7 +2034,7 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
         *(int*) dictionary_get(entrenador->stock_pokemons, pokemon_second_trainer)-=1;
     }
     else{
-        dictionary_remove(entrenador->stock_pokemons, pokemon_second_trainer);
+        free(dictionary_remove(entrenador->stock_pokemons, pokemon_second_trainer));
     }
 
     //Remuevo del stock el pokemon que voy a dar para el segundo entrenador
@@ -2041,7 +2042,7 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
         *(int*)dictionary_get(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer)-=1;
     }
     else{
-        dictionary_remove(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer);
+        free(dictionary_remove(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer));
     }
 
 }
@@ -2083,31 +2084,7 @@ t_list* trainer_needs(Entrenador* entrenador) {
     return pokemons_necesarios;
 }
 
-t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons){
-
-    t_list* pokemons_estimado = list_create();
-
-    void iterador(char* key, void* _value){
-        if(dictionary_has_key(stock_pokemons,key) && (*(int*) _value > 0)){
-            list_add(pokemons_estimado,key);
-        }
-    }
-    dictionary_iterator(objetivos_pokemons,iterador);
-
-    return pokemons_estimado;
-}
-
 //----------------------------------------HELPERS----------------------------------------//
-
-void loggear_ready(Entrenador* entrenador) {
-
-    char *ready = string_new();
-    string_append(&ready, "El entrenador ");
-    char *entrenador_tid_ready = string_itoa(entrenador->tid);
-    string_append(&ready, entrenador_tid_ready);
-    string_append(&ready, " ha entrado a Ready");
-
-}
 
 void loggear_finish(Entrenador* entrenador){
 
@@ -2166,48 +2143,6 @@ struct timespec get_time(){
     struct timespec start;
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
     return start;
-}
-
-t_interval* new_interval(){
-    t_interval* iteration = malloc(sizeof(t_interval));
-    iteration->start_time = malloc(sizeof(struct timespec));
-    iteration->end_time = malloc(sizeof(struct timespec));
-    return iteration;
-}
-
-long timespec_to_us(struct timespec* timespec){
-    return (timespec->tv_sec * 1000000) + (timespec->tv_nsec / 1000);
-}
-
-void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff){
-
-    //Verifico si la resta entre final y principio da negativa
-    if ((end->tv_nsec - start->tv_nsec) < 0)
-    {
-        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
-        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec + 1000000000)) > 999999999){
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
-        } else {
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec - 1);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec + 1000000000);
-        }
-    }
-    else
-    {
-        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
-        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec)) > 999999999){
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec + 1);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec - 1000000000);
-        } else {
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
-        }
-    }
 }
 
 int distancia(Coordenada actual, Coordenada siguiente) {

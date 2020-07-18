@@ -14,10 +14,10 @@ cmake ..
 make
 
 #Asigno una variable con el path del archivo de configuracion
-CONFIG="team"
+CONFIG="../team.config"
 
 
-# Datos del Broker
+# Datos del Team
 echo "Ingrese las posiciones de entrenadores"
 	echo -n "> "
 	read POSICIONES_ENTRENADORES
@@ -28,43 +28,87 @@ echo "Ingrese los pokemons que tienen los entrenadores"
 	echo -n "> "
 	read POKEMON_ENTRENADORES
 
-echo "POKEMON_ENTRENADORES=POKEMON_ENTRENADORES" >> "$CONFIG"
+echo "POKEMON_ENTRENADORES=$POKEMON_ENTRENADORES" >> "$CONFIG"
 
+echo "Ingrese los objetivos de los entrenadores"
+	echo -n "> "
+	read OBJETIVOS_ENTRENADORES
 
-# Datos proceso tema
-echo "Ingrese la ip del Team"
+echo "OBJETIVOS_ENTRENADORES=$OBJETIVOS_ENTRENADORES" >> "$CONFIG"
+
+echo "Ingrese el tiempo de reconexion"
+	echo -n "> "
+	read TIEMPO_RECONEXION
+
+echo "TIEMPO_RECONEXION=$TIEMPO_RECONEXION" >> "$CONFIG"
+
+echo "Ingrese el retardo de ciclo de CPU"
+	echo -n "> "
+	read RETARDO_CICLO_CPU
+
+echo "RETARDO_CICLO_CPU=$RETARDO_CICLO_CPU" >> "$CONFIG"
+
+echo "Ingrese el algoritmo de planificacion"
+	echo -n "> "
+	read ALGORITMO_PLANIFICACION
+
+echo "ALGORITMO_PLANIFICACION=$ALGORITMO_PLANIFICACION" >> "$CONFIG"
+
+echo "Ingrese el Quantum"
+	echo -n "> "
+	read QUANTUM
+
+echo "QUANTUM=$QUANTUM" >> "$CONFIG"
+
+echo "Ingrese el Alpha"
+	echo -n "> "
+	read ALPHA
+
+echo "ALPHA=$ALPHA" >> "$CONFIG"
+
+echo "Ingrese la estimacion inicial"
+	echo -n "> "
+	read ESTIMACION_INICIAL
+
+echo "ESTIMACION_INICIAL=$ESTIMACION_INICIAL" >> "$CONFIG"
+
+# Datos Broker
+echo "Ingrese la IP del Broker"
+	echo -n "> "
+	read IP_BROKER
+
+echo "IP_BROKER=$IP_BROKER" >> "$CONFIG"
+
+echo "Ingrese el Puerto del Broker"
+	echo -n "> "
+	read PUERTO_BROKER
+
+echo "PUERTO_BROKER=$PUERTO_BROKER" >> "$CONFIG"
+
+# Datos Team
+echo "Ingrese la IP del Team"
 	echo -n "> "
 	read IP_TEAM
 
 echo "IP_TEAM=$IP_TEAM" >> "$CONFIG"
 
-echo "Ingrese el puerto del Team"
+echo "Ingrese el Puerto del Team"
 	echo -n "> "
 	read PUERTO_TEAM
 
 echo "PUERTO_TEAM=$PUERTO_TEAM" >> "$CONFIG"
 
-
-#Datos proceso gamecard
-
-echo "Ingrese la ip del Gamecard"
+echo "Ingrese el path del Log File"
 	echo -n "> "
-	read IP_GAMECARD
+	read LOG_FILE
 
-echo "IP_GAMECARD=$IP_GAMECARD" >> "$CONFIG"
+echo "LOG_FILE=$LOG_FILE" >> "$CONFIG"
 
-echo "Ingrese el puerto del Gamecard"
+echo "Ingrese el Team ID"
 	echo -n "> "
-	read PUERTO_GAMECARD
+	read TEAM_ID
 
-echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"
-
-#Datos propios
-echo "Ingrese el id del proceso"
-	echo -n "> "
-	read MAC
-
-echo "MAC=$MAC" >> "$CONFIG"
+echo "TEAM_ID=$TEAM_ID" >> "$CONFIG"
 
 
 

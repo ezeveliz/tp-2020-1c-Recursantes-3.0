@@ -1922,8 +1922,7 @@ bool algoritmo_deadlock(){
             Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
 
             // Hallo los pokemones que necesito
-            t_list* pokemones_necesarios = trainer_needs(entrenador_primero);
-            // TODO: Hallo los pokemones que no necesito
+            t_list* pokemones_necesarios_primer = trainer_needs(entrenador_primero);
 
             // Itero la lista de entrenadores sin margen a partir del segundo entrenador
             while (cont_segundo < tamanio_ent) {
@@ -1931,103 +1930,81 @@ bool algoritmo_deadlock(){
                 // Obtengo el entrenador siguiente al del bucle superior
                 Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
 
-                // TODO: Hallo los pokemons que el segundo entrenador no necesita
+                //Hallo los pokemones que no necesita el segundo entrenador
+                t_list* pokemons_innecesario_segundo = trainer_dont_need(entrenador_segundo);
 
+                //Pokemon intercambiar es el pokemon que necesita el primero y no necesita el segundo
+                char* pokemon_intercambiar = NULL;
+                bool cumplio_condicion = false;
 
-
-            }
-        }
-
-        while(cont_primero < tamanio_ent && !cumplio_condiciones) {
-
-            //Agarro el primer entrenador bloqueado
-            Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
-
-
-            while (cont_segundo < tamanio_ent) {
-                Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
-                //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
-                t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
-
-                if (list_size(repeat_pokemon) > 0) {
-
-                    //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
-                    t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
-
-                    if (list_size(unnecesary_pokemon) > 0) {
-
-                        //Calculo que pokemon no le sirve al primer entrenador
-                        char* pokemon_primer_entrenador_no_necesita;
-                        int i = 0;
-                        void no_necesita(char* key, void*value){
-                            //Busco el pokemon que no necesita el entrenador, es decir el pokemon que tiene en stock pero no esta en sus objetivos. La variable i es para agarrar al primero que encuentre
-                            if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                pokemon_primer_entrenador_no_necesita = strdup(key);
-                                //strcpy(pokemon_primer_entrenador_no_necesita, key);
-                                i++;
-                            }
-                            else{
-                                //Si lo tiene como objetivo quiere decir que tiene en stock uno mas del que deberia
-                                if((dictionary_has_key(entrenador_primero->objetivos_particular, key)) && (i == 0)){
-                                    int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
-                                    int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
-                                    if(cantidad_stock > cantidad_objetivo){
-                                        pokemon_primer_entrenador_no_necesita = strdup(key);
-                                        //strcpy(pokemon_primer_entrenador_no_necesita, key);
-                                        i++;
-                                    }
-                                }
-                            }
+                void iterador_primero(void* _pokemon){
+                    char* pokemon_primero = (char*) _pokemon;
+                    int i = 0;
+                    while(i < list_size(pokemons_innecesario_segundo) && !cumplio_condicion){
+                        char* pokemon_segundo = (char*) list_get(pokemons_innecesario_segundo, i);
+                        if(string_equals_ignore_case(pokemon_primero,pokemon_segundo)){
+                            pokemon_intercambiar = string_duplicate(pokemon_primero);
+                            cumplio_condicion = true;
                         }
-                        dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
-
-                        char* deadlock_entrenadores = string_new();
-                        string_append(&deadlock_entrenadores,"El entrenador ");
-                        char* entrenador_primero_tid = string_itoa(entrenador_primero->tid);
-                        string_append(&deadlock_entrenadores, entrenador_primero_tid);
-                        string_append(&deadlock_entrenadores, " y el entrenador ");
-                        char* entrenador_segundo_tid = string_itoa(entrenador_segundo->tid);
-                        string_append(&deadlock_entrenadores, entrenador_segundo_tid);
-                        string_append(&deadlock_entrenadores, " van a realizar un intercambio ");
-                        log_info(logger, deadlock_entrenadores);
-
-                        free(deadlock_entrenadores);
-                        free(entrenador_primero_tid);
-                        free(entrenador_segundo_tid);
-
-                        entrenador_primero->entrenador_objetivo = entrenador_segundo;
-                        char* pokemon_objetivo_primer_entrenador = (char*) list_get(unnecesary_pokemon,0);
-                        //entrenador_primero->pokemon_objetivo->especie = strdup(pokemon_objetivo_primer_entrenador);
-                        strcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_objetivo_primer_entrenador);
-
-                        entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
-                        entrenador_primero->razon_bloqueo = DEADLOCK;
-                        entrenador_segundo->razon_bloqueo = DEADLOCK;
-                        entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
-
-                        bool remover(void *_entrenador) {
-                            Entrenador *entrenador = (Entrenador *) _entrenador;
-                            return entrenador->tid == entrenador_primero->tid;
-                        }
-                        list_remove_by_condition(estado_block, remover);
-
-                        list_add(estado_ready, entrenador_primero);
-                        entrenador_primero->estado = READY;
-                        deadlocks_totales+=1;
-                        cumplio_condiciones = true;
-                        sem_post(&block_ready_transition[entrenador_primero->tid]);
-                        se_desbloqueo = true;
-                        break;
+                        i++;
                     }
-                    list_destroy(unnecesary_pokemon);
                 }
-                //No hay ningun pokemon ni se cumplieron las condiciones para que se realice el intercambio
-                cont_segundo++;
-                list_destroy(repeat_pokemon);
-            }
+                list_iterate(pokemones_necesarios_primer, iterador_primero);
 
+                if(pokemon_intercambiar){
+                    //Hallo los pokemons que no necesita el primer entrenador para darle al segundo
+                    t_list* pokemones_innecesarios_primer = trainer_dont_need(entrenador_primero);
+
+                    //Agarro el primer elemento que tenga la lista para el intercambio
+                    char* pokemon_inncesario_primer = (char*) list_get(pokemones_innecesarios_primer,0);
+
+                    char* deadlock_entrenadores = string_new();
+                    string_append(&deadlock_entrenadores,"El entrenador ");
+                    char* entrenador_primero_tid = string_itoa(entrenador_primero->tid);
+                    string_append(&deadlock_entrenadores, entrenador_primero_tid);
+                    string_append(&deadlock_entrenadores, " y el entrenador ");
+                    char* entrenador_segundo_tid = string_itoa(entrenador_segundo->tid);
+                    string_append(&deadlock_entrenadores, entrenador_segundo_tid);
+                    string_append(&deadlock_entrenadores, " van a realizar un intercambio ");
+                    log_info(logger, deadlock_entrenadores);
+
+                    free(deadlock_entrenadores);
+                    free(entrenador_primero_tid);
+                    free(entrenador_segundo_tid);
+
+                    // Asigno los objetivos correspondientes (entrenadores y pokemons)
+                    entrenador_primero->entrenador_objetivo = entrenador_segundo;
+                    //strcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_intercambiar);
+                    strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer);
+                    entrenador_primero->pokemon_objetivo->especie = pokemon_intercambiar;
+                    //entrenador_segundo->pokemon_objetivo->especie = pokemon_inncesario_primer;
+
+                    entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                    entrenador_primero->razon_bloqueo = DEADLOCK;
+                    entrenador_segundo->razon_bloqueo = DEADLOCK;
+
+                    //Quito al entrenador que voy a mover de bloqueado para luego pasarlo a ready
+                    bool remover(void *_entrenador) {
+                        Entrenador *entrenador = (Entrenador *) _entrenador;
+                        return entrenador->tid == entrenador_primero->tid;
+                    }
+                    list_remove_by_condition(estado_block, remover);
+
+                    list_add(estado_ready, entrenador_primero);
+                    entrenador_primero->estado = READY;
+                    deadlocks_totales+=1;
+                    cumplio_condiciones = true;
+                    sem_post(&block_ready_transition[entrenador_primero->tid]);
+                    se_desbloqueo = true;
+                    list_destroy(pokemones_innecesarios_primer);
+                    break;
+                }
+                cont_segundo++;
+                list_destroy(pokemons_innecesario_segundo);
+            }
             cont_primero++;
             cont_segundo = cont_primero + 1;
+            list_destroy(pokemones_necesarios_primer);
         }
     }else {
         log_info(logger, "No hay dos entrenadores para realizar el intercambio.");
@@ -2057,14 +2034,21 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
 
 }
 
-t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
+t_list* trainer_dont_need(Entrenador* entrenador){
 
-    t_list* pokemons_innecesarios;
-    bool filtrar_pokemons(void* _nombre_pokemon){
-        char* nombre_pokemon = (char*) _nombre_pokemon;
-        return !dictionary_has_key(entrenador->objetivos_particular,nombre_pokemon);
+    t_list* pokemons_innecesarios = list_create();
+
+    void pokemon_innecesario(char* pokemon, void* _cant) {
+        int cant_stock = *(int*)_cant;
+        if (!dictionary_has_key(entrenador->objetivos_particular, pokemon)) {
+            list_add(pokemons_innecesarios, pokemon);
+        }else{
+            if( cant_stock > *(int*) dictionary_get(entrenador->objetivos_particular, pokemon)){
+                list_add(pokemons_innecesarios, pokemon);
+            }
+        }
     }
-    pokemons_innecesarios = list_filter(pokemon_array,filtrar_pokemons);
+    dictionary_iterator(entrenador->stock_pokemons, pokemon_innecesario);
 
     return pokemons_innecesarios;
 }
@@ -2074,12 +2058,16 @@ t_list* trainer_needs(Entrenador* entrenador) {
     t_list* pokemons_necesarios = list_create();
     void pokemon_necesario(char* pokemon, void* _cant) {
         int cant_necesaria = *(int*)_cant;
-        if (dictionary_has_key(entrenador->stock_pokemons)) {
-
+        if (!dictionary_has_key(entrenador->stock_pokemons, pokemon)) {
+            list_add(pokemons_necesarios, pokemon);
+        }else{
+            if( *(int*)dictionary_get(entrenador->stock_pokemons,pokemon) < cant_necesaria){
+                list_add(pokemons_necesarios, pokemon);
+            }
         }
-
     }
     dictionary_iterator(entrenador->objetivos_particular, pokemon_necesario);
+
     return pokemons_necesarios;
 }
 

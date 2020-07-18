@@ -277,7 +277,7 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
  * @param pokemon_array
  * @return lista de pokemon
  */
-t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array);
+t_list* trainer_dont_need(Entrenador* entrenador);
 
 /**
  * Hallo los pokemones que le hacen falta a un entrenador

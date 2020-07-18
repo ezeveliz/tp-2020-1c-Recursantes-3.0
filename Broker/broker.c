@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv) {
     if (argc != 2) {
-        cfg_path = strdup("../broker.cfg");
+        cfg_path = strdup("./broker.cfg");
     } else {
         cfg_path = strdup(argv[1]);
     }
@@ -594,6 +594,19 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     return nuevo_mensaje;
 }
 
+void mensaje_destroy(int id_mensaje){
+    pthread_mutex_lock(&M_MENSAJES);
+    bool id_search(void* un_mensaje){
+        mensaje* m = (mensaje*) un_mensaje;
+        return m->id == id_mensaje;
+    }
+    void element_destroyer(void* element){
+        free(element);
+    }
+    list_remove_and_destroy_by_condition(MENSAJES, id_search, element_destroyer);
+    pthread_mutex_unlock(&M_MENSAJES);
+}
+
 
 subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
     subscriptor* nuevo_subscriptor = malloc(sizeof(subscriptor));
@@ -679,9 +692,12 @@ void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
         mensaje_subscriptor* men_sub = (subscriptor*) un_men_sub;
         return men_sub->id_mensaje == id_mensaje && men_sub->id_subscriptor == id_sub;
     }
-    list_remove_by_condition(MENSAJE_SUBSCRIPTORE, multiple_id_search);
-
+    void element_destroyer(void* element){
+        free(element);
+    }
+    list_remove_and_destroy_by_condition(MENSAJE_SUBSCRIPTORE, multiple_id_search, element_destroyer);
 }
+
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
     pthread_mutex_lock(&M_SUBSCRIPTORES);
     pthread_mutex_lock(&M_MENSAJES);
@@ -726,6 +742,20 @@ void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
         subscriptor* un_subscriptor = list_get(una_cola, i);
         if(!existe_mensaje_subscriptor(un_mensaje->id, un_subscriptor->id_subs)){
             mensaje_subscriptor_create(un_mensaje->id, un_subscriptor->id_subs);
+        }
+        cantidad_subs = list_size(una_cola);
+    }
+    pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
+}
+
+// Carga mensajes si no estaban antes
+void descargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
+    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
+    int cantidad_subs = list_size(una_cola);
+    for (int i = 0; i < cantidad_subs; ++i) {
+        subscriptor* un_subscriptor = list_get(una_cola, i);
+        if(existe_mensaje_subscriptor(un_mensaje->id, un_subscriptor->id_subs)){
+            mensaje_subscriptor_delete(un_mensaje->id, un_subscriptor->id_subs);
         }
         cantidad_subs = list_size(una_cola);
     }
@@ -984,6 +1014,12 @@ void algoritmo_de_reemplazo(){
     log_error(logger, "Se borra la particion con base: %d", una_particion->base);
     log_info(tp_logger, "Se borra la particion con base: %d", una_particion->base);
 
+    // Borro el mensaje de las estrucutras
+    log_error(logger, "Borramos el mensaje: %d", una_particion->mensaje->id);
+    t_list* cola = men_to_cola(una_particion->mensaje->tipo);
+    descargar_mensaje(cola, una_particion->mensaje->id);
+    mensaje_destroy(una_particion->mensaje->id);
+
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_delete(una_particion->base);
     } else if(strcmp(config.mem_algorithm, "BS") == 0){
@@ -1211,6 +1247,25 @@ MessageType sub_to_men(MessageType cola) {
             return LOCALIZED_POK;
         case SUB_CAUGHT:
             return CAUGHT_POK;
+        default:
+            exit(EXIT_FAILURE);
+    }
+}
+
+t_list* men_to_cola(MessageType tipo) {
+    switch (tipo) {
+        case NEW_POK:
+            return LIST_NEW_POKEMON;
+        case GET_POK:
+            return LIST_GET_POKEMON;
+        case CATCH_POK:
+            return LIST_CATCH_POKEMON;
+        case APPEARED_POK:
+            return LIST_APPEARED_POKEMON;
+        case LOCALIZED_POK:
+            return LIST_LOCALIZED_POKEMON;
+        case CAUGHT_POK:
+            return LIST_CAUGHT_POKEMON;
         default:
             exit(EXIT_FAILURE);
     }

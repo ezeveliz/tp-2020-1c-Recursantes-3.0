@@ -51,11 +51,17 @@ echo "Ingrese tiempo de reintento de conexion"
 
 echo "TIEMPO_DE_REINTENTO_CONEXION=$TIEMPO_DE_REINTENTO_CONEXION" >> "$CONFIG"
 
-echo "Ingrese tiempo de reintento de conexion"
+echo "Ingrese ID del proceso"
 	echo -n "> "
 	read MAC
 
 echo "MAC=$MAC" >> "$CONFIG"
+
+echo "Ingrese el puerto de gamecard"
+	echo -n "> "
+	read PUERTO_GAMECARD
+
+echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"PUERTO_GAMECARD
 
 ./gamecard
 

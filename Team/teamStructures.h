@@ -62,7 +62,7 @@ typedef enum estado_entrenador{
  */
 typedef enum razonBloqueo{
     SIN_ESPACIO,
-    DEADLOCK,
+    DEADLOCK, // Esta razon se le setea a los 2 entrenadores que fueron seleccionados para hacer el intercambio
     ESPERANDO_CATCH,
     ESPERANDO_POKEMON, // Estoy disponible pero no hay pokemones para darme
 }RazonBloqueo;

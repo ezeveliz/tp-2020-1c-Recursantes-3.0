@@ -1898,7 +1898,8 @@ bool algoritmo_deadlock(){
     // Logueo el inicio del algoritmo de deteccion de deadlock
     log_info(logger,"Se ha iniciado el algoritmo de deteccion de deadlock");
 
-    //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
+    //Filtro la lista de entrenadores que no pueden atrapar mas pokemons(descarto a los entrenadores
+    // que hayan sido seleccionados para intercambiar en una ejecucion anterior)
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
         return (entrenador->cant_objetivos == entrenador->cant_stock) && (entrenador->razon_bloqueo != DEADLOCK);
@@ -1907,12 +1908,35 @@ bool algoritmo_deadlock(){
 
     int tamanio_ent = list_size(entrenadores_sin_margen);
 
-    // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
+    // Verifico que haya mas de 1 entrenador sin margen, caso contrario no podria hacer el intercambio
     if(tamanio_ent > 1 ) {
 
         int cont_primero = 0;
         int cont_segundo = 1;
         bool cumplio_condiciones = false;
+
+        // Itero la lista de entrenadores sin margen, se corta si encontre un par de entrenadores entre los que pueda intercambiar
+        while(cont_primero < tamanio_ent && !cumplio_condiciones) {
+
+            // Obtengo al primer entrenador de la lista de entrenadores sin margen
+            Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
+
+            // Hallo los pokemones que necesito
+            t_list* pokemones_necesarios = trainer_needs(entrenador_primero);
+            // TODO: Hallo los pokemones que no necesito
+
+            // Itero la lista de entrenadores sin margen a partir del segundo entrenador
+            while (cont_segundo < tamanio_ent) {
+
+                // Obtengo el entrenador siguiente al del bucle superior
+                Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
+
+                // TODO: Hallo los pokemons que el segundo entrenador no necesita
+
+
+
+            }
+        }
 
         while(cont_primero < tamanio_ent && !cumplio_condiciones) {
 
@@ -2043,6 +2067,20 @@ t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
     pokemons_innecesarios = list_filter(pokemon_array,filtrar_pokemons);
 
     return pokemons_innecesarios;
+}
+
+t_list* trainer_needs(Entrenador* entrenador) {
+
+    t_list* pokemons_necesarios = list_create();
+    void pokemon_necesario(char* pokemon, void* _cant) {
+        int cant_necesaria = *(int*)_cant;
+        if (dictionary_has_key(entrenador->stock_pokemons)) {
+
+        }
+
+    }
+    dictionary_iterator(entrenador->objetivos_particular, pokemon_necesario);
+    return pokemons_necesarios;
 }
 
 t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons){

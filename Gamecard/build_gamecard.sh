@@ -51,7 +51,7 @@ echo "Ingrese tiempo de reintento de conexion"
 
 echo "TIEMPO_DE_REINTENTO_CONEXION=$TIEMPO_DE_REINTENTO_CONEXION" >> "$CONFIG"
 
-
+./gamecard
 
 
 

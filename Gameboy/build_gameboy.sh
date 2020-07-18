@@ -59,7 +59,7 @@ echo "Ingrese el puerto del Gamecard"
 
 echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"
 
-
+./gameboy
 
 
 

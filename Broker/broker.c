@@ -749,13 +749,13 @@ void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
 }
 
 // Carga mensajes si no estaban antes
-void descargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
+void descargar_mensaje(t_list* una_cola, int un_mensaje){
     pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
     int cantidad_subs = list_size(una_cola);
     for (int i = 0; i < cantidad_subs; ++i) {
         subscriptor* un_subscriptor = list_get(una_cola, i);
-        if(existe_mensaje_subscriptor(un_mensaje->id, un_subscriptor->id_subs)){
-            mensaje_subscriptor_delete(un_mensaje->id, un_subscriptor->id_subs);
+        if(existe_mensaje_subscriptor(un_mensaje, un_subscriptor->id_subs)){
+            mensaje_subscriptor_delete(un_mensaje, un_subscriptor->id_subs);
         }
         cantidad_subs = list_size(una_cola);
     }
@@ -1016,9 +1016,9 @@ void algoritmo_de_reemplazo(){
 
     // Borro el mensaje de las estrucutras
     log_error(logger, "Borramos el mensaje: %d", una_particion->mensaje->id);
-    t_list* cola = men_to_cola(una_particion->mensaje->tipo);
-    descargar_mensaje(cola, una_particion->mensaje->id);
-    mensaje_destroy(una_particion->mensaje->id);
+//    t_list* cola = men_to_cola(una_particion->mensaje->tipo);
+//    descargar_mensaje(cola, una_particion->mensaje->id);
+//    mensaje_destroy(una_particion->mensaje->id);
 
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_delete(una_particion->base);

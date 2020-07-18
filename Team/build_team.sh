@@ -86,12 +86,6 @@ echo "Ingrese el Puerto del Broker"
 echo "PUERTO_BROKER=$PUERTO_BROKER" >> "$CONFIG"
 
 # Datos Team
-echo "Ingrese la IP del Team"
-	echo -n "> "
-	read IP_TEAM
-
-echo "IP_TEAM=$IP_TEAM" >> "$CONFIG"
-
 echo "Ingrese el Puerto del Team"
 	echo -n "> "
 	read PUERTO_TEAM
@@ -109,8 +103,3 @@ echo "Ingrese el Team ID"
 	read TEAM_ID
 
 echo "TEAM_ID=$TEAM_ID" >> "$CONFIG"
-
-
-
-
-

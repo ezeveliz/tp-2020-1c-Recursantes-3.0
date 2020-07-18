@@ -211,7 +211,6 @@ int read_config_options() {
     config.estimacion_inicial = config_get_int_value(config_file, "ESTIMACION_INICIAL");
     config.ip_broker = config_get_string_value(config_file, "IP_BROKER");
     config.puerto_broker = config_get_int_value(config_file, "PUERTO_BROKER");
-    config.ip_team = config_get_string_value(config_file, "IP_TEAM");
     config.puerto_team = config_get_int_value(config_file, "PUERTO_TEAM");
     config.log_file = config_get_string_value(config_file, "LOG_FILE");
     config.team_id = config_get_int_value(config_file, "TEAM_ID");

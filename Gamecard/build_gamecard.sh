@@ -61,9 +61,9 @@ echo "Ingrese el puerto de gamecard"
 	echo -n "> "
 	read PUERTO_GAMECARD
 
-echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"PUERTO_GAMECARD
+echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"
 
-./gamecard
+#./gamecard
 
 
 

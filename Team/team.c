@@ -263,6 +263,7 @@ void subscribe_to_queues() {
 }
 
 void* subscribe_to_queue_thread(void* arg) {
+
     MessageType cola = *(MessageType*)arg;
 
     // Me intento conectar y suscribir, la funcion no retorna hasta que no lo logre

@@ -16,8 +16,6 @@ pthread_t localized_thread;
 pthread_t caught_thread;
 
 int main() {
-    montar("..");
-
     pthread_t server_thread;
 
     //Leo la configuracion, si da error cierro el negocio
@@ -25,6 +23,8 @@ int main() {
         printf("Error al leer configuracion\n");
         return -1;
     }
+
+    montar(configuracion.punto_montaje);
 
     // Inicializo el log, si no pude salgo del proceso
 //    LOG_LEVEL_TRACE

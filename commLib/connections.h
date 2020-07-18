@@ -213,7 +213,7 @@ t_get_pokemon* void_a_get_pokemon(void* stream);
  * @param coordenas, posicion en x coma posicion en y
  * @return Puntero a la estructura creada
  */
-t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...);
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, uint32_t* coordenadas);
 
 /**
  * Serealizar t_localized_pokemon

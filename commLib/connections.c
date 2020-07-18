@@ -306,6 +306,7 @@ t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t
     new_pokemon->pos_x = pos_x;
     new_pokemon->pos_y = pos_y;
     new_pokemon->cantidad = cantidad;
+    return new_pokemon;
 }
 
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon){
@@ -387,19 +388,13 @@ t_get_pokemon* void_a_get_pokemon(void* stream){
 }
 
 
-t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, ...){
+t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t cantidad_coordenadas, uint32_t* coordenadas){
     t_localized_pokemon* localized_pokemon = malloc(sizeof(t_localized_pokemon));
     localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
     localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
-
-    va_list ap;
-    va_start(ap, cantidad_coordenadas*2);
-    for (int i = 0; i < cantidad_coordenadas*2; ++i) {
-        localized_pokemon->coordenadas[i] = va_arg(ap, uint32_t);
-    }
-    va_end(ap);
+    localized_pokemon->coordenadas = coordenadas;
 
     return localized_pokemon;
 }
@@ -480,6 +475,7 @@ t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint
     catch_pokemon->nombre_pokemon = nombre_pokemon;
     catch_pokemon->pos_x = pos_x;
     catch_pokemon->pos_y = pos_y;
+    return catch_pokemon;
 }
 
 void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon){
@@ -528,6 +524,7 @@ t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x
     appeared_pokemon->nombre_pokemon = nombre_pokemon;
     appeared_pokemon->pos_x = pos_x;
     appeared_pokemon->pos_y = pos_y;
+    return appeared_pokemon;
 }
 
 void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon){

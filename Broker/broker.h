@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <limits.h>
 #include <signal.h>
+#include <math.h>
 
 #include <commons/config.h>
 #include <commons/log.h>
@@ -83,7 +84,6 @@ typedef struct mensaje {
     MessageType tipo;
     size_t tam;
     void* puntero_a_memoria;
-    unsigned long lru;
 } mensaje;
 t_list* MENSAJES;
 pthread_mutex_t M_MENSAJES;
@@ -164,4 +164,12 @@ void algoritmo_de_reemplazo();
 particion* find_particion_by_id_mensaje(int id_mensaje);
 bool existe_mensaje_subscriptor(int id_mensaje, int id_subs);
 MessageType sub_to_men(MessageType cola);
+t_nodo* buscar_nodo_tam(struct t_nodo* nodo, int tam);
+particion* asignar_particion_buddy(t_nodo* raiz, size_t tam);
+t_nodo* buddy_dividir_raiz(t_nodo* raiz);
+void particion_destroy(particion * unaparticion);
+t_nodo* buscar_nodo_particion(struct t_nodo* nodo, particion* una_particion);
+void buddy_liberar_particion(particion* particion_victima);
+t_nodo* crear_nodo(particion* particion, struct t_nodo* izq, struct t_nodo* der, struct t_nodo* padre, struct t_nodo* buddy, bool es_hoja);
+
 #endif //TEAM_BROKER_H

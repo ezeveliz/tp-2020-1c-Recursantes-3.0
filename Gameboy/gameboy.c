@@ -634,6 +634,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             memcpy(nombre_pokemon, getPokemon->nombre_pokemon, getPokemon->nombre_pokemon_length);
             nombre_pokemon[getPokemon->nombre_pokemon_length] = '\0';
 
+
             free(getPokemon->nombre_pokemon);
             getPokemon->nombre_pokemon = nombre_pokemon;
 

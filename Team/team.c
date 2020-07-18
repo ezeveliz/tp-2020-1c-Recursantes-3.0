@@ -998,8 +998,6 @@ void* trainer_thread(void* arg){
                 Pokemon* pok = entrenador->pokemon_objetivo;
                 t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, pok->coordenada.pos_x, pok->coordenada.pos_y);
 
-                // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
-                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
                 // Me quito de la lista de ejecucion
                 list_remove(estado_exec, 0);
 
@@ -1037,6 +1035,9 @@ void* trainer_thread(void* arg){
                     call_planner();
                 else
                     algoritmo_de_cercania();
+
+                // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
+                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
 
                 // Me bloqueo esperando la rta del Broker
                 sem_wait(&block_catch_transition[entrenador->tid]);
@@ -1337,6 +1338,7 @@ void* message_function(void* message_package){
 
         // Me desconecto del Broker
         disconnect_from_broker(broker);
+        free_package(package);
     }
 
     free(mensajeError);
@@ -1417,9 +1419,6 @@ void caught_pokemon(int tid, int atrapado) {
     } else {
 
         string_append(&caught, " no ha sido atrapado por el entrenador ");
-        // Obtengo el pokemon y libero la memoria?
-        Pokemon* pok = entrenador->pokemon_objetivo;
-
     }
     char* trainer = string_itoa(entrenador->tid);
     string_append(&caught, trainer);

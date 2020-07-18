@@ -13,6 +13,8 @@ t_list* archivos_abiertos;
 //Bloquea el uso de la lista
 sem_t* bloque_archivos_abiertos;
 
+//Para logear lo que pasa en el file system
+t_log *logger_tall_grass;
 
 /* Crea la estrucutra de carpetas del file system siempre y cuando no exista
  * Los errores los muestra imprimiendo en consola
@@ -23,6 +25,7 @@ int montar(char* punto_montaje){
     //Creo el path del fileSystem
     char* path_tall_grass = concatenar_strings(punto_montaje,"/Tall_Grass");
 
+    logger_tall_grass = log_create("tall_grass_logger", "Tall-Grass", 0, LOG_LEVEL_INFO);
     //Venga lo nuevo fuera lo viejo
     limpiar_unidades_antiguas(path_tall_grass);
 
@@ -83,6 +86,7 @@ void limpiar_unidades_antiguas(char* path){
 //Crea la estructura de metadata del fileSystem
 int crear_metadata(char* path){
     char* path_metadata = concatenar_strings(path,"/Metadata");
+    log_info(logger_tall_grass,"Se crea la metadata del FS");
 
     //Creo la carpeta
     int resultado = crear_carpeta(path_metadata, ACCESSPERMS);
@@ -134,9 +138,11 @@ int crear_blocks(char* path){
             free(path_bloque);
         }
         free(path_blocks);
+        log_info(logger_tall_grass,"Se crearon los bloques del FS");
         return 0;
     }
     free(path_blocks);
+    log_error(logger_tall_grass,"Error al crear bloques del FS");
     return 1;
 }
 
@@ -200,14 +206,18 @@ int crear_ficheto(char* path, int tipo){
         FILE * archivo_metadata = fopen(path_metadata,"w+");
         if(tipo == 0){
             resultado = fprintf(archivo_metadata,"DIRECTORY=Y");
+            log_info(logger_tall_grass,"Se creo un directorio con Path:%s",path);
+
         }else{
             resultado = fprintf(archivo_metadata,"DIRECTORY=N\nSIZE=0\nBLOCKS=[]\nOPEN=N");
+            log_info(logger_tall_grass,"Se creo un archivo con Path:%s",path);
         }
         fclose(archivo_metadata);
         free(path_metadata);
         return resultado > 0 ? 0:1;
     }
 
+    log_error(logger_tall_grass,"Error al crear archivo con Path:%s",path);
     return 1;
 }
 
@@ -359,9 +369,12 @@ t_file* open_tall_grass(char* path){
         config_save(metadata);
         config_destroy(metadata);
 
+        log_info(logger_tall_grass,"Se abrio el archivo:%s",path);
         free(path_archivo_metadata);
         return retorno;
     }else{
+
+        log_error(logger_tall_grass,"Error al abrir archivo:%s",path);
         free(retorno);
         free(path_archivo_metadata);
         return NULL;
@@ -379,6 +392,7 @@ int close_tall_grass(t_file * fd ){
 
     int res = sacar_lista_archivos_abiertos(fd->path);
 
+    log_info(logger_tall_grass,"Se cerro el archivo con Path:%s",fd->path);
     free(fd->path);
     free(fd->metadata->bloques);
     free(fd->metadata);
@@ -470,6 +484,7 @@ int buscar_caracter_archivo(FILE* archivo, char caracter_a_buscar , int numero_d
 }
 
 int write_tall_grass(t_file* archivo, char* datos_escribir, uint32_t size_a_escribir, uint32_t posicion_dentro_archivo){
+
 
     int exedente_byte = (archivo->metadata->size) - posicion_dentro_archivo;
 
@@ -598,6 +613,7 @@ void agregar_bloque_archivo(t_file* archivo, uint32_t bloque){
     //Asigno version nueva ya guardada de bloques
     archivo->metadata->bloques = bloques_final;
 
+    log_info(logger_tall_grass,"Se agrego un bloque al archivo: %s bloque: %d",archivo->path, bloque);
     //Libero
     free(bloque_string1);
     free(bloque_string2);
@@ -607,6 +623,7 @@ void agregar_bloque_archivo(t_file* archivo, uint32_t bloque){
 void agregar_byte_archivo(t_file* archivo, int cantidad){
     //Abro el archivo de metadata como un t_config
     //Me aprobecho de eso para simplificar la cosa
+    sleep(1); //todo acordate de sacarlo
     t_config* metadata = config_create(archivo->path);
     int size_anterior = config_get_int_value(metadata,"SIZE");
     char* size = string_itoa(size_anterior + cantidad);
@@ -803,6 +820,7 @@ char* read_tall_grass(t_file* archivo, uint32_t size_a_leer, uint32_t posicion){
 }
 
 int truncate_tall_grass(t_file* archivo, uint32_t off_set){
+
     //Seteo la pos al archivo
     archivo->pos = off_set;
     //Calculo los bytes a disminuir
@@ -864,6 +882,7 @@ int truncate_tall_grass(t_file* archivo, uint32_t off_set){
 
 //Funcion para sacar el ultimo bloque de la metadata del archivo
 void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
+    log_info(logger_tall_grass,"Se va a sacar un bloque del archivo:s", archivo->path);
 
     //Calculo los bloques por los q paso la posicion
     int bloque_usado_en_array = bloque_relativo_archivo(pos_final_archivo); //Es la posicion del array de bloques
@@ -911,6 +930,7 @@ void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
 }
 
 int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) {
+    log_info(logger_tall_grass,"Se va a eliminar datos del archivo:%s pos: %d cant:%d",archivo->path, off_set, cantidad_byte);
     char *caracter_a_copiar;
 //i < cantidad_byte &&
     for (int i = 0;  (off_set + cantidad_byte + i) < (archivo->metadata->size); i++) {
@@ -947,6 +967,7 @@ t_list* obtener_bloques_libres( int cantidad_pedida ) {
     //Lo dejo esperando hasta que pueda entrar
     while (flock(archivo_bitmap->_fileno, LOCK_EX | LOCK_NB) != 0) {}
 
+
     //Bloque el archivo y si tengo exito entra el el while
     t_bitarray *bitmap = bitarray_create(obtener_bitmap(archivo_bitmap, cantidad_bloques),
                                          tamanio_bitmap(cantidad_bloques));
@@ -961,6 +982,7 @@ t_list* obtener_bloques_libres( int cantidad_pedida ) {
             *bloque_libre = i;
             list_add(bloques_libres, bloque_libre);
             bitarray_set_bit(bitmap, i);
+            log_info(logger_tall_grass,"Se ocupa el bloque: %d del bitmap",i);
             contador_bloques_obtenidos++;
         }
     }
@@ -999,6 +1021,7 @@ int liberar_bloque(uint32_t nro_bloque){
 
         //Escribo el bitmap modificado en el archivo
         escribir_bitmap(bitmap, archivo_bitmap);
+        log_info(logger_tall_grass,"Se libera bloque: %d del bitmap", nro_bloque);
 
         //Desbloqueo el archivo
         flock(archivo_bitmap->_fileno, LOCK_UN);
@@ -1018,6 +1041,9 @@ int liberar_bloque(uint32_t nro_bloque){
 }
 
 t_metadata* obtener_metadata_archivo(char* path){
+
+    printf("%s\n",path);
+
     //Trato a la metadata del archivo como un config
     t_config* conf = config_create(path);
     t_metadata* metadata = malloc(sizeof(t_metadata));

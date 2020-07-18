@@ -9,13 +9,14 @@ t_gamecard_config configuracion;
 t_config* config_file;
 t_log *logger;
 int contador_hilo = 0;
+
 // Hilos encargados de recibir los distintos mensajes del Broker
 pthread_t appeared_thread;
 pthread_t localized_thread;
 pthread_t caught_thread;
 
 int main() {
-    montar("");
+    montar("..");
 
     pthread_t server_thread;
 
@@ -32,7 +33,7 @@ int main() {
 //    LOG_LEVEL_WARNING
 //    LOG_LEVEL_ERROR
 
-    logger = log_create("gamecard_log", "Gamecard", 1, LOG_LEVEL_INFO);
+    logger = log_create("gamecard_log", "Gamecard", 0, LOG_LEVEL_INFO);
     if (logger == NULL) {
         printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
         return -1;
@@ -106,17 +107,17 @@ void subscribe_to_queues() {
 
     // Levanto 3 hilos y en cada uno realizo una conexion al broker para cada una de las colas
     MessageType* appeared = malloc(sizeof(MessageType));
-    *appeared = SUB_APPEARED;
+    *appeared = SUB_NEW;
     pthread_create(&appeared_thread, NULL, &subscribe_to_queue_thread, (void*)appeared);
     pthread_detach(appeared_thread);// Lo pone como un hilo separado para que libere los recursos despues
 
     MessageType* localized = malloc(sizeof(MessageType));
-    *localized = SUB_LOCALIZED;
+    *localized = SUB_CATCH;
     pthread_create(&localized_thread, NULL, &subscribe_to_queue_thread, (void*)localized);
     pthread_detach(localized_thread);
 
     MessageType* caught = malloc(sizeof(MessageType));
-    *caught = SUB_CAUGHT;
+    *caught = SUB_GET;
     pthread_create(&caught_thread, NULL, &subscribe_to_queue_thread, (void*)caught);
     pthread_detach(caught_thread);
 }
@@ -359,6 +360,7 @@ void incoming_gameboy(int server_socket, char* ip, int port, MessageHeader * hea
     log_debug(logger, "Llegada de un mensaje desde Gameboy");
     t_list* paquete_recibido = receive_package(server_socket, headerStruct);
 
+
     //Seteo los datos para la respuesta
     int id_gamecard = configuracion.gamecard_id;
     int idMensaje = *(int *) list_get(paquete_recibido, 0);
@@ -430,6 +432,12 @@ void* mensaje_new_pokemon(void* parametros ){
     //Asigno los parametros para trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
     t_new_pokemon* pokemon = void_a_new_pokemon(datos_param->estructura_pokemon) ;
+    char* nombre_pokemon = malloc(pokemon->nombre_pokemon_length + 1);
+    memcpy(nombre_pokemon, pokemon->nombre_pokemon, pokemon->nombre_pokemon_length);
+    nombre_pokemon[pokemon->nombre_pokemon_length] = '\0';
+    free(pokemon->nombre_pokemon);
+    pokemon->nombre_pokemon = nombre_pokemon;
+
     uint32_t id = datos_param->id;
 
     //Genero el path del archivo desde la raiz tall grass
@@ -443,6 +451,7 @@ void* mensaje_new_pokemon(void* parametros ){
     if(!find_tall_grass(pokemon->nombre_pokemon)){
         log_debug(logger,"Hilo: %d Crea el directorio %s", pthread_self(),pokemon->nombre_pokemon);
         create_tall_grass(path_archvio);
+        sleep(1);//Para que no intente leerlo antes de que se cree
     }
 
     //Verificar si el archivo se puede abrir sino intentar en x tiempo
@@ -560,6 +569,12 @@ void* mensaje_catch_pokemon(void* parametros){
     //Asigno los datos a la estructura para trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
     t_catch_pokemon* pokemon = void_a_catch_pokemon(datos_param->estructura_pokemon) ;
+    char* nombre_pokemon = malloc(pokemon->nombre_pokemon_length + 1);
+    memcpy(nombre_pokemon,pokemon->nombre_pokemon,pokemon->nombre_pokemon_length);
+    nombre_pokemon[pokemon->nombre_pokemon_length] = '\0';
+    free(pokemon->nombre_pokemon);
+    pokemon->nombre_pokemon = nombre_pokemon;
+
     uint32_t id = datos_param->id;
 
     //Genero el path del archivo desde la raiz tall grass
@@ -730,6 +745,12 @@ void* mensaje_get_pokemon(void* parametros){
     //Asigno las estructuras para poder trabajar
     estructura_para_hilo* datos_param = (estructura_para_hilo*) parametros;
     t_get_pokemon* pokemon = void_a_get_pokemon(datos_param->estructura_pokemon) ;
+    char* nombre_pokemon = malloc(pokemon->nombre_pokemon_length + 1);
+    memcpy(nombre_pokemon,pokemon->nombre_pokemon,pokemon->nombre_pokemon_length);
+    nombre_pokemon[pokemon->nombre_pokemon_length] = '\0';
+    free(pokemon->nombre_pokemon);
+    pokemon->nombre_pokemon = nombre_pokemon;
+
     uint32_t id = datos_param->id;
 
     //Obtengo el path donde estan alojados los archivos

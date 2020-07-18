@@ -278,13 +278,13 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionPerdida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (APPEARED_POK):;
+        case (SUB_APPEARED):;
             string_append(&conexionPerdida, "Appeared ");
             break;
-        case (LOCALIZED_POK):;
+        case (SUB_LOCALIZED):;
             string_append(&conexionPerdida, "Localized ");
             break;
-        case (CAUGHT_POK):;
+        case (SUB_CAUGHT):;
             string_append(&conexionPerdida, "Caught ");
             break;
         default:;
@@ -298,13 +298,13 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionReestablecida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (APPEARED_POK):;
+        case (SUB_APPEARED):;
             string_append(&conexionReestablecida, "Appeared ");
             break;
-        case (LOCALIZED_POK):;
+        case (SUB_LOCALIZED):;
             string_append(&conexionReestablecida, "Localized ");
             break;
-        case (CAUGHT_POK):;
+        case (SUB_CAUGHT):;
             string_append(&conexionReestablecida, "Caught ");
             break;
         default:;
@@ -338,7 +338,7 @@ void* subscribe_to_queue_thread(void* arg) {
             }
 
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
-            switch (cola) {
+            switch (buffer_header->type) {
 
                 case (APPEARED_POK):;
 

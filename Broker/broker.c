@@ -239,7 +239,7 @@ void *server_function(void *arg) {
 
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, new_pokemon_a_void(new_pokemon), sizeof_new_pokemon(new_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_new_pokemon(new_pokemon));
                   
                     // Cargamos el un_mensaje a la lista de New_pokemon
                     pthread_mutex_lock(&M_LIST_NEW_POKEMON);
@@ -250,9 +250,12 @@ void *server_function(void *arg) {
                     t_paquete* paquete = create_package(NEW_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
 
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
+                    free(new_pokemon->nombre_pokemon);
+                    free(new_pokemon);
                     break;
                 }
 
@@ -266,21 +269,24 @@ void *server_function(void *arg) {
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, APPEARED_POK, sizeof_appeared_pokemon(appeared_pokemon));
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, appeared_pokemon_a_void(appeared_pokemon), sizeof_appeared_pokemon(appeared_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_appeared_pokemon(appeared_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Appeared_pokemon
                     pthread_mutex_lock(&M_LIST_APPEARED_POKEMON);
                     cargar_mensaje(LIST_APPEARED_POKEMON, un_mensaje);
                     pthread_mutex_unlock(&M_LIST_APPEARED_POKEMON);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(APPEARED_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
+                    free(appeared_pokemon->nombre_pokemon);
+                    free(appeared_pokemon);
                     break;
                 }
 
@@ -294,21 +300,25 @@ void *server_function(void *arg) {
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, LOCALIZED_POK, sizeof_localized_pokemon(localized_pokemon));
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, localized_pokemon_a_void(localized_pokemon), sizeof_localized_pokemon(localized_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_localized_pokemon(localized_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Localized_pokemon
                     pthread_mutex_lock(&M_LIST_LOCALIZED_POKEMON);
                     cargar_mensaje(LIST_LOCALIZED_POKEMON, un_mensaje);
                     pthread_mutex_unlock(&M_LIST_LOCALIZED_POKEMON);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(LOCALIZED_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
+                    free(localized_pokemon->nombre_pokemon);
+                    free(localized_pokemon->coordenadas);
+                    free(localized_pokemon);
                     break;
                 }
 
@@ -322,21 +332,23 @@ void *server_function(void *arg) {
                     mensaje* un_mensaje = mensaje_create(0, mensaje_co_id, CAUGHT_POK, sizeof_caught_pokemon(caught_pokemon));
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, caught_pokemon_a_void(caught_pokemon), sizeof_caught_pokemon(caught_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_caught_pokemon(caught_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Caught_pokemon
                     pthread_mutex_lock(&M_LIST_CAUGHT_POKEMON);
                     cargar_mensaje(LIST_CAUGHT_POKEMON, un_mensaje);
                     pthread_mutex_unlock(&M_LIST_CAUGHT_POKEMON);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(CAUGHT_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
+                    free(caught_pokemon);
                     break;
                 }
 
@@ -349,21 +361,24 @@ void *server_function(void *arg) {
                     mensaje* un_mensaje = mensaje_create(0, 0, GET_POK, sizeof_get_pokemon(get_pokemon));
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, get_pokemon_a_void(get_pokemon), sizeof_get_pokemon(get_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_get_pokemon(get_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Get_pokemon
                     pthread_mutex_lock(&M_LIST_GET_POKEMON);
                     cargar_mensaje(LIST_GET_POKEMON, un_mensaje);
                     pthread_mutex_unlock(&M_LIST_GET_POKEMON);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(GET_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
+                    free(get_pokemon->nombre_pokemon);
+                    free(get_pokemon);
                     break;
                 }
 
@@ -376,21 +391,24 @@ void *server_function(void *arg) {
                     mensaje* un_mensaje = mensaje_create(0, 0, CATCH_POK, sizeof_catch_pokemon(catch_pokemon));
 
                     // Guardamos el contenido del mensaje en la memoria principal
-                    memcpy(un_mensaje->puntero_a_memoria, catch_pokemon_a_void(catch_pokemon), sizeof_catch_pokemon(catch_pokemon));
+                    memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_catch_pokemon(catch_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Catch_pokemon
                     pthread_mutex_lock(&M_LIST_CATCH_POKEMON);
                     cargar_mensaje(LIST_CATCH_POKEMON, un_mensaje);
                     pthread_mutex_unlock(&M_LIST_CATCH_POKEMON);
 
-                    // Enviamos los mensajes pendientes
-                    recursar_operativos();
-
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(CATCH_POK);
                     add_to_package(paquete, (void*) &respuesta, sizeof(int));
                     send_package(paquete, fd);
+                    free_package(paquete);
+
+                    // Enviamos los mensajes pendientes
+                    recursar_operativos();
+                    free(catch_pokemon->nombre_pokemon);
+                    free(catch_pokemon);
                     break;
                 }
 
@@ -411,6 +429,10 @@ void *server_function(void *arg) {
                 break;
             }
         }
+        void element_destroyer(void* element){
+            free(element);
+        }
+        list_destroy_and_destroy_elements(cosas, element_destroyer);
     }
     log_info(logger, "Hilo de servidor iniciado...");
     start_multithread_server(socket, &new, &lost, &incoming);
@@ -675,6 +697,7 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     t_paquete* paquete = create_package(tipo);
     add_to_package(paquete, (void*) &respuesta, sizeof(int));
     send_package(paquete, fd);
+    free_package(paquete);
 
     // Busque los mensajes antiguos en memoria y se cree las estructuras mensaje_subscriptor
     for (int i = 0; i < list_size(MENSAJES); ++i) {
@@ -758,6 +781,7 @@ void recursar_operativos(){
         }
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
+        free(cosito);
     }
     pthread_mutex_unlock(&M_PARTICIONES);
     pthread_mutex_unlock(&M_SUBSCRIPTORES);
@@ -784,6 +808,8 @@ void mandar_mensaje(void* cosito){
         particion* una_particion = find_particion_by_id_mensaje(un_mensaje->id);
         una_particion->ultimo_uso = unix_epoch();
     }
+    free(coso);
+    free_package(paquete);
 }
 
 particion* find_particion_by_id_mensaje(int id_mensaje){

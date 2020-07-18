@@ -306,6 +306,7 @@ t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t
     new_pokemon->pos_x = pos_x;
     new_pokemon->pos_y = pos_y;
     new_pokemon->cantidad = cantidad;
+    return new_pokemon;
 }
 
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon){
@@ -474,6 +475,7 @@ t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint
     catch_pokemon->nombre_pokemon = nombre_pokemon;
     catch_pokemon->pos_x = pos_x;
     catch_pokemon->pos_y = pos_y;
+    return catch_pokemon;
 }
 
 void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon){
@@ -522,6 +524,7 @@ t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x
     appeared_pokemon->nombre_pokemon = nombre_pokemon;
     appeared_pokemon->pos_x = pos_x;
     appeared_pokemon->pos_y = pos_y;
+    return appeared_pokemon;
 }
 
 void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon){

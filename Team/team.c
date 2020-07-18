@@ -1757,6 +1757,7 @@ void appeared_pokemon(t_list* paquete){
 
     // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
 
+
     // Chequeo si el pokemon se encuentra en el diccionario de objetivos
     if (dictionary_has_key(objetivo_global, appearedPokemon->nombre_pokemon)) {
 

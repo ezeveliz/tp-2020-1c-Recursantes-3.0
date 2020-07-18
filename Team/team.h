@@ -277,24 +277,20 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
  * @param pokemon_array
  * @return lista de pokemon
  */
-t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array);
+t_list* trainer_dont_need(Entrenador* entrenador);
 
 /**
- * Devuelve la lista de pokemons que se repiten
- * @param stock_pokemons, pokemones que tiene un entrenador
- * @param objetivos_pokemons, pokemones que necesita un entrenador
- * @return lista de pokemons repetidos
+ * Hallo los pokemones que le hacen falta a un entrenador
+ * @returns t_list* lista de pokemones que necesita
  */
-
-t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons);
+t_list* trainer_needs(Entrenador* entrenador);
 
 //----------------------------------------HELPERS----------------------------------------//
 
 /**
- * Loggea el cambio de estado de un entrenador a Ready
- * @param entrenador
+ * Loggear el cambio de estado de un entrenador a Finish
  */
-void loggear_ready(Entrenador* entrenador);
+void loggear_finish(Entrenador* entrenador);
 
 /**
  * Loggear el cambio de estado de un entrenador a Ejecucion
@@ -320,27 +316,6 @@ void free_list(t_list* received, void(*element_destroyer)(void*));
  * @return
  */
 struct timespec get_time();
-
-/**
- * Creo un nuevo intervalo con su memoria ya alocada
- * @return interval* interval
- */
-t_interval* new_interval();
-
-/**
- * Conversion de un timespec a microsegundos;
- * @param timespec
- * @return
- */
-long timespec_to_us(struct timespec* timespec);
-
-/**
- * Hallo la diferencia de tiempo entre dos timespec
- * @param start, timespec en el que inicio la medición
- * @param end, timespec en el que termino la medición
- * @param diff, timespec en el que se almacena la diferencia entre ambos
- */
-void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff);
 
 /**
  * Hallo la distancia entre dos coordenadas, la actual y la de destino.

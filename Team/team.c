@@ -22,6 +22,8 @@ pthread_t caught_thread;
 //Variable encargada de acumular los deadlocks totales
 int deadlocks_totales = 0;
 
+int cambios_contextos = 0;
+
 // Estructura clave-valor para manejar los objetivos globales, la clave es el nombre y el valor es la cantidad necesitada
 t_dictionary* objetivo_global;
 
@@ -74,6 +76,9 @@ pthread_mutex_t mutex_algoritmo_cercania;
 //Semaforo mutex deadlock
 pthread_mutex_t mutex_deadlock;
 
+//Semaforo mutex planificador
+pthread_mutex_t mutex_planificador;
+
 int main() {
     int i = 0;
     pthread_t server_thread;
@@ -91,7 +96,7 @@ int main() {
     }
 
     // Inicializo estructuras, semaforos e hilos
-int tamanio_entrenadores = initialize_structures();
+    int tamanio_entrenadores = initialize_structures();
 
     //Creo el servidor para que el GameBoy me mande mensajes
     pthread_create(&server_thread, NULL, server_function, NULL);
@@ -120,15 +125,71 @@ int tamanio_entrenadores = initialize_structures();
     }
     dictionary_iterator(objetivo_global, iterador_pokemons);
 
-    // TODO: joinear hilos de entrenadores
     while(i < tamanio_entrenadores){
         pthread_join(threads_trainer[i], NULL);
         i++;
     }
 
-    printf("Todos los entrenadores cumplieron sus objetivos \n");
+    char* log_final = string_new();
+    string_append(&log_final, "Cantidad de ciclos de CPU totales: ");
 
-    log_info(logger, "Todos los entrenadores cumplieron sus objetivos ");
+    char* detalles_entrenador = string_new();
+    string_append(&detalles_entrenador, "Cantidad de ciclos de CPU por entrenador: \n");
+
+    //Loggeo de ciclos por entrenador
+    int total_ejecutado = 0;
+    void sumador(void* _entrenador) {
+        Entrenador* entrenador = (Entrenador*) _entrenador;
+        total_ejecutado += entrenador->acumulado_total;
+
+        string_append(&detalles_entrenador, "-----Entrenador ");
+        char* tid = string_itoa(entrenador->tid);
+        string_append(&detalles_entrenador, tid);
+        string_append(&detalles_entrenador, ": ");
+        char* ciclos = string_itoa(entrenador->acumulado_total);
+        string_append(&detalles_entrenador, ciclos);
+        string_append(&detalles_entrenador, "\n");
+
+        free(tid);
+        free(ciclos);
+    }
+    list_iterate(estado_finish, sumador);
+
+    //Loggeo de ciclos totales
+    char* ciclos_totales = string_itoa(total_ejecutado);
+    string_append(&log_final, ciclos_totales);
+    string_append(&log_final, "\n");
+
+    char* deadlocks_totales_log = string_new();
+    string_append(&deadlocks_totales_log,"Los deadlocks totales resueltos fueron ");
+    char* numero_deadlocks = string_itoa(deadlocks_totales);
+    string_append(&deadlocks_totales_log, numero_deadlocks);
+    string_append(&deadlocks_totales_log, "\n");
+
+    char* cambios_contextos_log = string_new();
+    string_append(&cambios_contextos_log, "Los cambios de contextos totales fueron ");
+    char* numero_contextos = string_itoa(cambios_contextos);
+    string_append(&cambios_contextos_log, numero_contextos);
+    string_append(&cambios_contextos_log, "\n");
+
+    printf("%s", log_final);
+    printf("%s", detalles_entrenador);
+    printf("%s", deadlocks_totales_log);
+    printf("%s", cambios_contextos_log);
+
+    free(ciclos_totales);
+
+    log_info(logger, log_final);
+    log_info(logger, detalles_entrenador);
+    log_info(logger, deadlocks_totales_log);
+    log_info(logger, cambios_contextos_log);
+
+    free(cambios_contextos_log);
+    free(numero_contextos);
+    free(log_final);
+    free(detalles_entrenador);
+    free(deadlocks_totales_log);
+    free(numero_deadlocks);
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
@@ -413,6 +474,8 @@ void* subscribe_to_queue_thread(void* arg) {
 
             // Envio confirmacion al Broker
             send_package(paquete, broker);
+            free_package(paquete);
+            list_destroy(rta_list);
 
             // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
@@ -627,9 +690,9 @@ int initialize_structures() {
     // Inicializo semaforo mutex que protege la lista de pokemones recibidos(solo nombre)
     pthread_mutex_init(&mutex_pokemons_received, NULL);
 
-    //TODO: Despues ver si esto se queda o se borra
     pthread_mutex_init(&mutex_algoritmo_cercania, NULL);
     pthread_mutex_init(&mutex_deadlock, NULL);
+    pthread_mutex_init(&mutex_planificador, NULL);
 
     // Hallo la cantidad de listas de stock de pokemones hay
     int cant_listas_pokemones_stock = funcion_de_mierda(config.pokemon_entrenadores);
@@ -649,6 +712,7 @@ int initialize_structures() {
         entrenador->vengo_de_ejecucion = false;
         entrenador->tengo_que_desalojar = false;
         entrenador->calcular_estimado = true;
+        entrenador->pokemon_objetivo = malloc(sizeof(Pokemon));
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -796,7 +860,7 @@ void add_global_objectives(char** objetivos_entrenador, char** pokemon_entrenado
 
             *(int*)dictionary_get(objetivo_global, pokemon) -= 1;
 
-            //TODO: verificar que no sean tan forros de poner un pokemon que nadie va a utilizar
+            //TODO: verificar que no pongan un pokemon que nadie va a utilizar
             // Si no existia la necesidad la creo(con valor de -1)
         } else {
 
@@ -832,8 +896,6 @@ void* trainer_thread(void* arg){
     // Me quedo iterando hasta que este en estado Finish
     while(entrenador->estado != FINISH){
 
-        loggear_ready(entrenador);
-
         // Marco el momento en que el entrenador llego a Ready
         *(entrenador->tiempo_llegada) = get_time();
 
@@ -843,7 +905,9 @@ void* trainer_thread(void* arg){
         // Bloqueo esperando a que el planificador decida que ejecute
         sem_wait( &ready_exec_transition[entrenador->tid] );
 
-        loggear_exec(entrenador);
+        if(config.algoritmo_planificacion != RR && config.algoritmo_planificacion != SJF_CD){
+            loggear_exec(entrenador);
+        }
 
         int distancia_a_viajar = 0;
 
@@ -868,7 +932,6 @@ void* trainer_thread(void* arg){
 
             // Duermo el entrenador durante un ciclo de CPU
             sleep(config.retardo_ciclo_cpu);
-            //TODO: Actualizar la posicion de los entrenadores en los algoritmos con desalojo si me desalojaron
 
             // Acumulo un ciclo de ejecucion
             entrenador->acumulado_actual += 1;
@@ -916,9 +979,8 @@ void* trainer_thread(void* arg){
             // Estaba viajando para atrapar un Pokemon
             case (CATCH):;
 
-                // TODO: Las listas que uso abajo deben estar protegidas por semaforos mutex
-
                 verificar_desalojo(entrenador);
+                entrenador->vengo_de_ejecucion = false;
 
                 // Duermo durante el tiempo que ocupa un ciclo de ejecucion correspondiente al envio de mensaje al broker
                 sleep(config.retardo_ciclo_cpu);
@@ -935,9 +997,6 @@ void* trainer_thread(void* arg){
                 Pokemon* pok = entrenador->pokemon_objetivo;
                 t_catch_pokemon* pokemon_to_catch = create_catch_pokemon(pok->especie, pok->coordenada.pos_x, pok->coordenada.pos_y);
 
-                // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
-                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
-                entrenador->vengo_de_ejecucion = false;
                 // Me quito de la lista de ejecucion
                 list_remove(estado_exec, 0);
 
@@ -971,11 +1030,16 @@ void* trainer_thread(void* arg){
                 entrenador->calcular_estimado = true;
                 loggear_block(entrenador);
 
-                if(list_size(estado_ready) > 0)
+                if(list_size(estado_ready) > 0) {
                     call_planner();
-                else
+                } else {
                     algoritmo_de_cercania();
+                }
 
+                // Llamo a la funcion para enviar un mensaje en un hilo y envio la estructura que cree antes
+                send_message_thread(catch_pokemon_a_void(pokemon_to_catch), sizeof_catch_pokemon(pokemon_to_catch), CATCH_POK, entrenador->tid);
+
+                free(pokemon_to_catch);
                 // Me bloqueo esperando la rta del Broker
                 sem_wait(&block_catch_transition[entrenador->tid]);
 
@@ -1006,14 +1070,14 @@ void* trainer_thread(void* arg){
                 entrenador->vengo_de_ejecucion = false;
 
                 //Hago un vector porque add_to_dictionary recibe un char**
-                char** pokemon_first_trainer = (char**) malloc(sizeof(char*) * 2);
+                char* pokemon_first_trainer[2];
                 pokemon_first_trainer[0] = entrenador->pokemon_objetivo->especie;
                 pokemon_first_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
                 add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
 
-                char** pokemon_second_trainer = (char**) malloc(sizeof(char*) * 2);
+                char* pokemon_second_trainer[2];
                 pokemon_second_trainer[0] = entrenador->entrenador_objetivo->pokemon_objetivo->especie;
                 pokemon_second_trainer[1] = NULL;
 
@@ -1055,14 +1119,8 @@ void* trainer_thread(void* arg){
 
         // Verifico si el entrenador completo sus objetivos
         if (objetivos_cumplidos(entrenador)) {
-            char* objetivos_cumplidos_entrenador = string_new();
-            string_append(&objetivos_cumplidos_entrenador, "El entrenador ");
-            char* entrenador_tid_objetivos_cumplidos = string_itoa(entrenador->tid);
-            string_append(&objetivos_cumplidos_entrenador, entrenador_tid_objetivos_cumplidos);
-            string_append(&objetivos_cumplidos_entrenador, " ha cumplido con los objetivos ");
-            log_info(logger,objetivos_cumplidos_entrenador);
-            free(objetivos_cumplidos_entrenador);
-            free(entrenador_tid_objetivos_cumplidos);
+
+            loggear_finish(entrenador);
 
             // Dependiendo de la razon del movimiento me tengo que quitar de una lista distinta
             switch (entrenador->razon_movimiento) {
@@ -1078,14 +1136,8 @@ void* trainer_thread(void* arg){
 
                     // Verifico si el entrenador con el que intercambie pokemones tambien cumplio sus objetivos
                     if(objetivos_cumplidos(entrenador->entrenador_objetivo)){
-                        char* objetivos_cumplidos_entrenador = string_new();
-                        string_append(&objetivos_cumplidos_entrenador, "El entrenador ");
-                        char* entrenador_tid_objetivos_cumplidos = string_itoa(entrenador->entrenador_objetivo->tid);
-                        string_append(&objetivos_cumplidos_entrenador, entrenador_tid_objetivos_cumplidos);
-                        string_append(&objetivos_cumplidos_entrenador, " ha cumplido con los objetivos ");
-                        log_info(logger,objetivos_cumplidos_entrenador);
-                        free(objetivos_cumplidos_entrenador);
-                        free(entrenador_tid_objetivos_cumplidos);
+
+                        loggear_finish(entrenador->entrenador_objetivo);
 
                         bool remover(void *_entrenador) {
                             Entrenador *entrenador_iteracion = (Entrenador *) _entrenador;
@@ -1111,31 +1163,12 @@ void* trainer_thread(void* arg){
             // Le asigno el estado finish
             entrenador->estado = FINISH;
             list_add(estado_finish, entrenador);
-            //TODO: loggear paso a exit
 
             // En este caso no cumpli mis objetivos aun, debo quedarme en bloqueo
         } else {
-
-            char* objetivos_nocumplidos_entrenador = string_new();
-            string_append(&objetivos_nocumplidos_entrenador, "El entrenador ");
-            char* entrenador_tid_objetivos_nocumplidos = string_itoa(entrenador->tid);
-            string_append(&objetivos_nocumplidos_entrenador, entrenador_tid_objetivos_nocumplidos);
-            string_append(&objetivos_nocumplidos_entrenador, " todavia no ha cumplido con los objetivos ");
-            log_info(logger,objetivos_nocumplidos_entrenador);
-            free(objetivos_nocumplidos_entrenador);
-            free(entrenador_tid_objetivos_nocumplidos);
             bool se_desbloqueo;
             // Chequeo si tengo espacio para recibir mas pokemones
             if(entrenador->cant_stock < entrenador->cant_objetivos){
-
-                char* entrenador_sin_lugar = string_new();
-                string_append(&entrenador_sin_lugar, "El entrenador ");
-                char* entrenador_tid_sin_lugar = string_itoa(entrenador->tid);
-                string_append(&entrenador_sin_lugar, entrenador_tid_sin_lugar);
-                string_append(&entrenador_sin_lugar, " tiene lugar para atrapar mas pokemons, procede a llamar al algoritmo de cercania ");
-                log_info(logger,entrenador_sin_lugar);
-                free(entrenador_sin_lugar);
-                free(entrenador_tid_sin_lugar);
 
                 entrenador->razon_bloqueo = ESPERANDO_POKEMON;
                 // Llamo al algoritmo de cercania ya que puede haber pokemones sin asignar
@@ -1160,9 +1193,6 @@ void* trainer_thread(void* arg){
         }
     }
 
-    int bloqueado_estado = list_size(estado_block);
-    int ready_estado = list_size(estado_ready);
-
     if(list_size(estado_ready) > 0){
         call_planner();
     }else{
@@ -1174,9 +1204,6 @@ void* trainer_thread(void* arg){
             call_planner();
         }
     }
-
-    // TODO: liberar la memoria reservada:
-    //  - Tiempo de llegada
 
     return NULL;
 }
@@ -1306,12 +1333,12 @@ void* message_function(void* message_package){
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 
-                // TODO: Limpieza
             }
         }
 
         // Me desconecto del Broker
         disconnect_from_broker(broker);
+        free_package(package);
     }
 
     free(mensajeError);
@@ -1351,11 +1378,13 @@ void caught_pokemon(int tid, int atrapado) {
     }
     Entrenador* entrenador = list_find(estado_block, encontrador);
 
+    char* pok_name = entrenador->pokemon_objetivo->especie;
+
     // Logueo el mensaje caught recibido
     char* caught = string_new();
 
     string_append(&caught, "Ha llegado un mensaje Caught indicando que un pokemon ");
-    string_append(&caught, entrenador->pokemon_objetivo->especie);
+    string_append(&caught, pok_name);
 
     // Chequeo si lo atrape
     if (atrapado == si) {
@@ -1364,8 +1393,6 @@ void caught_pokemon(int tid, int atrapado) {
 
         // Le aumento el stock en uno al entrenador
         entrenador->cant_stock += 1;
-
-        char* pok_name = entrenador->pokemon_objetivo->especie;
 
         // Verifico si existe el pokemon en el stock del entrenador
         if (dictionary_has_key(entrenador->stock_pokemons, pok_name)) {
@@ -1385,16 +1412,13 @@ void caught_pokemon(int tid, int atrapado) {
             *(int*) dictionary_get(objetivo_global, pok_name)-=1;
         }
         else{
-            dictionary_remove(objetivo_global, pok_name);
+            free(dictionary_remove(objetivo_global, pok_name));
         }
 
         // En este caso no pude atrapar el pokemon
     } else {
 
         string_append(&caught, " no ha sido atrapado por el entrenador ");
-        // Obtengo el pokemon y libero la memoria?
-        Pokemon* pok = entrenador->pokemon_objetivo;
-
     }
     char* trainer = string_itoa(entrenador->tid);
     string_append(&caught, trainer);
@@ -1427,7 +1451,6 @@ void call_planner() {
             rr_planner();
             break;
         default:
-            printf("Este no es un algoritmo valido");
             break;
 
     }
@@ -1435,11 +1458,8 @@ void call_planner() {
 
 void fifo_planner() {
 
-    log_info(logger, "Se llamo al algoritmo FIFO ");
     // Busco si no hay ningun entrenador en ejecucion
     if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
-
-        log_info(logger, "Entro a FIFO planner y no hay nadie en ejecucion ");
 
         ordenar_tiempo_llegada();
 
@@ -1454,12 +1474,10 @@ void fifo_planner() {
 
 void sjf_sd_planner() {
 
-    log_info(logger, "Se llamo al algoritmo SFJ sin desalojo ");
+    pthread_mutex_lock(&mutex_planificador);
 
     // Busco si no hay ningun entrenador en ejecucion
     if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
-
-        log_info(logger, "Entro a SJF sin desalojo planner y no hay nadie en ejecucion ");
 
         calcular_estimacion_y_ordenamiento();
 
@@ -1469,12 +1487,10 @@ void sjf_sd_planner() {
 
         sem_post(&ready_exec_transition[entrenador_elegido->tid] );
     }
-
+    pthread_mutex_unlock(&mutex_planificador);
 }
 
 void calcular_estimacion_y_ordenamiento(){
-
-    log_info(logger, "Calculo estimados y ordeno readys");
 
     //Hallo el ultimo estimado de los entrenadores
     void iterador(void* _entrenador){
@@ -1508,28 +1524,49 @@ void calcular_estimacion_y_ordenamiento(){
 
 void sjf_cd_planner() {
 
-    log_info(logger, "Entre al planificador SJF-CD");
+    pthread_mutex_lock(&mutex_planificador);
     if (list_size(estado_ready) > 0) {
         calcular_estimacion_y_ordenamiento();
-        log_info(logger, "Ready ordenado");
         if(list_size(estado_exec) == 0) {
             Entrenador *entrenador_ready = (Entrenador *) list_remove(estado_ready, 0);
-            log_info(logger, "No habia nadie en ejecucion");
             if(entrenador_ready->vengo_de_ejecucion){
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
                 entrenador_ready->tengo_que_desalojar = false;
                 sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
+
+                char* ready_exec_segunda_vez = string_new();
+                string_append(&ready_exec_segunda_vez, "El entrenador ");
+                char* ready_exec_sv_tid = string_itoa(entrenador_ready->tid);
+                string_append(&ready_exec_segunda_vez, ready_exec_sv_tid);
+                string_append(&ready_exec_segunda_vez, " vuelve a Exec porque no habia nadie en ejecucion y tiene el menor estimado");
+
+                log_info(logger, ready_exec_segunda_vez);
+
+                free(ready_exec_segunda_vez);
+                free(ready_exec_sv_tid);
+                cambios_contextos++;
             }
             else{
                 list_add(estado_exec,entrenador_ready);
                 entrenador_ready->estado = EXEC;
                 entrenador_ready->tengo_que_desalojar = false;
                 sem_post(&ready_exec_transition[entrenador_ready->tid] );
+
+                char* ready_exec_primera_vez = string_new();
+                string_append(&ready_exec_primera_vez, "El entrenador ");
+                char* ready_exec_pv_tid = string_itoa(entrenador_ready->tid);
+                string_append(&ready_exec_primera_vez, ready_exec_pv_tid);
+                string_append(&ready_exec_primera_vez, " pasa a Exec porque no habia nadie en ejecucion y tiene el menor estimado");
+
+                log_info(logger, ready_exec_primera_vez);
+
+                free(ready_exec_primera_vez);
+                free(ready_exec_pv_tid);
+                cambios_contextos++;
             }
         } else {
             Entrenador *entrenador_ready = (Entrenador *) list_get(estado_ready, 0);
-            log_info(logger, "Habia alguien en ejecucion ");
             Entrenador *entrenador_exec = (Entrenador *) list_get(estado_exec, 0);
             if ((entrenador_exec->ultimo_estimado - entrenador_exec->acumulado_actual) > (entrenador_ready->ultimo_estimado - entrenador_ready->acumulado_actual)) {
 
@@ -1549,27 +1586,44 @@ void sjf_cd_planner() {
 
                 if(entrenador_ready->vengo_de_ejecucion){
                     sem_post(&ready_exec_cd_transition[entrenador_ready->tid]);
+
+                    char* ready_exec_segunda_vez = string_new();
+                    string_append(&ready_exec_segunda_vez, "El entrenador ");
+                    char* ready_exec_sv_tid = string_itoa(entrenador_ready->tid);
+                    string_append(&ready_exec_segunda_vez, ready_exec_sv_tid);
+                    string_append(&ready_exec_segunda_vez, " vuelve a Exec porque desaloja al entrenador que estaba en ejecucion");
+
+                    log_info(logger, ready_exec_segunda_vez);
+
+                    free(ready_exec_segunda_vez);
+                    free(ready_exec_sv_tid);
+                    cambios_contextos++;
                 }
                 else{
                     sem_post(&ready_exec_transition[entrenador_ready->tid]);
+
+                    char* ready_exec_primera_vez = string_new();
+                    string_append(&ready_exec_primera_vez, "El entrenador ");
+                    char* ready_exec_pv_tid = string_itoa(entrenador_ready->tid);
+                    string_append(&ready_exec_primera_vez, ready_exec_pv_tid);
+                    string_append(&ready_exec_primera_vez, " pasa a Exec porque desaloja al entrenador que estaba en ejecucion");
+
+                    log_info(logger, ready_exec_primera_vez);
+
+                    free(ready_exec_primera_vez);
+                    free(ready_exec_pv_tid);
+                    cambios_contextos++;
                 }
-                log_info(logger, "Desalojo al que estaba en ejecucion");
-            } else {
-                log_info(logger, "Continua el que estaba en ejecucion");
             }
         }
     }
-
+    pthread_mutex_unlock(&mutex_planificador);
 }
 
 void rr_planner() {
 
-    log_info(logger, "Se llamo al algoritmo RR ");
-
     // Busco si no hay ningun entrenador en ejecucion
     if (list_size(estado_exec) == 0 && list_size(estado_ready) > 0) {
-
-        log_info(logger, "Entro a RR planner y no hay nadie en ejecucion ");
 
         ordenar_tiempo_llegada();
 
@@ -1579,9 +1633,24 @@ void rr_planner() {
 
         if(entrenador_elegido->vengo_de_ejecucion){
             sem_post(&ready_exec_cd_transition[entrenador_elegido->tid]);
+
+            char* ready_exec_segunda_vez = string_new();
+            string_append(&ready_exec_segunda_vez, "El entrenador ");
+            char* ready_exec_sv_tid = string_itoa(entrenador_elegido->tid);
+            string_append(&ready_exec_segunda_vez, ready_exec_sv_tid);
+            string_append(&ready_exec_segunda_vez, " vuelve a Exec porque se le termino el Quantum en la ejecucion anterior y vuelve a ser elegido");
+
+            log_info(logger, ready_exec_segunda_vez);
+
+            free(ready_exec_segunda_vez);
+            free(ready_exec_sv_tid);
+
+            cambios_contextos++;
         }
         else{
             sem_post(&ready_exec_transition[entrenador_elegido->tid] );
+
+            loggear_exec(entrenador_elegido);
         }
     }
 }
@@ -1609,7 +1678,16 @@ void verificar_desalojo(Entrenador* entrenador){
         list_add(estado_ready, entrenador);
         entrenador->estado = READY;
 
-        loggear_ready(entrenador);
+        char *ready = string_new();
+        string_append(&ready, "El entrenador ");
+        char *entrenador_tid_ready = string_itoa(entrenador->tid);
+        string_append(&ready, entrenador_tid_ready);
+        string_append(&ready, " ha entrado a Ready porque se le termino el Quantum");
+
+        log_info(logger, ready);
+
+        free(ready);
+        free(entrenador_tid_ready);
 
         //Actualizo el tiempo de llegada
         *(entrenador->tiempo_llegada) = get_time();
@@ -1620,16 +1698,23 @@ void verificar_desalojo(Entrenador* entrenador){
         sem_wait(&ready_exec_cd_transition[entrenador->tid]);
         entrenador->acumulado_actual = 0;
 
-        loggear_exec(entrenador);
     }
 
     if(config.algoritmo_planificacion == SJF_CD && entrenador->tengo_que_desalojar){
 
-        loggear_ready(entrenador);
+        char *ready = string_new();
+        string_append(&ready, "El entrenador ");
+        char *entrenador_tid_ready = string_itoa(entrenador->tid);
+        string_append(&ready, entrenador_tid_ready);
+        string_append(&ready, " ha entrado a Ready porque fue desalojado por un hilo que tenia un menor estimado");
+
+        log_info(logger, ready);
+
+        free(ready);
+        free(entrenador_tid_ready);
 
         sem_wait(&ready_exec_cd_transition[entrenador->tid]);
 
-        loggear_exec(entrenador);
     }
 }
 
@@ -1669,7 +1754,6 @@ void appeared_pokemon(t_list* paquete){
 
     free(appeared);
     free(appeared_void);
-    //TODO: Librerar paquete_recibido
 
     // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
 
@@ -1683,6 +1767,7 @@ void appeared_pokemon(t_list* paquete){
 
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+
             pokemon->especie = appearedPokemon->nombre_pokemon;
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
@@ -1697,8 +1782,14 @@ void appeared_pokemon(t_list* paquete){
         }
     }
 
+    free(list_get(paquete, 0));
+    free(list_get(paquete, 1));
+
+    //free(appearedPokemon->nombre_pokemon);
+    free(appearedPokemon);
+
     // Destruyo el paquete recibido
-    //list_destroy(paquete); Si lo destruyo despues no voy a tener el id para confirmarle la recepcion al Broker
+    list_destroy(paquete);
 }
 
 bool algoritmo_de_cercania() {
@@ -1707,7 +1798,8 @@ bool algoritmo_de_cercania() {
 
     if (list_size(pokemons) > 0) {
         pthread_mutex_lock(&mutex_algoritmo_cercania);
-        log_info(logger, "Se ha iniciado el algoritmo de cercania ");
+
+        t_list* lista_intermedia = list_create();
 
         //Filtro los entrenadores que no pueden atrapar mas pokemons porque llegaron al limite
         bool puede_ir_ready(void *_entreador) {
@@ -1718,80 +1810,95 @@ bool algoritmo_de_cercania() {
         t_list *entrenadores_con_margen = list_filter(estado_block, puede_ir_ready);
 
         //Pongo todos en una lista asi es mas facil trabajar
-        list_add_all(entrenadores_con_margen, estado_new);
+        list_add_all(lista_intermedia, estado_new);
+        list_add_all(lista_intermedia, entrenadores_con_margen);
 
-        //Verifico que la lista de entrenadores no sea vacia
-        if (list_size(entrenadores_con_margen) > 0) {
-            int cant_pok = list_size(pokemons);
-            while (cant_pok > 0) {
-                Pokemon *pokemon = (Pokemon *) list_get(pokemons, 0);
+        int tamanio_intermedia = list_size(lista_intermedia);
+        int cant_pok = list_size(pokemons);
 
-                //Verifico que la lista tenga mas de un entrenador porque sino rompe todo
-                if (list_size(entrenadores_con_margen) > 1) {
+        while (cant_pok > 0 && tamanio_intermedia > 0) {
+            Pokemon *pokemon = (Pokemon *) list_get(pokemons, 0);
 
-                    //Ordeno a los entrenadores por cercania al pokemon
-                    bool entrenador_mas_cerca(void *_entrenador_actual, void *_entrenador_siguiente) {
-                        Entrenador *entrenador_actual = (Entrenador *) _entrenador_actual;
-                        Entrenador *entrenador_siguiente = (Entrenador *) _entrenador_siguiente;
+            //Verifico que la lista tenga mas de un entrenador porque sino rompe tod.o
+            if (list_size(lista_intermedia) > 1) {
 
-                        return distancia(entrenador_actual->pos_actual, pokemon->coordenada) <
-                               distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                //Ordeno a los entrenadores por cercania al pokemon
+                bool entrenador_mas_cerca(void *_entrenador_actual, void *_entrenador_siguiente) {
+                    Entrenador *entrenador_actual = (Entrenador *) _entrenador_actual;
+                    Entrenador *entrenador_siguiente = (Entrenador *) _entrenador_siguiente;
+
+                    int dist_ent_actual = distancia(entrenador_actual->pos_actual, pokemon->coordenada);
+                    int dist_ent_sig = distancia(entrenador_siguiente->pos_actual, pokemon->coordenada);
+                    if(dist_ent_actual == dist_ent_sig){
+                        return entrenador_actual->estado == NEW;
                     }
-                    list_sort(entrenadores_con_margen, entrenador_mas_cerca);
+                    return dist_ent_actual < dist_ent_sig;
                 }
-                //Obtengo el primero que es el mas cercano
-                Entrenador *entrenador_cercano = (Entrenador *) list_get(entrenadores_con_margen, 0);
-
-                //Removemos al entrenador de la lista entrenadores con margen ya que esta ordenada por cercania
-                list_remove(entrenadores_con_margen, 0);
-
-                bool remover(void *_entrenador) {
-                    Entrenador *entrenador = (Entrenador *) _entrenador;
-                    return entrenador->tid == entrenador_cercano->tid;
-                }
-                //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
-                switch (entrenador_cercano->estado) {
-                    case (NEW):;
-
-                        list_remove_by_condition(estado_new, remover);
-
-                        entrenador_cercano->pokemon_objetivo = pokemon;
-                        entrenador_cercano->razon_movimiento = CATCH;
-                        list_add(estado_ready, entrenador_cercano);
-                        entrenador_cercano->estado = READY;
-
-                        sem_post(&new_ready_transition[entrenador_cercano->tid]);
-                        break;
-
-                    case (BLOCK):;
-
-                        list_remove_by_condition(estado_block, remover);
-
-                        entrenador_cercano->pokemon_objetivo = pokemon;
-                        entrenador_cercano->razon_movimiento = CATCH;
-                        list_add(estado_ready, entrenador_cercano);
-                        entrenador_cercano->estado = READY;
-
-                        sem_post(&block_ready_transition[entrenador_cercano->tid]);
-                        break;
-
-                    default:
-                        break;
-                }
-                se_desbloqueo = true;
-                //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
-                pthread_mutex_lock(&mutex_pokemon);
-                list_remove(pokemons, 0);
-                pthread_mutex_unlock(&mutex_pokemon);
-                cant_pok--;
-
+                list_sort(lista_intermedia, entrenador_mas_cerca);
             }
-            log_info(logger, "Ha terminado el algoritmo de cercania");
-        }else{
-            log_info(logger, "No hay entrenadores disponibles para atrapar un pokemon");
+            //Obtengo el primero que es el mas cercano
+            Entrenador *entrenador_cercano = (Entrenador *) list_remove(lista_intermedia, 0);
+
+            bool remover(void *_entrenador) {
+                Entrenador *entrenador = (Entrenador *) _entrenador;
+                return entrenador->tid == entrenador_cercano->tid;
+            }
+            //Removemeos al entrenador de la lista del estado correspondiente ya sea NEW o BLOCK
+            switch (entrenador_cercano->estado) {
+                case (NEW):;
+
+                    list_remove_by_condition(estado_new, remover);
+
+                    memcpy(entrenador_cercano->pokemon_objetivo, pokemon, sizeof(Pokemon));
+                    entrenador_cercano->razon_movimiento = CATCH;
+                    list_add(estado_ready, entrenador_cercano);
+                    entrenador_cercano->estado = READY;
+
+                    free(pokemon);
+
+                    sem_post(&new_ready_transition[entrenador_cercano->tid]);
+                    break;
+
+                case (BLOCK):;
+
+                    list_remove_by_condition(estado_block, remover);
+
+                    memcpy(entrenador_cercano->pokemon_objetivo, pokemon, sizeof(Pokemon));
+                    entrenador_cercano->razon_movimiento = CATCH;
+                    list_add(estado_ready, entrenador_cercano);
+                    entrenador_cercano->estado = READY;
+
+                    free(pokemon);
+
+                    sem_post(&block_ready_transition[entrenador_cercano->tid]);
+                    break;
+
+                default:
+                    break;
+            }
+
+            char* ready = string_new();
+            string_append(&ready,"El entrenador ");
+            char* entrenador_tid_ready = string_itoa(entrenador_cercano->tid);
+            string_append(&ready, entrenador_tid_ready);
+            string_append(&ready, " ha entrado a Ready porque habia un pokemon disponible para atrapar");
+
+            log_info(logger, ready);
+
+            free(entrenador_tid_ready);
+            free(ready);
+
+            se_desbloqueo = true;
+            //Aca siempre es cero porque cuando hago un remove del elemento anterior todos se corren uno menos
+            pthread_mutex_lock(&mutex_pokemon);
+            list_remove(pokemons, 0);
+            pthread_mutex_unlock(&mutex_pokemon);
+            cant_pok--;
+            tamanio_intermedia--;
         }
         list_destroy(entrenadores_con_margen);
         pthread_mutex_unlock(&mutex_algoritmo_cercania);
+        list_destroy(lista_intermedia);
         return se_desbloqueo;
     }
 }
@@ -1800,11 +1907,13 @@ bool algoritmo_deadlock(){
 
     bool se_desbloqueo = false;
 
+
     pthread_mutex_lock(&mutex_deadlock);
     // Logueo el inicio del algoritmo de deteccion de deadlock
     log_info(logger,"Se ha iniciado el algoritmo de deteccion de deadlock");
 
-    //Filtro la lista de entrenadores que no pueden atrapar mas pokemons
+    //Filtro la lista de entrenadores que no pueden atrapar mas pokemons(descarto a los entrenadores
+    // que hayan sido seleccionados para intercambiar en una ejecucion anterior)
     bool _entrenadores_sin_margen(void* _entrenador){
         Entrenador* entrenador = (Entrenador*) _entrenador;
         return (entrenador->cant_objetivos == entrenador->cant_stock) && (entrenador->razon_bloqueo != DEADLOCK);
@@ -1813,111 +1922,112 @@ bool algoritmo_deadlock(){
 
     int tamanio_ent = list_size(entrenadores_sin_margen);
 
-    // Hay mas de un entrenador en deadlock, si hay menos de dos no hago nada y salgo
+    // Verifico que haya mas de 1 entrenador sin margen, caso contrario no podria hacer el intercambio
     if(tamanio_ent > 1 ) {
-
-        log_info(logger,"Hay mas de un entrenador en deadlock");
 
         int cont_primero = 0;
         int cont_segundo = 1;
         bool cumplio_condiciones = false;
 
+        // Itero la lista de entrenadores sin margen, se corta si encontre un par de entrenadores entre los que pueda intercambiar
         while(cont_primero < tamanio_ent && !cumplio_condiciones) {
 
-            //Agarro el primer entrenador bloqueado
+            // Obtengo al primer entrenador de la lista de entrenadores sin margen
             Entrenador *entrenador_primero = (Entrenador *) list_get(entrenadores_sin_margen, cont_primero);
 
+            // Hallo los pokemones que necesito
+            t_list* pokemones_necesarios_primer = trainer_needs(entrenador_primero);
 
+            // Itero la lista de entrenadores sin margen a partir del segundo entrenador
             while (cont_segundo < tamanio_ent) {
+
+                // Obtengo el entrenador siguiente al del bucle superior
                 Entrenador *entrenador_segundo = (Entrenador *) list_get(entrenadores_sin_margen, cont_segundo);
-                //Me devuelve un listado de pokemons que se repiten entre lo que necesita el primer entrenador y lo que tiene el segundo entrenador en stock
-                t_list* repeat_pokemon = dictionary_contains(entrenador_segundo->stock_pokemons, entrenador_primero->objetivos_particular);
 
-                if (list_size(repeat_pokemon) > 0) {
-                    log_info(logger, "Se calculo los pokemons que tiene el entrenador segundo y necesita el primero");
+                //Hallo los pokemones que no necesita el segundo entrenador
+                t_list* pokemons_innecesario_segundo = trainer_dont_need(entrenador_segundo);
 
-                    //Devuelve listado de pokemons que no los tiene como objetivo y los necesita el primer entrenador
-                    t_list *unnecesary_pokemon = trainer_dont_need(entrenador_segundo, repeat_pokemon);
+                //Pokemon intercambiar es el pokemon que necesita el primero y no necesita el segundo
+                char* pokemon_intercambiar = NULL;
+                bool cumplio_condicion = false;
 
-                    if (list_size(unnecesary_pokemon) > 0) {
-                        log_info(logger, "Se calculo la lista que necesita el primer entrenador y no necesita el segundo entrenador (lista definitiva)");
-
-                        //Calculo que pokemon no le sirve al primer entrenador
-                        char* pokemon_primer_entrenador_no_necesita;
-                        int i = 0;
-                        void no_necesita(char* key, void*value){
-                            //Busco el pokemon que no necesita el entrenador, es decir el pokemon que tiene en stock pero no esta en sus objetivos. La variable i es para agarrar al primero que encuentre
-                            if(!dictionary_has_key(entrenador_primero->objetivos_particular, key) && (i == 0)){
-                                pokemon_primer_entrenador_no_necesita = strdup(key);
-                                //strcpy(pokemon_primer_entrenador_no_necesita, key);
-                                i++;
-                            }
-                            else{
-                                //Si lo tiene como objetivo quiere decir que tiene en stock uno mas del que deberia
-                                if((dictionary_has_key(entrenador_primero->objetivos_particular, key)) && (i == 0)){
-                                    int cantidad_objetivo = *(int*) dictionary_get(entrenador_primero->objetivos_particular,key);
-                                    int cantidad_stock = *(int*) dictionary_get(entrenador_primero->stock_pokemons,key);
-                                    if(cantidad_stock > cantidad_objetivo){
-                                        pokemon_primer_entrenador_no_necesita = strdup(key);
-                                        //strcpy(pokemon_primer_entrenador_no_necesita, key);
-                                        i++;
-                                    }
-                                }
-                            }
+                void iterador_primero(void* _pokemon){
+                    char* pokemon_primero = (char*) _pokemon;
+                    int i = 0;
+                    while(i < list_size(pokemons_innecesario_segundo) && !cumplio_condicion){
+                        char* pokemon_segundo = (char*) list_get(pokemons_innecesario_segundo, i);
+                        if(string_equals_ignore_case(pokemon_primero,pokemon_segundo)){
+                            pokemon_intercambiar = string_duplicate(pokemon_primero);
+                            cumplio_condicion = true;
                         }
-                        dictionary_iterator(entrenador_primero->stock_pokemons,no_necesita);
-
-                        char* deadlock_entrenadores = string_new();
-                        string_append(&deadlock_entrenadores,"El entrenador ");
-                        char* entrenador_primero_tid = string_itoa(entrenador_primero->tid);
-                        string_append(&deadlock_entrenadores, entrenador_primero_tid);
-                        string_append(&deadlock_entrenadores, " y el entrenador ");
-                        char* entrenador_segundo_tid = string_itoa(entrenador_segundo->tid);
-                        string_append(&deadlock_entrenadores, entrenador_segundo_tid);
-                        string_append(&deadlock_entrenadores, " estan en deadlock ");
-                        log_info(logger, deadlock_entrenadores);
-
-                        free(deadlock_entrenadores);
-                        free(entrenador_primero_tid);
-                        free(entrenador_segundo_tid);
-
-                        entrenador_primero->entrenador_objetivo = entrenador_segundo;
-                        char* pokemon_objetivo_primer_entrenador = (char*) list_get(unnecesary_pokemon,0);
-                        //entrenador_primero->pokemon_objetivo->especie = strdup(pokemon_objetivo_primer_entrenador);
-                        strcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_objetivo_primer_entrenador);
-
-                        entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
-                        entrenador_primero->razon_bloqueo = DEADLOCK;
-                        entrenador_segundo->razon_bloqueo = DEADLOCK;
-                        entrenador_segundo->pokemon_objetivo->especie = pokemon_primer_entrenador_no_necesita;
-
-                        bool remover(void *_entrenador) {
-                            Entrenador *entrenador = (Entrenador *) _entrenador;
-                            return entrenador->tid == entrenador_primero->tid;
-                        }
-                        list_remove_by_condition(estado_block, remover);
-
-                        list_add(estado_ready, entrenador_primero);
-                        entrenador_primero->estado = READY;
-                        deadlocks_totales+=1;
-                        cumplio_condiciones = true;
-                        //TODO: Liberar listas falopa que hicimos
-                        sem_post(&block_ready_transition[entrenador_primero->tid]);
-                        se_desbloqueo = true;
-                        break;
+                        i++;
                     }
-                    list_destroy(unnecesary_pokemon);
                 }
-                //No hay ningun pokemon ni se cumplieron las condiciones para que se realice el intercambio
-                cont_segundo++;
-                list_destroy(repeat_pokemon);
-            }
+                list_iterate(pokemones_necesarios_primer, iterador_primero);
 
+                if(pokemon_intercambiar){
+                    //Hallo los pokemons que no necesita el primer entrenador para darle al segundo
+                    t_list* pokemones_innecesarios_primer = trainer_dont_need(entrenador_primero);
+
+                    //Agarro el primer elemento que tenga la lista para el intercambio
+                    char* pokemon_inncesario_primer = (char*) list_get(pokemones_innecesarios_primer,0);
+
+                    char* deadlock_entrenadores = string_new();
+                    string_append(&deadlock_entrenadores,"El entrenador ");
+                    char* entrenador_primero_tid = string_itoa(entrenador_primero->tid);
+                    string_append(&deadlock_entrenadores, entrenador_primero_tid);
+                    string_append(&deadlock_entrenadores, " y el entrenador ");
+                    char* entrenador_segundo_tid = string_itoa(entrenador_segundo->tid);
+                    string_append(&deadlock_entrenadores, entrenador_segundo_tid);
+                    string_append(&deadlock_entrenadores, " van a realizar un intercambio ");
+                    log_info(logger, deadlock_entrenadores);
+
+                    free(deadlock_entrenadores);
+                    free(entrenador_primero_tid);
+                    free(entrenador_segundo_tid);
+
+                    // Asigno los objetivos correspondientes (entrenadores y pokemons)
+                    entrenador_primero->entrenador_objetivo = entrenador_segundo;
+
+                    strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer);
+                    free(entrenador_primero->pokemon_objetivo->especie);
+                    entrenador_primero->pokemon_objetivo->especie = pokemon_intercambiar;
+
+                    entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
+                    entrenador_primero->razon_bloqueo = DEADLOCK;
+                    entrenador_segundo->razon_bloqueo = DEADLOCK;
+
+                    //Quito al entrenador que voy a mover de bloqueado para luego pasarlo a ready
+                    bool remover(void *_entrenador) {
+                        Entrenador *entrenador = (Entrenador *) _entrenador;
+                        return entrenador->tid == entrenador_primero->tid;
+                    }
+                    list_remove_by_condition(estado_block, remover);
+
+                    list_add(estado_ready, entrenador_primero);
+                    entrenador_primero->estado = READY;
+                    deadlocks_totales+=1;
+                    cumplio_condiciones = true;
+                    sem_post(&block_ready_transition[entrenador_primero->tid]);
+                    se_desbloqueo = true;
+
+                    list_destroy(pokemones_innecesarios_primer);
+                    list_destroy(pokemons_innecesario_segundo);
+                    break;
+                }
+                cont_segundo++;
+                list_destroy(pokemons_innecesario_segundo);
+            }
             cont_primero++;
             cont_segundo = cont_primero + 1;
+            list_destroy(pokemones_necesarios_primer);
+        }
+
+        if(!se_desbloqueo){
+            log_info(logger, "No hay dos entrenadores para realizar el intercambio.");
         }
     }else {
-        log_info(logger, "No hay dos entrenadores en deadlock");
+        log_info(logger, "No hay dos entrenadores para realizar el intercambio.");
     }
     list_destroy(entrenadores_sin_margen);
     pthread_mutex_unlock(&mutex_deadlock);
@@ -1931,7 +2041,7 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
         *(int*) dictionary_get(entrenador->stock_pokemons, pokemon_second_trainer)-=1;
     }
     else{
-        dictionary_remove(entrenador->stock_pokemons, pokemon_second_trainer);
+        free(dictionary_remove(entrenador->stock_pokemons, pokemon_second_trainer));
     }
 
     //Remuevo del stock el pokemon que voy a dar para el segundo entrenador
@@ -1939,52 +2049,62 @@ void remover_de_stock(Entrenador* entrenador, char* pokemon_first_trainer, char*
         *(int*)dictionary_get(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer)-=1;
     }
     else{
-        dictionary_remove(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer);
+        free(dictionary_remove(entrenador->entrenador_objetivo->stock_pokemons, pokemon_first_trainer));
     }
 
 }
 
-t_list* trainer_dont_need(Entrenador* entrenador, t_list* pokemon_array){
+t_list* trainer_dont_need(Entrenador* entrenador){
 
-    t_list* pokemons_innecesarios;
-    bool filtrar_pokemons(void* _nombre_pokemon){
-        char* nombre_pokemon = (char*) _nombre_pokemon;
-        return !dictionary_has_key(entrenador->objetivos_particular,nombre_pokemon);
+    t_list* pokemons_innecesarios = list_create();
+
+    void pokemon_innecesario(char* pokemon, void* _cant) {
+        int cant_stock = *(int*)_cant;
+        if (!dictionary_has_key(entrenador->objetivos_particular, pokemon)) {
+            list_add(pokemons_innecesarios, pokemon);
+        }else{
+            if( cant_stock > *(int*) dictionary_get(entrenador->objetivos_particular, pokemon)){
+                list_add(pokemons_innecesarios, pokemon);
+            }
+        }
     }
-    pokemons_innecesarios = list_filter(pokemon_array,filtrar_pokemons);
+    dictionary_iterator(entrenador->stock_pokemons, pokemon_innecesario);
 
     return pokemons_innecesarios;
 }
 
-t_list* dictionary_contains(t_dictionary* stock_pokemons, t_dictionary* objetivos_pokemons){
+t_list* trainer_needs(Entrenador* entrenador) {
 
-    t_list* pokemons_estimado = list_create();
-
-    //TODO: Sacar la clave cuando el value es 0
-    void iterador(char* key, void* _value){
-        if(dictionary_has_key(stock_pokemons,key) && (*(int*) _value > 0)){
-            list_add(pokemons_estimado,key);
+    t_list* pokemons_necesarios = list_create();
+    void pokemon_necesario(char* pokemon, void* _cant) {
+        int cant_necesaria = *(int*)_cant;
+        if (!dictionary_has_key(entrenador->stock_pokemons, pokemon)) {
+            list_add(pokemons_necesarios, pokemon);
+        }else{
+            if( *(int*)dictionary_get(entrenador->stock_pokemons,pokemon) < cant_necesaria){
+                list_add(pokemons_necesarios, pokemon);
+            }
         }
     }
-    dictionary_iterator(objetivos_pokemons,iterador);
+    dictionary_iterator(entrenador->objetivos_particular, pokemon_necesario);
 
-    return pokemons_estimado;
+    return pokemons_necesarios;
 }
 
 //----------------------------------------HELPERS----------------------------------------//
 
-void loggear_ready(Entrenador* entrenador){
+void loggear_finish(Entrenador* entrenador){
 
-    char* ready = string_new();
-    string_append(&ready,"El entrenador ");
-    char* entrenador_tid_ready = string_itoa(entrenador->tid);
-    string_append(&ready, entrenador_tid_ready);
-    string_append(&ready, " ha entrado a Ready");
+    char* finish = string_new();
+    string_append(&finish,"El entrenador ");
+    char* entrenador_tid_finish = string_itoa(entrenador->tid);
+    string_append(&finish, entrenador_tid_finish);
+    string_append(&finish, " ha entrado a Finish porque cumplio sus objetivos");
 
-    log_info(logger, ready);
+    log_info(logger, finish);
 
-    free(entrenador_tid_ready);
-    free(ready);
+    free(entrenador_tid_finish);
+    free(finish);
 }
 
 void loggear_exec(Entrenador* entrenador){
@@ -1993,7 +2113,9 @@ void loggear_exec(Entrenador* entrenador){
     string_append(&exec,"El entrenador ");
     char* entrenador_tid_exec = string_itoa(entrenador->tid);
     string_append(&exec, entrenador_tid_exec);
-    string_append(&exec, " ha entrado a Exec");
+    string_append(&exec, " ha entrado a Exec porque ha sido elegido por el planificador");
+
+    cambios_contextos++;
 
     log_info(logger, exec);
 
@@ -2007,7 +2129,12 @@ void loggear_block(Entrenador* entrenador){
     string_append(&block,"El entrenador ");
     char* entrenador_tid_block = string_itoa(entrenador->tid);
     string_append(&block, entrenador_tid_block);
-    string_append(&block, " ha entrado a Block");
+    string_append(&block, " ha entrado a Block porque ");
+    if(entrenador->razon_movimiento == CATCH){
+        string_append(&block, "mando un catch.");
+    }else{
+        string_append(&block, "viene de una resolucion de deadlock.");
+    }
 
     log_info(logger, block);
 
@@ -2025,48 +2152,6 @@ struct timespec get_time(){
     return start;
 }
 
-t_interval* new_interval(){
-    t_interval* iteration = malloc(sizeof(t_interval));
-    iteration->start_time = malloc(sizeof(struct timespec));
-    iteration->end_time = malloc(sizeof(struct timespec));
-    return iteration;
-}
-
-long timespec_to_us(struct timespec* timespec){
-    return (timespec->tv_sec * 1000000) + (timespec->tv_nsec / 1000);
-}
-
-void time_diff(struct timespec* start, struct timespec* end, struct timespec* diff){
-
-    //Verifico si la resta entre final y principio da negativa
-    if ((end->tv_nsec - start->tv_nsec) < 0)
-    {
-        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
-        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec + 1000000000)) > 999999999){
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
-        } else {
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec - 1);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec + 1000000000);
-        }
-    }
-    else
-    {
-        //Verifico si la suma entre el acumulado y el nuevo tiempo es mayor a 999999999ns (casi un segundo), me excedi del limite
-        if((diff->tv_nsec + (end->tv_nsec - start->tv_nsec)) > 999999999){
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec + 1);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec - 1000000000);
-        } else {
-
-            diff->tv_sec += (end->tv_sec - start->tv_sec);
-            diff->tv_nsec += (end->tv_nsec - start->tv_nsec);
-        }
-    }
-}
-
 int distancia(Coordenada actual, Coordenada siguiente) {
 
     int pos_actual_x = actual.pos_x;
@@ -2081,9 +2166,34 @@ int distancia(Coordenada actual, Coordenada siguiente) {
 
 void free_resources(){
 
+    list_destroy(estado_new);
+    list_destroy(estado_ready);
+    list_destroy(estado_exec);
+    list_destroy(estado_block);
+    list_destroy(waiting_list);
+    list_destroy(pokemons);
+    list_destroy(pokemons_received);
+    void destructor_de_entrenadores(void* _entrenador){
+        Entrenador* entrenador = (Entrenador*)_entrenador;
+
+        dictionary_destroy_and_destroy_elements(entrenador->objetivos_particular, free);
+        dictionary_destroy_and_destroy_elements(entrenador->stock_pokemons, free);
+        free(entrenador->tiempo_llegada);
+        free(entrenador->pokemon_objetivo->especie);
+        free(entrenador->pokemon_objetivo);
+        free(entrenador);
+    }
+    list_destroy_and_destroy_elements(estado_finish, destructor_de_entrenadores);
+
     config_destroy(config_file);
     log_destroy(logger);
     pthread_mutex_destroy(&mutex_pokemon);
+    pthread_mutex_destroy(&mutex_waiting_list);
+    pthread_mutex_destroy(&mutex_algoritmo_cercania);
+    pthread_mutex_destroy(&mutex_deadlock);
+    pthread_mutex_destroy(&mutex_planificador);
+    free(threads_trainer);
+
 }
 
 void free_splitted_arrays(char ** elements, int cant) {

@@ -513,6 +513,7 @@ int connect_and_subscribe(MessageType cola) {
 
             // Si no me pude conectar al Broker, me duermo y vuelvo a intentar en unos segundos
         } else {
+            log_info(logger, "Broker no disponible, conexion fallida");
             sleep(config.tiempo_reconexion);
         }
     }

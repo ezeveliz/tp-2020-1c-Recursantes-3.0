@@ -1771,7 +1771,7 @@ void appeared_pokemon(t_list* paquete){
 
             //pokemon->especie = appearedPokemon->nombre_pokemon;
             pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
-            pokemon->especie[nombre_pokemon_length-1] = "\0";
+            pokemon->especie[appearedPokemon->nombre_pokemon_length-1] = "\0";
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 

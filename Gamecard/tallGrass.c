@@ -187,11 +187,8 @@ int obtener_cantidad_bloques(){
 }
 
 int obtener_tamanio_bloques(){
-    char* path_methadata = obtener_path_metadata();
-    t_config* metadata = config_create(path_methadata);
-    int blocks = config_get_int_value(metadata, "BLOCK_SIZE");
-    config_destroy(metadata);
-    free(path_methadata);
+
+    int blocks = BLOCK_SIZE;
 
     return blocks;
 }
@@ -392,7 +389,7 @@ int close_tall_grass(t_file * fd ){
 
     int res = sacar_lista_archivos_abiertos(fd->path);
 
-    log_info(logger_tall_grass,"Se cerro el archivo con Path:%s",fd->path);
+    log_info(logger_tall_grass,"Se cerro el archivo con Path:%s Hilo:%d ",fd->path, pthread_self());
     free(fd->path);
     free(fd->metadata->bloques);
     free(fd->metadata);
@@ -1042,7 +1039,6 @@ int liberar_bloque(uint32_t nro_bloque){
 
 t_metadata* obtener_metadata_archivo(char* path){
 
-    printf("%s\n",path);
 
     //Trato a la metadata del archivo como un config
     t_config* conf = config_create(path);

@@ -33,7 +33,7 @@ int main() {
 //    LOG_LEVEL_WARNING
 //    LOG_LEVEL_ERROR
 
-    logger = log_create("gamecard_log", "Gamecard", 0, LOG_LEVEL_INFO);
+    logger = log_create("gamecard_log", "Gamecard", 1, LOG_LEVEL_DEBUG);
     if (logger == NULL) {
         printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
         return -1;
@@ -828,7 +828,6 @@ void* mensaje_get_pokemon(void* parametros){
                 array_posiciones[contador_pos_array] = pok_pos->y;
                 contador_pos_array++;
 
-                printf("Pos x:%d Pos y:%d\n",pok_pos->x,pok_pos->y);
             }
 
             localized_pokemon = create_localized_pokemon(pokemon->nombre_pokemon,lista_pos->elements_count, array_posiciones);
@@ -849,8 +848,9 @@ void* mensaje_get_pokemon(void* parametros){
             //Libero el parametro poque ya no lo uso
             free_package(paquete);
             free(localized_pokemon->coordenadas);
+            free(localized_pokemon->nombre_pokemon);
             free(localized_pokemon);
-            free(array_posiciones);
+            //free(array_posiciones);
             free(path_file);
             free(path_archvio);
             free(mensaje_serializado);
@@ -863,7 +863,7 @@ void* mensaje_get_pokemon(void* parametros){
     }
 
     //Libero los datos del pokemon
-    free(pokemon->nombre_pokemon);
+    //free(pokemon->nombre_pokemon);
     free(pokemon);
 
     //TODO sacar

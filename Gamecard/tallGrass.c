@@ -25,7 +25,7 @@ int montar(char* punto_montaje){
     //Creo el path del fileSystem
     char* path_tall_grass = concatenar_strings(punto_montaje,"/Tall_Grass");
 
-    logger_tall_grass = log_create("tall_grass_logger", "Tall-Grass", 0, LOG_LEVEL_INFO);
+    logger_tall_grass = log_create("tall_grass_logger", "Tall-Grass", 1, LOG_LEVEL_INFO);
     //Venga lo nuevo fuera lo viejo
     limpiar_unidades_antiguas(path_tall_grass);
 

@@ -1757,6 +1757,7 @@ void appeared_pokemon(t_list* paquete){
 
     // Validaciones para verificar si puedo meter al pokemon en la lista de pokemons
 
+
     // Chequeo si el pokemon se encuentra en el diccionario de objetivos
     if (dictionary_has_key(objetivo_global, appearedPokemon->nombre_pokemon)) {
 
@@ -1768,7 +1769,9 @@ void appeared_pokemon(t_list* paquete){
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
-            pokemon->especie = appearedPokemon->nombre_pokemon;
+            //pokemon->especie = appearedPokemon->nombre_pokemon;
+            pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            string_append(&pokemon->especie, "\0");
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 

@@ -138,14 +138,14 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionPerdida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (NEW_POK):;
-            string_append(&conexionPerdida, "Appeared ");
+        case (SUB_NEW):;
+            string_append(&conexionPerdida, "New ");
             break;
-        case (CATCH_POK):;
-            string_append(&conexionPerdida, "Localized ");
+        case (SUB_CATCH):;
+            string_append(&conexionPerdida, "Catch ");
             break;
-        case (GET_POK):;
-            string_append(&conexionPerdida, "Caught ");
+        case (SUB_GET):;
+            string_append(&conexionPerdida, "Get ");
             break;
         default:;
             string_append(&conexionPerdida, "(mensaje no soportado) ");
@@ -159,14 +159,14 @@ void* subscribe_to_queue_thread(void* arg) {
     string_append(&conexionReestablecida, "La cola encargada de recibir los mensajes ");
 
     switch (cola) {
-        case (NEW_POK):;
-            string_append(&conexionReestablecida, "Appeared ");
+        case (SUB_NEW):;
+            string_append(&conexionReestablecida, "New ");
             break;
-        case (CATCH_POK):;
-            string_append(&conexionReestablecida, "Localized ");
+        case (SUB_CATCH):;
+            string_append(&conexionReestablecida, "Catch ");
             break;
-        case (GET_POK):;
-            string_append(&conexionReestablecida, "Caught ");
+        case (SUB_GET):;
+            string_append(&conexionReestablecida, "Get ");
             break;
         default:;
             string_append(&conexionReestablecida, "(mensaje no soportado) ");
@@ -199,7 +199,7 @@ void* subscribe_to_queue_thread(void* arg) {
             parametros_hilo->estructura_pokemon = list_get(rta_list,2);
 
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
-            switch (cola) {
+            switch (buffer_header->type) {
 
                 //Tengo que crear un hilo para tratar cada caso
                 case (NEW_POK):;

@@ -27,7 +27,7 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server, NULL);
     pthread_detach(server_thread);
 
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 100; ++i) {
         int broker_socket_mensaje = connect_to_broker();
         mandar_mensaje(broker_socket_mensaje);
         close_socket(broker_socket_mensaje);

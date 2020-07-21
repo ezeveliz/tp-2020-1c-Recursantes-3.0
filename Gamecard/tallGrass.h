@@ -4,8 +4,8 @@
 
 #ifndef GAMECARD_TALLGRASS_H
 #define GAMECARD_TALLGRASS_H
-#define BLOCK_SIZE 5
-#define BLOCKS 64
+#define BLOCK_SIZE 64
+#define BLOCKS 1024
 #define MAGIC_NUMBER "TALL_GRASS"
 
 #include <commLib/connections.h>
@@ -16,6 +16,7 @@
 #include <sys/file.h>
 #include <commons/config.h>
 #include <pthread.h>
+#include <semaphore.h>
 
 #endif //GAMECARD_TALLGRASS_H
 
@@ -63,12 +64,13 @@ int set_estado_archivo(FILE* archivo,char estado);
 void agregar_byte_archivo(t_file* archivo, int cantidad);
 void disminuir_byte_archivo(t_file* archivo, int cantidad);
 void agregar_bloque_archivo(t_file* archivo, uint32_t bloque);
-void sacar_bloques(t_file* archivo,uint32_t cantidad);
+void sacar_bloques_metadata(t_file* archivo,  uint32_t pos_final_archivo);
 
 //Funciones para obtener distintos elementos del fileSystem
 int obtener_cantidad_bloques();
 int obtener_tamanio_bloques();
 t_list* obtener_bloques_libres(int cantidad_pedida);
+int liberar_bloque(uint32_t nro_bloque);
 FILE* obtener_file_bloque(int numero_bloque,char* flag);
 int obtener_bloque(char* bloques,int posicion);
 
@@ -89,3 +91,8 @@ int liberar_elementos_array(char** array);
 int bloque_relativo_archivo(int posicion);
 char** cortar_bloques_array(char* array);
 
+
+//Manejo lista de archivos abiertos
+int agregar_archivo_abierto(char* path);
+int buscar_archivo_abierto(char* path);
+int sacar_lista_archivos_abiertos(char* path);

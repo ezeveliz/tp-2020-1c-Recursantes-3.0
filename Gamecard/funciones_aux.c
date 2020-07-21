@@ -55,6 +55,8 @@ void limpiar_bitmpa(t_bitarray* bitarray){
     }
 }
 
+
+// Obtiene un string con el bitmap
 char* obtener_bitmap(FILE* archivo_bitmap, int cant_bloques){
     //Pongo el puntero del archivo en 0
     rewind(archivo_bitmap);

@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 }
 
 void leer_configuracion(){
-    t_config * archConfig = config_create("gameboy_config");
+    t_config * archConfig = config_create("../gameboy_config");
 
     config_params.ip_broker = config_get_string_value(archConfig, "IP_GAMECARD");
     config_params.puerto_broker = config_get_int_value(archConfig, "PUERTO_BROKER");
@@ -474,7 +474,6 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
             send_package(paquete, broker);
 
-            send_package(paquete, broker);
             free_package(paquete);
         }
     }
@@ -559,15 +558,26 @@ int suscribir_broker(int broker_socket,char *cola_mensaje){
 
 void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
     int id_correlativo = *(int *) list_get(rta_list, 0);
-    void *mensaje = list_get(rta_list, 1);
+    void *mensaje = list_get(rta_list, 2);
 
     switch (buffer_header->type) {
         case NEW_POK: {
-            //TODO: Ver esto mañana
             t_new_pokemon *newPokemon = void_a_new_pokemon(mensaje);
+
+            //Arreglo error de fin de caracter
+            char* nombre_pokemon = malloc(newPokemon->nombre_pokemon_length + 1);
+            memcpy(nombre_pokemon, newPokemon->nombre_pokemon, newPokemon->nombre_pokemon_length);
+            nombre_pokemon[newPokemon->nombre_pokemon_length] = '\0';
+
+            free(newPokemon->nombre_pokemon);
+            newPokemon->nombre_pokemon = nombre_pokemon;
+
+            //Logeo
             log_info(logger, "Mensaje de cola NEW_POKEMON Id correlativo: %d Nombre Pokemon: %s Cantidad: %d Posicion: (%d,%d)",
                      id_correlativo, newPokemon->nombre_pokemon, newPokemon->cantidad, newPokemon->pos_x,
                      newPokemon->pos_y);
+
+            //Libero
             free(newPokemon->nombre_pokemon);
             free(newPokemon);
             printf("Llego un mensaje new_pok\n");
@@ -575,6 +585,15 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case APPEARED_POK: {
             t_appeared_pokemon *appearedPokemon = void_a_appeared_pokemon(mensaje);
+
+            //Arreglo error de fin de caracter
+            char* nombre_pokemon = malloc(appearedPokemon->nombre_pokemon_length + 1);
+            memcpy(nombre_pokemon, appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            nombre_pokemon[appearedPokemon->nombre_pokemon_length] = '\0';
+
+            free(appearedPokemon->nombre_pokemon);
+            appearedPokemon->nombre_pokemon = nombre_pokemon;
+
             log_info(logger, "Mensaje de cola APEPEARED_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo, appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
             free(appearedPokemon->nombre_pokemon);
@@ -583,6 +602,15 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case CATCH_POK: {
             t_catch_pokemon *catchPokemon = void_a_catch_pokemon(mensaje);
+
+            //Arreglo error de fin de caracter
+            char* nombre_pokemon = malloc(catchPokemon->nombre_pokemon_length + 1);
+            memcpy(nombre_pokemon, catchPokemon->nombre_pokemon, catchPokemon->nombre_pokemon_length);
+            nombre_pokemon[catchPokemon->nombre_pokemon_length] = '\0';
+
+            free(catchPokemon->nombre_pokemon);
+            catchPokemon->nombre_pokemon = nombre_pokemon;
+
             log_info(logger, "Mensaje de cola CATCH_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo,
                      catchPokemon->nombre_pokemon, catchPokemon->pos_x, catchPokemon->pos_y);
@@ -592,6 +620,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case CAUGHT_POK: {
             t_caught_pokemon *caughtPokemon = void_a_caught_pokemon(mensaje);
+
             log_info(logger, "Mensaje de cola CAUGHT_POKEMON Id correlativo: %d\n Fue atrapado: %d\n", id_correlativo,
                      caughtPokemon->atrapado);
             free(caughtPokemon);
@@ -599,6 +628,16 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case GET_POK: {
             t_get_pokemon *getPokemon = void_a_get_pokemon(mensaje);
+
+            //Arreglo error de fin de caracter
+            char* nombre_pokemon = malloc(getPokemon->nombre_pokemon_length + 1);
+            memcpy(nombre_pokemon, getPokemon->nombre_pokemon, getPokemon->nombre_pokemon_length);
+            nombre_pokemon[getPokemon->nombre_pokemon_length] = '\0';
+
+
+            free(getPokemon->nombre_pokemon);
+            getPokemon->nombre_pokemon = nombre_pokemon;
+
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
                      getPokemon->nombre_pokemon);
             free(getPokemon->nombre_pokemon);
@@ -607,6 +646,14 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
         }
         case LOCALIZED_POK: {
             t_localized_pokemon *localizedPokemon = void_a_localized_pokemon(mensaje);
+
+            //Arreglo error de fin de caracter
+            char* nombre_pokemon = malloc(localizedPokemon->nombre_pokemon_length + 1);
+            memcpy(nombre_pokemon, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
+            nombre_pokemon[localizedPokemon->nombre_pokemon_length] = '\0';
+
+            free(localizedPokemon->nombre_pokemon);
+
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
             free(localizedPokemon->nombre_pokemon);

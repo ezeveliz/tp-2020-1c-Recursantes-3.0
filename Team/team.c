@@ -193,7 +193,6 @@ int main() {
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
-    //pthread_cancel(server_thread);
 }
 
 int read_config_options() {

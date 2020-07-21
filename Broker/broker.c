@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_PARTICIONES_QUEUE, NULL);
     pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
     pthread_mutex_init(&M_INTENTOS, NULL);
+    pthread_mutex_init(&M_PROCESO, NULL);
 
     signal(SIGUSR1, dump_cache);
 
@@ -237,6 +238,7 @@ void *server_function(void *arg) {
 
             case NEW_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola NEW_POK");
                     // Le llega un un_mensaje
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
@@ -263,6 +265,7 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(new_pokemon->nombre_pokemon);
                     free(new_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 

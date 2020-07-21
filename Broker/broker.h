@@ -50,6 +50,8 @@ void *server_function(void *arg);
  * Configuration ends
  */
 
+pthread_mutex_t M_PROCESO;
+
 void* MEMORIA_PRINCIPAL;
 pthread_mutex_t M_MEMORIA_PRINCIPAL;
 

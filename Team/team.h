@@ -16,6 +16,7 @@
 #include <pthread.h>
 #include <string.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #include "teamStructures.h"
 

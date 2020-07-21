@@ -193,11 +193,12 @@ int main() {
 
     //Cuando termina la ejecucion de todos los hilos libero los recursos
     free_resources();
+    //pthread_cancel(server_thread);
 }
 
 int read_config_options() {
-
-    config_file = config_create("../team.config");
+    //TODO: Cambiar para la entrega a ../team.config
+    config_file = config_create("team.config");
     if (!config_file) {
         return -1;
     }

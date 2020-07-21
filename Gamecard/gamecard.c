@@ -33,7 +33,8 @@ int main() {
 //    LOG_LEVEL_WARNING
 //    LOG_LEVEL_ERROR
 
-    logger = log_create("gamecard_log", "Gamecard", 1, LOG_LEVEL_DEBUG);
+    logger = log_create(configuracion.punto_log, "Gamecard", 1, configuracion.nivel_log);
+
     if (logger == NULL) {
         printf("No se pudo inicializar el log en la ruta especificada, saliendo.");
         return -1;
@@ -72,7 +73,7 @@ void mostrar_bitmap(){
 
 int leer_opciones_configuracion() {
 
-    config_file = config_create("gamecard.config");
+    config_file = config_create("../gamecard.config");
     if (!config_file) {
         return -1;
     }
@@ -85,6 +86,9 @@ int leer_opciones_configuracion() {
     configuracion.tiempo_retardo_operacion = config_get_int_value(config_file,"TIEMPO_RETARDO_OPERACION");
     configuracion.gamecard_id = config_get_int_value(config_file,"MAC");
     configuracion.puerto_gamecard = config_get_int_value(config_file,"PUERTO_GAMECARD");
+    configuracion.punto_log = config_get_string_value(config_file,"PUNTO_LOG");
+    configuracion.nivel_log = config_get_int_value(config_file,"NIVEL_LOG");
+
     return 1;
 }
 
@@ -449,7 +453,7 @@ void* mensaje_new_pokemon(void* parametros ){
 
     //Verificar si existe pokemon sino crearlo
     if(!find_tall_grass(pokemon->nombre_pokemon)){
-        log_debug(logger,"Hilo: %d Crea el directorio %s", pthread_self(),pokemon->nombre_pokemon);
+        log_debug(logger,"Crea el directorio %s Hilo: %d ",pokemon->nombre_pokemon , syscall(SYS_gettid));
         create_tall_grass(path_archvio);
         sleep(1);//Para que no intente leerlo antes de que se cree
     }
@@ -467,13 +471,13 @@ void* mensaje_new_pokemon(void* parametros ){
         free(pokemon);
 
         log_info(logger,"Se quizo abrir un archivo abierto");
-        log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
+        log_debug(logger,"Espera el tiempo de reoperacion y vuelve a intentar. Hilo: %d ", syscall(SYS_gettid));
         sleep(configuracion.tiempo_reoperacion);
         mensaje_new_pokemon(parametros);
 
     }else{
 
-        log_debug(logger,"Hilo: %d Entro a la ejecucion de new pokemon", pthread_self());
+        log_debug(logger,"Entro a la ejecucion de new pokemon. Hilo: %d ", syscall(SYS_gettid));
         //sleep(3);
 
         //Verificar si existe la entrada en el archivo y agregar uno a la cantidad sino agregarlo al final
@@ -492,7 +496,7 @@ void* mensaje_new_pokemon(void* parametros ){
         //Verifico si esta el registro con esa posicion
         if( pos_pok == NULL ){
 
-            log_debug(logger,"Hilo: %d Posicion no encontrada se va a crear una entrada nueva", pthread_self());
+            log_debug(logger,"Posicion no encontrada se va a crear una entrada nueva. Hilo: %d ", syscall(SYS_gettid));
 
             //Le agrego la cantidad al string y lo escribo en el archivo
             char* aux_itoa_cant = string_itoa(pokemon->cantidad);
@@ -503,7 +507,7 @@ void* mensaje_new_pokemon(void* parametros ){
             write_tall_grass(archivo, registro_agregar,string_length(registro_agregar), archivo->metadata->size);
 
         }else{
-            log_debug(logger,"Hilo: %d Posicion encontrada se va a incrementar", pthread_self());
+            log_debug(logger,"Posicion encontrada se va a incrementar. Hilo: %d ", syscall(SYS_gettid));
 
             //Elimino la entrada vieja
             delet_tall_grass(archivo, pos_pok->pos_archivo, pos_pok->tam );
@@ -549,7 +553,7 @@ void* mensaje_new_pokemon(void* parametros ){
         free(registro_agregar);
 
         //Debugeo
-        log_debug(logger,"Hilo: %d Finalizo a la ejecucion de new pokemon", pthread_self());
+        log_debug(logger,"Finalizo a la ejecucion de new pokemon. Hilo: %d ", syscall(SYS_gettid));
 
         free(pokemon);
         free(datos_param->estructura_pokemon);
@@ -625,7 +629,7 @@ void* mensaje_catch_pokemon(void* parametros){
             free_package(paquete);
 
             log_info(logger,"Se quizo abrir un archivo abierto");
-            log_debug(logger,"Hilo: %d Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
+            log_debug(logger,"Espera el tiempo de reoperacion y vuelve a intentar. Hilo: %d ", syscall(SYS_gettid));
             sleep(configuracion.tiempo_reoperacion);
             mensaje_catch_pokemon(parametros);
 
@@ -637,8 +641,7 @@ void* mensaje_catch_pokemon(void* parametros){
             if (pos_pok == NULL) {
 
                 //Informacion para la presentacion del tp
-                log_info(logger, "No se encontraron las coordenadas x:%d y:%d", pokemon->pos_x, pokemon->pos_y);
-                log_error(logger,"Hilo: %d No se encontraron las coordenadas x:%d y:%d", pthread_self(), pokemon->pos_x, pokemon->pos_y);
+                log_error(logger,"No se encontraron las coordenadas x:%d y:%d Hilo: %d ", pokemon->pos_x, pokemon->pos_y, syscall(SYS_gettid));
 
                 //Espero el tiempo especificado para simular acceso a disco
                 sleep(configuracion.tiempo_retardo_operacion);
@@ -668,7 +671,7 @@ void* mensaje_catch_pokemon(void* parametros){
                 //Verifico que la posicion no quede sin entrada vacia
                 if ((pos_pok->cant - 1) > 0) {
 
-                    log_debug(logger, "Hilo: %d va a decrementar en una a la cantidad de esa posicion ", pthread_self());
+                    log_debug(logger, "Se va a decrementar en 1 el pokemon en pos:(%d,%d) Hilo: %d ", pokemon->pos_x, pokemon->pos_y, syscall(SYS_gettid));
 
                     //Le agrego la cantidad que quiero al registro a agregar
                     char* itoa_aux = string_itoa(pos_pok->cant - 1);
@@ -689,7 +692,7 @@ void* mensaje_catch_pokemon(void* parametros){
 
                 }else{
 
-                    log_debug(logger, "Hilo: %d va a eliminar la posicion por no tener nada", pthread_self());
+                    log_debug(logger, "Se va a eliminar la posicion:(%d,%d) Hilo: %d", pokemon->pos_x, pokemon->pos_y, syscall(SYS_gettid));
 
                 }
 
@@ -714,7 +717,7 @@ void* mensaje_catch_pokemon(void* parametros){
             add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
             envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
-            log_debug(logger, "Hilo: %d Finalizo a la ejecucion de new pokemon de catch pokemon ", pthread_self());
+            log_debug(logger, "Finalizo a la ejecucion de new pokemon de catch pokemon del hilo: %d ", syscall(SYS_gettid));
 
             //Libero
             free(mensaje_serializado);
@@ -770,8 +773,7 @@ void* mensaje_get_pokemon(void* parametros){
     //Verificar si existe el pokemon, sino devolver el mensaje sin posiciones ni cantidades
     if(!find_tall_grass(pokemon->nombre_pokemon)){
 
-        log_debug(logger,"Hilo: %d Entro a la ejecucion de get pokemon", pthread_self());
-        log_error(logger,"Hilo: %d No se encontro el archivo %s", pthread_self(), pokemon->nombre_pokemon);
+        log_error(logger,"No se encontro el archivo %s Hilo: %d ",  pokemon->nombre_pokemon, syscall(SYS_gettid));
 
         //Generlo el mensaje de error
         uint32_t* vacio;
@@ -780,12 +782,12 @@ void* mensaje_get_pokemon(void* parametros){
 
         //Agrego los datos al paquete
         add_to_package(paquete, (void *) &id, sizeof(uint32_t));
-        add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(localized_pokemon));
+        add_to_package(paquete, mensaje_serializado, sizeof_localized_pokemon(localized_pokemon));
 
         //Si no se puede conectar informar por log
         envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
-        log_debug(logger,"Hilo: %d Finalizo la ejecucion de get pokemon", pthread_self());
+        log_debug(logger,"Finalizo la ejecucion de get pokemon del Hilo: %d ", syscall(SYS_gettid));
 
         //Libero
         free_package(paquete);
@@ -804,7 +806,7 @@ void* mensaje_get_pokemon(void* parametros){
             free(path_archvio);
 
             log_info(logger,"Se quizo abrir un archivo abierto");
-            log_debug(logger,"Hilo: %d  Espera el tiempo de reoperacion y vuelve a intentar", pthread_self());
+            log_debug(logger,"Espera el tiempo de reoperacion y vuelve a intentar Hilo: %d  ", syscall(SYS_gettid));
 
             //Espero x segundos antes de reintentar
             sleep(configuracion.tiempo_reoperacion);
@@ -813,7 +815,7 @@ void* mensaje_get_pokemon(void* parametros){
             mensaje_get_pokemon(parametros);
 
         } else{
-            log_debug(logger,"Hilo: %d Entro a la ejecucion de get pokemon", pthread_self());
+            log_debug(logger,"Entro a la ejecucion de get pokemon Hilo: %d ", syscall(SYS_gettid));
 
             //Obtengo todas las coordenadas
             t_list* lista_pos = obtener_todas_coordenadas(archivo);
@@ -858,7 +860,7 @@ void* mensaje_get_pokemon(void* parametros){
             free(parametros);
             list_destroy_and_destroy_elements(lista_pos,free);
 
-            log_debug(logger,"Hilo: %d Finalizo a la ejecucion de get pokemon", pthread_self());
+            log_debug(logger,"Finalizo a la ejecucion de get pokemon del Hilo: %d ", syscall(SYS_gettid));
         }
     }
 

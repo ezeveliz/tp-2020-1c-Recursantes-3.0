@@ -86,7 +86,7 @@ void limpiar_unidades_antiguas(char* path){
 //Crea la estructura de metadata del fileSystem
 int crear_metadata(char* path){
     char* path_metadata = concatenar_strings(path,"/Metadata");
-    log_info(logger_tall_grass,"Se crea la metadata del FS");
+    log_info(logger_tall_grass,"Se crea la metadata del FS con Path:%s", path_metadata);
 
     //Creo la carpeta
     int resultado = crear_carpeta(path_metadata, ACCESSPERMS);
@@ -137,8 +137,9 @@ int crear_blocks(char* path){
             free(nombre_bloque);
             free(path_bloque);
         }
+
+        log_info(logger_tall_grass,"Se crearon los bloques del FS en la carpeta:%s", path_blocks);
         free(path_blocks);
-        log_info(logger_tall_grass,"Se crearon los bloques del FS");
         return 0;
     }
     free(path_blocks);
@@ -366,12 +367,12 @@ t_file* open_tall_grass(char* path){
         config_save(metadata);
         config_destroy(metadata);
 
-        log_info(logger_tall_grass,"Se abrio el archivo:%s",path);
+        log_info(logger_tall_grass,"Se abrio el archivo: %s",path);
         free(path_archivo_metadata);
         return retorno;
     }else{
 
-        log_error(logger_tall_grass,"Error al abrir archivo:%s",path);
+        log_error(logger_tall_grass,"Error al abrir archivo: %s",path);
         free(retorno);
         free(path_archivo_metadata);
         return NULL;
@@ -389,7 +390,7 @@ int close_tall_grass(t_file * fd ){
 
     int res = sacar_lista_archivos_abiertos(fd->path);
 
-    log_info(logger_tall_grass,"Se cerro el archivo con Path:%s Hilo:%d ",fd->path, pthread_self());
+    log_info(logger_tall_grass,"Se cerro el archivo con Path:%s en el Hilo: %d ",fd->path, syscall(SYS_gettid));
     free(fd->path);
     free(fd->metadata->bloques);
     free(fd->metadata);
@@ -879,7 +880,7 @@ int truncate_tall_grass(t_file* archivo, uint32_t off_set){
 
 //Funcion para sacar el ultimo bloque de la metadata del archivo
 void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
-    log_info(logger_tall_grass,"Se va a sacar un bloque del archivo:s", archivo->path);
+    log_info(logger_tall_grass,"Se va a sacar un bloque del archivo: %s", archivo->path);
 
     //Calculo los bloques por los q paso la posicion
     int bloque_usado_en_array = bloque_relativo_archivo(pos_final_archivo); //Es la posicion del array de bloques
@@ -927,7 +928,7 @@ void sacar_bloques_metadata(t_file* archivo, uint32_t pos_final_archivo){
 }
 
 int delet_tall_grass(t_file* archivo, uint32_t off_set, uint32_t cantidad_byte) {
-    log_info(logger_tall_grass,"Se va a eliminar datos del archivo:%s pos: %d cant:%d",archivo->path, off_set, cantidad_byte);
+    log_info(logger_tall_grass,"Se va a eliminar datos del archivo: %s pos: %d cant:%d",archivo->path, off_set, cantidad_byte);
     char *caracter_a_copiar;
 //i < cantidad_byte &&
     for (int i = 0;  (off_set + cantidad_byte + i) < (archivo->metadata->size); i++) {

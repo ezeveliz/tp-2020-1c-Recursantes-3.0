@@ -17,6 +17,8 @@
 #include <commons/config.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
+#include <sys/types.h>
 
 #endif //GAMECARD_TALLGRASS_H
 

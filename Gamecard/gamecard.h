@@ -11,6 +11,9 @@
 #include <commLib/structures.h>
 #include "structures.h"
 #include "tallGrass.h"
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/syscall.h>
 
 #endif //TEAM_GAMECARD_H
 

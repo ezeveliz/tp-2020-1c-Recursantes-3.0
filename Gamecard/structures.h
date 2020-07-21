@@ -16,6 +16,8 @@ typedef struct {
     int puerto_broker;
     int gamecard_id;
     int puerto_gamecard;
+    char* punto_log;
+    int nivel_log;
 } t_gamecard_config;
 
 typedef struct{

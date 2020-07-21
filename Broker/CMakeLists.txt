@@ -8,3 +8,9 @@ include_directories("/usr/include/commons" "/usr/include/commLib")
 add_executable(broker broker.c broker.h)
 
 target_link_libraries(broker "/usr/lib/libcommons.so" pthread "/usr/lib/libcommLib.so" m)
+
+if(MSVC)
+    target_compile_options(broker PRIVATE /W4 /WX)
+else()
+    target_compile_options(broker PRIVATE -Wall)
+endif()

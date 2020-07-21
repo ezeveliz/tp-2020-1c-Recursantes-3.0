@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server, NULL);
     pthread_detach(server_thread);
 
-    CANTIDAD_MENSAJES_A_ENVIAR = 10;
+    CANTIDAD_MENSAJES_A_ENVIAR = 100;
 
     for (int i = 0; i < CANTIDAD_MENSAJES_A_ENVIAR; ++i) {
         int broker_socket_mensaje = connect_to_broker();

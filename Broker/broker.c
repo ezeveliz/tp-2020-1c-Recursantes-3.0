@@ -298,8 +298,8 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(appeared_pokemon->nombre_pokemon);
                     free(appeared_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
-                    pthread_mutex_unlock(&M_PROCESO);                
                 }
 
             case LOCALIZED_POK:;
@@ -332,8 +332,8 @@ void *server_function(void *arg) {
                     free(localized_pokemon->nombre_pokemon);
                     free(localized_pokemon->coordenadas);
                     free(localized_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
-                    pthread_mutex_unlock(&M_PROCESO);                
                 }
 
             case CAUGHT_POK:;
@@ -364,8 +364,8 @@ void *server_function(void *arg) {
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(caught_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
-                    pthread_mutex_unlock(&M_PROCESO);                
                 }
 
             case GET_POK:;
@@ -396,8 +396,8 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(get_pokemon->nombre_pokemon);
                     free(get_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
-                    pthread_mutex_unlock(&M_PROCESO);                
                 }
 
             case CATCH_POK:;
@@ -428,8 +428,8 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(catch_pokemon->nombre_pokemon);
                     free(catch_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
-                    pthread_mutex_unlock(&M_PROCESO);                
                 }
 
             case ACK:;
@@ -723,7 +723,7 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     pthread_mutex_lock(&M_SUBSCRIPTORES);
     pthread_mutex_lock(&M_MENSAJES);
     int id = *((int*) list_get(cosas, 0));
-    log_warning(logger, "Nuevo %s id:%d fd:%d ip:%s port:%d", cola_to_string(sub_to_men(tipo)), id, fd, ip, puerto);
+    log_warning(logger, "Nuevo %s id:%d fd:%d ip:%s port:%d", cola_to_string(una_cola), id, fd, ip, puerto);
 
     // Si cambia el puerto o la ip lo borro y vuelvo a crearlo
     if(existe_sub_en_lista(id, SUBSCRIPTORES)){

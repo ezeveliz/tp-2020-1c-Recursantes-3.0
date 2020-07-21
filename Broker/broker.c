@@ -723,7 +723,7 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     pthread_mutex_lock(&M_SUBSCRIPTORES);
     pthread_mutex_lock(&M_MENSAJES);
     int id = *((int*) list_get(cosas, 0));
-    log_warning(logger, "Nuevo %s id:%d fd:%d ip:%s port:%d", cola_to_string(una_cola), id, fd, ip, puerto);
+    log_warning(logger, "Nuevo SUB_%s id:%d fd:%d ip:%s port:%d", cola_to_string(sub_to_men(tipo)), id, fd, ip, puerto);
 
     // Si cambia el puerto o la ip lo borro y vuelvo a crearlo
     if(existe_sub_en_lista(id, SUBSCRIPTORES)){
@@ -881,7 +881,6 @@ int send_message_test(t_paquete* paquete, int socket){
 void* mandar_mensaje(void* cosito){
     log_info(logger, "Entro en mandar mensaje");
     mensaje_subscriptor* coso = void_a_mensaje_subscriptor(cosito);
-    free(cosito);
 
     subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
     mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
@@ -1271,14 +1270,16 @@ void compactar_particiones(){
             for(int z=i+1;z<size;z++){
                 particion* particion_ocupada = list_get(PARTICIONES, z);
                 if(!particion_ocupada->libre){
+
+                    // Movemos primero la memoria real
+                    memcpy(MEMORIA_PRINCIPAL + particion_libre->base,
+                           particion_ocupada->mensaje->puntero_a_memoria,
+                           particion_ocupada->mensaje->tam);
+                    particion_ocupada->mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
+
+                    // Despues acomodamos las estrucuras
                     particion_ocupada->base = particion_libre->base;
                     particion_libre->base += particion_ocupada->tam;
-
-                    // Mover memoria real
-                    particion_ocupada->mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
-                    memcpy(particion_ocupada->mensaje->puntero_a_memoria,
-                            particion_libre->mensaje->puntero_a_memoria,
-                            particion_libre->mensaje->tam);
 
                     ordenar_particiones();
                     mergear_particiones_libres();

@@ -393,7 +393,7 @@ t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t can
     localized_pokemon->nombre_pokemon_length = strlen(nombre_pokemon);
     localized_pokemon->nombre_pokemon = nombre_pokemon;
     localized_pokemon->cantidad_coordenas = cantidad_coordenadas;
-    localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
+    //localized_pokemon->coordenadas = malloc(cantidad_coordenadas*2*(sizeof(uint32_t)));
     localized_pokemon->coordenadas = coordenadas;
 
     return localized_pokemon;

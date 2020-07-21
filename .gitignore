@@ -63,5 +63,7 @@ dump.txt
 /Gameboy/catch_pokemon_escenario_1_s2.sh
 /Team/delibird-pruebas/
 */Makefile
+*/vgcore*
 /Broker/broker
 /Gameboy/gameboy
+/cliente-test/cliente-test

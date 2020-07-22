@@ -6,7 +6,8 @@
 #
 
 
-
+clear
+echo -e "\n"
 echo "   ██████╗  █████╗ ███╗   ███╗███████╗ ██████╗ █████╗ ██████╗ ██████╗ ";
 echo "  ██╔════╝ ██╔══██╗████╗ ████║██╔════╝██╔════╝██╔══██╗██╔══██╗██╔══██╗";
 echo "  ██║  ███╗███████║██╔████╔██║█████╗  ██║     ███████║██████╔╝██║  ██║";
@@ -30,9 +31,14 @@ CONFIG="gamecard.config"
 
 # Datos del Broker
 echo "Ingrese la ip del Broker"
+echo "Default: 127.0.0.1"
 	echo -n "> "
 	read IP_BROKER
+	if [[ -z  $IP_BROKER ]]; then
+		IP_BROKER="127.0.0.1"
+	fi
 
+echo -e "\nIP_BROKER=$IP_BROKER\n"
 echo "IP_BROKER=$IP_BROKER" > "$CONFIG"
 
 #Variables 

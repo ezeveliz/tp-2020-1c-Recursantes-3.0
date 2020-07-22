@@ -310,7 +310,7 @@ t_new_pokemon* create_new_pokemon(char* nombre_pokemon, uint32_t pos_x, uint32_t
 }
 
 void* new_pokemon_a_void(t_new_pokemon* new_pokemon){
-    void* stream = malloc(sizeof(uint32_t)*4 + new_pokemon->nombre_pokemon_length);
+    void* stream = malloc(sizeof(uint32_t)*4 + new_pokemon->nombre_pokemon_length*sizeof(char));
     int offset = 0;
 
     memcpy(stream + offset, &new_pokemon->nombre_pokemon_length, sizeof(uint32_t));
@@ -362,7 +362,7 @@ t_get_pokemon* create_get_pokemon(char* nombre_pokemon){
 }
 
 void* get_pokemon_a_void(t_get_pokemon* get_pokemon){
-    void* stream = malloc(sizeof(uint32_t) + get_pokemon->nombre_pokemon_length);
+    void* stream = malloc(sizeof(uint32_t) + get_pokemon->nombre_pokemon_length*sizeof(char));
     int offset = 0;
 
     memcpy(stream + offset, &get_pokemon->nombre_pokemon_length, sizeof(uint32_t));
@@ -401,7 +401,7 @@ t_localized_pokemon* create_localized_pokemon(char* nombre_pokemon, uint32_t can
 
 void* localized_pokemon_a_void(t_localized_pokemon* localized_pokemon){
     int len = sizeof(uint32_t) + localized_pokemon->nombre_pokemon_length + sizeof(uint32_t)*(localized_pokemon->cantidad_coordenas*2 + 1);
-    void* stream = malloc(sizeof(uint32_t) + localized_pokemon->nombre_pokemon_length + sizeof(uint32_t)*(localized_pokemon->cantidad_coordenas*2 + 1));
+    void* stream = malloc(sizeof(uint32_t) + localized_pokemon->nombre_pokemon_length*sizeof(char) + sizeof(uint32_t)*(localized_pokemon->cantidad_coordenas*2 + 1));
     int offset = 0;
 
     memcpy(stream + offset, &localized_pokemon->nombre_pokemon_length, sizeof(uint32_t));
@@ -479,7 +479,7 @@ t_catch_pokemon* create_catch_pokemon(char* nombre_pokemon, uint32_t pos_x, uint
 }
 
 void* catch_pokemon_a_void(t_catch_pokemon* catch_pokemon){
-    void* stream = malloc(sizeof(uint32_t)*3 + catch_pokemon->nombre_pokemon_length);
+    void* stream = malloc(sizeof(uint32_t)*3 + catch_pokemon->nombre_pokemon_length*sizeof(char));
     int offset = 0;
 
     memcpy(stream + offset, &catch_pokemon->nombre_pokemon_length, sizeof(uint32_t));
@@ -528,7 +528,7 @@ t_appeared_pokemon* create_appeared_pokemon(char* nombre_pokemon, uint32_t pos_x
 }
 
 void* appeared_pokemon_a_void(t_appeared_pokemon* appeared_pokemon){
-    void* stream = malloc(sizeof(uint32_t)*3 + appeared_pokemon->nombre_pokemon_length);
+    void* stream = malloc(sizeof(uint32_t)*3 + appeared_pokemon->nombre_pokemon_length*sizeof(char));
     int offset = 0;
 
     memcpy(stream + offset, &appeared_pokemon->nombre_pokemon_length, sizeof(uint32_t));
@@ -582,8 +582,9 @@ size_t sizeof_get_pokemon(t_get_pokemon* estructura){
     return tam;
 }
 size_t sizeof_localized_pokemon(t_localized_pokemon* estructura){
-    size_t tam = sizeof(uint32_t)*3;
+    size_t tam = sizeof(uint32_t)*2;
     tam += estructura->nombre_pokemon_length;
+    tam += estructura->cantidad_coordenas * 2 * sizeof(uint32_t);
     return tam;
 }
 size_t sizeof_catch_pokemon(t_catch_pokemon* estructura){

@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_PARTICIONES_QUEUE, NULL);
     pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
     pthread_mutex_init(&M_INTENTOS, NULL);
+    pthread_mutex_init(&M_PROCESO, NULL);
 
     signal(SIGUSR1, dump_cache);
 
@@ -58,7 +59,7 @@ int main(int argc, char **argv) {
     MENSAJES = list_create();
     MENSAJE_SUBSCRIPTORE = list_create();
     PARTICIONES = list_create();
-    log_debug(logger, "Creo la particin inicial del tamanio total de la memoria");
+    log_debug(logger, "Creo la particion inicial del tamanio total de la memoria");
     particion* principal = particion_create(0, config.mem_size, true);
     list_add(PARTICIONES, principal);
     ARBOL_BUDDY = malloc(sizeof(t_nodo));
@@ -82,6 +83,20 @@ int main(int argc, char **argv) {
         PARTICIONES_QUEUE = list_create();
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
+
+//    log_warning(logger, "\n░░░░█─────────────█──▀──\n"
+//                      "░░░░▓█───────▄▄▀▀█──────\n"
+//                      "░░░░▒░█────▄█▒░░▄░█─────\n"
+//                      "░░░░░░░▀▄─▄▀▒▀▀▀▄▄▀──DO─\n"
+//                      "░░░░░░░░░█▒░░░░▄▀────IT──\n"
+//                      "▒▒▒░░░░▄▀▒░░░░▄▀───FOR──\n"
+//                      "▓▓▓▓▒░█▒░░░░░█▄───RODRI──\n"
+//                      "█████▀▒░░░░░█░▀▄────────\n"
+//                      "█████▒▒░░░▒█░░░▀▄───────\n"
+//                      "███▓▓▒▒▒▀▀▀█▄░░░░█──────\n"
+//                      "▓██▓▒▒▒▒▒▒▒▒▒█░░░░█─────\n"
+//                      "▓▓█▓▒▒▒▒▒▒▓▒▒█░░░░░█────\n"
+//                      "░▒▒▀▀▄▄▄▄█▄▄▀░░░░░░░█─");
 
 //    tests_broker();
 
@@ -116,6 +131,9 @@ int main(int argc, char **argv) {
     pthread_mutex_destroy(&M_MENSAJE_SUBSCRIPTORE);
     pthread_mutex_destroy(&M_IDENTIFICADOR_MENSAJE);
     pthread_mutex_destroy(&M_PARTICIONES);
+    pthread_mutex_destroy(&M_PROCESO);
+
+    log_error(logger, "Salgo del Broker");
     return EXIT_SUCCESS;
 }
 
@@ -234,6 +252,7 @@ void *server_function(void *arg) {
 
             case NEW_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola NEW_POK");
                     // Le llega un un_mensaje
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(cosas,0));
@@ -260,11 +279,13 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(new_pokemon->nombre_pokemon);
                     free(new_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case APPEARED_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola APPEARED_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_appeared_pokemon* appeared_pokemon = void_a_appeared_pokemon(list_get(cosas,1));
@@ -291,11 +312,13 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(appeared_pokemon->nombre_pokemon);
                     free(appeared_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case LOCALIZED_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola LOCALIZED_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_localized_pokemon* localized_pokemon = void_a_localized_pokemon(list_get(cosas,1));
@@ -323,11 +346,13 @@ void *server_function(void *arg) {
                     free(localized_pokemon->nombre_pokemon);
                     free(localized_pokemon->coordenadas);
                     free(localized_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case CAUGHT_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola CAUGHT_POK");
                     uint32_t mensaje_co_id = *((uint32_t *) list_get(cosas, 0));
                     t_caught_pokemon* caught_pokemon = void_a_caught_pokemon(list_get(cosas,1));
@@ -353,11 +378,13 @@ void *server_function(void *arg) {
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(caught_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case GET_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola GET_POK");
                     t_get_pokemon* get_pokemon = void_a_get_pokemon(list_get(cosas,0));
 
@@ -383,11 +410,13 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(get_pokemon->nombre_pokemon);
                     free(get_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case CATCH_POK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     log_info(tp_logger, "Llega un mensaje a la cola CATCH_POK");
                     t_catch_pokemon* catch_pokemon = void_a_catch_pokemon(list_get(cosas,0));
 
@@ -413,18 +442,21 @@ void *server_function(void *arg) {
                     recursar_operativos();
                     free(catch_pokemon->nombre_pokemon);
                     free(catch_pokemon);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case ACK:;
                 {
+                    pthread_mutex_lock(&M_PROCESO);
                     int id_subscriptor = *(int*) list_get(cosas, 0);
                     int id_mensaje = *(int*) list_get(cosas, 1);
+                    log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d",
+                             id_mensaje, id_subscriptor);
                     pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
                     flag_ack(id_subscriptor, id_mensaje);
                     pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
-                    log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d",
-                             id_mensaje, id_subscriptor);
+                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -462,7 +494,7 @@ void tests_broker(){
     log_debug(logger, "NEW_POKEMON");
     t_new_pokemon* new_pika = create_new_pokemon("Pikachu", 3, 4, 2);
     size_t partition_size = sizeof_new_pokemon(new_pika);
-    int base = asignar_particion(partition_size);
+    particion* base = asignar_particion(partition_size);
     log_debug(logger, "Base: %d", base);
     printPartList();
     /*
@@ -474,7 +506,7 @@ void tests_broker(){
     log_debug(logger, "GET_POKEMON");
     t_get_pokemon* get_pika = create_get_pokemon("Pikachu");
     size_t partition_size1 = sizeof_get_pokemon(get_pika);
-    int base1 = asignar_particion(partition_size1);
+    particion* base1 = asignar_particion(partition_size1);
     log_debug(logger, "Base: %d", base1);
     printPartList();
     /*
@@ -487,7 +519,7 @@ void tests_broker(){
     uint32_t coordenadas_tmp[] = {3, 4, 5, 6};
     t_localized_pokemon* loc_pika = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size2 = sizeof_localized_pokemon(loc_pika);
-    int base2 = asignar_particion(partition_size2);
+    particion* base2 = asignar_particion(partition_size2);
     log_debug(logger, "Base: %d", base2);
     printPartList();
 
@@ -500,7 +532,7 @@ void tests_broker(){
     log_debug(logger, "LOCALIZED_POKEMON");
     t_localized_pokemon* loc_pika1 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size3 = sizeof_localized_pokemon(loc_pika1);
-    int base3 = asignar_particion(partition_size3);
+    particion* base3 = asignar_particion(partition_size3);
     log_debug(logger, "Base: %d", base3);
     printPartList();
     /*
@@ -512,7 +544,7 @@ void tests_broker(){
     log_debug(logger, "LOCALIZED_POKEMON");
     t_localized_pokemon* loc_pika2 = create_localized_pokemon("Pikachu", 2, coordenadas_tmp);
     size_t partition_size4 = sizeof_localized_pokemon(loc_pika2);
-    int base4 = asignar_particion(partition_size4);
+    particion* base4 = asignar_particion(partition_size4);
     log_debug(logger, "Base: %d", base4);
     printPartList();
     /*
@@ -581,21 +613,17 @@ mensaje* mensaje_create(int id, int id_correlacional, MessageType tipo, size_t t
     }
 
     particion_libre->mensaje = nuevo_mensaje;
-    pthread_mutex_lock(&M_MEMORIA_PRINCIPAL);
     nuevo_mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
-    pthread_mutex_unlock(&M_MEMORIA_PRINCIPAL);
 
-    pthread_mutex_lock(&M_MENSAJES);
     list_add(MENSAJES, nuevo_mensaje);
-    pthread_mutex_unlock(&M_MENSAJES);
 
     log_info(tp_logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
     log_debug(logger, "Se almaceno %s en la posicion %d", cola_to_string(tipo), particion_libre->base);
     return nuevo_mensaje;
 }
 
+// Se elimina el Mensaje de la lista de mensajes
 void mensaje_destroy(int id_mensaje){
-    pthread_mutex_lock(&M_MENSAJES);
     bool id_search(void* un_mensaje){
         mensaje* m = (mensaje*) un_mensaje;
         return m->id == id_mensaje;
@@ -604,7 +632,6 @@ void mensaje_destroy(int id_mensaje){
         free(element);
     }
     list_remove_and_destroy_by_condition(MENSAJES, id_search, element_destroyer);
-    pthread_mutex_unlock(&M_MENSAJES);
 }
 
 
@@ -623,7 +650,7 @@ subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket){
 }
 
 
-bool existe_sub(int id, t_list* cola){
+bool existe_sub_en_lista(int id, t_list* cola){
    bool id_search(void* un_sub){
        subscriptor* sub = (subscriptor*) un_sub;
        return sub->id_subs == id;
@@ -636,7 +663,10 @@ void subscriptor_delete(int id, t_list* cola){
         subscriptor* sub = (subscriptor*) un_sub;
         return sub->id_subs == id;
     }
-    list_remove_by_condition(cola, id_search);
+    void element_destroyer(void* element){
+        free(element);
+    }
+    list_remove_and_destroy_by_condition(cola, id_search, element_destroyer);
 }
 
 //void printSubList(){
@@ -673,7 +703,7 @@ void printPartList() {
 }
 
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
-    log_debug(logger, "Se crea una nueva relacion mensaje-subscriptor");
+    log_debug(logger, "Se crea una nueva relacion mensaje[%d]-subscriptor[%d]", id_mensaje, id_sub);
     mensaje_subscriptor* nuevo_mensaje_subscriptor = malloc(sizeof(mensaje_subscriptor));
 
     nuevo_mensaje_subscriptor->id_mensaje = id_mensaje;
@@ -688,6 +718,7 @@ mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub){
 }
 
 void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
+    log_error(logger, "Se borra la relacion mensaje[%d]-subscriptor[%d]", id_mensaje, id_sub);
     bool multiple_id_search(void* un_men_sub){
         mensaje_subscriptor* men_sub = (mensaje_subscriptor*) un_men_sub;
         return men_sub->id_mensaje == id_mensaje && men_sub->id_subscriptor == id_sub;
@@ -696,22 +727,35 @@ void mensaje_subscriptor_delete(int id_mensaje, int id_sub){
         free(element);
     }
     list_remove_and_destroy_by_condition(MENSAJE_SUBSCRIPTORE, multiple_id_search, element_destroyer);
+
+    int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
+    log_error(logger, "Hay %d mensajes pendientes", cantidad_mensajes);
 }
 
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo){
+    pthread_mutex_lock(&M_PROCESO);
     pthread_mutex_lock(&M_SUBSCRIPTORES);
     pthread_mutex_lock(&M_MENSAJES);
     int id = *((int*) list_get(cosas, 0));
+    log_warning(logger, "Nuevo SUB_%s id:%d fd:%d ip:%s port:%d", cola_to_string(sub_to_men(tipo)), id, fd, ip, puerto);
 
     // Si cambia el puerto o la ip lo borro y vuelvo a crearlo
-    if(existe_sub(id, una_cola)){
-        subscriptor_delete(id, una_cola);
-        log_info(logger, "Ya existia el subscriptor en el sistema");
+    if(existe_sub_en_lista(id, SUBSCRIPTORES)){
+        log_warning(logger, "Ya existia el subscriptor en el sistema");
+        subscriptor_actualizar_fd(id, fd);
+
+        if(!existe_sub_en_lista(id, una_cola)){
+            log_warning(logger, "Pero no estaba en la cola %s, asi que lo agrego", cola_to_string(sub_to_men(tipo)));
+            subscriptor* nuevo_subscriptor = find_subscriptor(id);
+            list_add(una_cola, nuevo_subscriptor);
+        }
+
+    } else{
+        log_debug(logger, "Se crea un nuevo subscriptor de %s - ID:%d FD:%d", cola_to_string(sub_to_men(tipo)), id, fd);
+        subscriptor* nuevo_subscriptor = subscriptor_create(id, ip, puerto, fd);
+        list_add(una_cola, nuevo_subscriptor);
     }
 
-    subscriptor* nuevo_subscriptor = subscriptor_create(id, ip, puerto, fd);
-
-    list_add(una_cola, nuevo_subscriptor);
 
     int respuesta = 1;
     t_paquete* paquete = create_package(tipo);
@@ -730,11 +774,24 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
 
     pthread_mutex_unlock(&M_MENSAJES);
     pthread_mutex_unlock(&M_SUBSCRIPTORES);
-    recursar_operativos();
 
+    recursar_operativos();
+    pthread_mutex_unlock(&M_PROCESO);
+}
+
+void subscriptor_actualizar_fd(int id, int fd){
+    int cant = list_size(SUBSCRIPTORES);
+    for (int i = 0; i < cant; ++i) {
+        subscriptor* un_sub = list_get(SUBSCRIPTORES, i);
+        if (un_sub->id_subs == id){
+            log_debug(logger, "Actualizamos el subscriptor %d con el fd:%d", id, fd);
+            un_sub->socket = fd;
+        }
+    }
 }
 
 // Carga mensajes si no estaban antes
+// Crea las relaciones Mensaje-Subscriptor
 void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
     pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
     int cantidad_subs = list_size(una_cola);
@@ -748,7 +805,7 @@ void cargar_mensaje(t_list* una_cola, mensaje* un_mensaje){
     pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
 }
 
-// Carga mensajes si no estaban antes
+// Elimina todos los Mensaje-Subscriptor de ese Mensaje
 void descargar_mensaje(t_list* una_cola, int un_mensaje){
     pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
     int cantidad_subs = list_size(una_cola);
@@ -796,11 +853,12 @@ subscriptor* find_subscriptor(int id){
 // Esta funcion recorre la lista MENSAJE_SUBSCRIPTORE mandando los mensajes pendientes
 void recursar_operativos(){
     pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
-    pthread_mutex_lock(&M_MENSAJES);
-    pthread_mutex_lock(&M_SUBSCRIPTORES);
     pthread_mutex_lock(&M_PARTICIONES);
+    pthread_mutex_lock(&M_SUBSCRIPTORES);
+    pthread_mutex_lock(&M_MENSAJES);
 
     int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
+    log_debug(logger, "Hay %d mensajes pendientes", cantidad_mensajes);
     for (int i = 0; i < cantidad_mensajes; ++i) {
         mensaje_subscriptor* coso = list_get(MENSAJE_SUBSCRIPTORE, i);
         void* cosito = mensaje_subscriptor_a_void(coso);
@@ -809,25 +867,47 @@ void recursar_operativos(){
         if(!coso->enviado){
 
             pthread_t mensaje_thread;
-            pthread_create(&mensaje_thread, NULL, mandar_mensaje, (void*)cosito);
-            pthread_detach(mensaje_thread);
+            pthread_create(&mensaje_thread, NULL, mandar_mensaje, cosito);
+            pthread_join(mensaje_thread, NULL);
+//            pthread_detach(mensaje_thread);
+            /*
+             * Si le pongo detach:
+             * puede salir de aca antes de terminar de mandar los mensaje
+             * llegar un mensaje nuevo
+             * borrar el viejo que todavia no se mando
+             * y cuando se quiera mandar no tener mensaje
+             */
 
+        } else{
+            free(cosito);
         }
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     }
-    pthread_mutex_unlock(&M_PARTICIONES);
-    pthread_mutex_unlock(&M_SUBSCRIPTORES);
     pthread_mutex_unlock(&M_MENSAJES);
+    pthread_mutex_unlock(&M_SUBSCRIPTORES);
+    pthread_mutex_unlock(&M_PARTICIONES);
     pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
 }
 int send_message_test(t_paquete* paquete, int socket){
     return 1;
 }
 void* mandar_mensaje(void* cosito){
+    log_info(logger, "Entro en mandar mensaje");
     mensaje_subscriptor* coso = void_a_mensaje_subscriptor(cosito);
+
     subscriptor* un_subscriptor = find_subscriptor(coso->id_subscriptor);
     mensaje* un_mensaje = find_mensaje(coso->id_mensaje);
+    if (!un_mensaje){
+        log_error(logger, "Mandar mensaje no encontro el MENSAJE con id %d", coso->id_mensaje);
+        free(coso);
+        return null;
+    }
+    if (!un_subscriptor){
+        log_error(logger, "Mandar mensaje no encontro el SUBSCRIPTOR con id %d", coso->id_subscriptor);
+        free(coso);
+        return null;
+    }
 
     t_paquete* paquete = create_package(un_mensaje->tipo);
     add_to_package(paquete, (void*) &un_mensaje->id, sizeof(int));
@@ -836,14 +916,21 @@ void* mandar_mensaje(void* cosito){
 
     if (send_package(paquete, un_subscriptor->socket) > 0){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
+        log_debug(logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         flag_enviado(coso->id_subscriptor, coso->id_mensaje);
         // Actualizo el LRU
         particion* una_particion = find_particion_by_id_mensaje(un_mensaje->id);
+        if (!una_particion){
+            log_error(logger, "Mandar mensaje no encontro la particion del id mensaje %d", un_mensaje->id);
+            free(coso);
+            return null;
+        }
         una_particion->ultimo_uso = unix_epoch();
     }
     free(coso);
     free(cosito);
     free_package(paquete);
+    log_info(logger, "Salgo de mandar mensaje");
     return null;
 }
 
@@ -895,18 +982,20 @@ mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream){
     return un_men_sub;
 
 }
-void* flag_enviado(uint32_t id_sub, uint32_t id_men){
+void flag_enviado(uint32_t id_sub, uint32_t id_men){
     for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
         mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
         if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->enviado = true;}
     }
 }
 
-void* flag_ack(uint32_t id_sub, uint32_t id_men){
+// ATENCION AHORA EL flag_ack ELIMINA EL MENSAJE_SUBSCRIPTOR
+void flag_ack(uint32_t id_sub, uint32_t id_men){
     for(int i = 0; i<list_size(MENSAJE_SUBSCRIPTORE);i++){
         mensaje_subscriptor* x = list_get(MENSAJE_SUBSCRIPTORE, i);
         if(x->id_mensaje == id_men && x->id_subscriptor == id_sub){x->ack = true;}
     }
+    mensaje_subscriptor_delete(id_men, id_sub);
 }
 
 /*
@@ -952,6 +1041,7 @@ particion* buscar_particion_libre(int tam){
         return best_fit_search(tam);
     } else {
         log_error(logger, "Unexpected algorithm");
+        exit(EXIT_FAILURE);
     }
 }
 
@@ -1017,9 +1107,9 @@ void algoritmo_de_reemplazo(){
 
     // Borro el mensaje de las estrucutras
     log_error(logger, "Borramos el mensaje: %d", una_particion->mensaje->id);
-//    t_list* cola = men_to_cola(una_particion->mensaje->tipo);
-//    descargar_mensaje(cola, una_particion->mensaje->id);
-//    mensaje_destroy(una_particion->mensaje->id);
+    t_list* cola = men_to_cola(una_particion->mensaje->tipo);
+    descargar_mensaje(cola, una_particion->mensaje->id);
+    mensaje_destroy(una_particion->mensaje->id);
 
     if(strcmp(config.mem_algorithm, "PARTICIONES") == 0){
         particion_delete(una_particion->base);
@@ -1194,14 +1284,16 @@ void compactar_particiones(){
             for(int z=i+1;z<size;z++){
                 particion* particion_ocupada = list_get(PARTICIONES, z);
                 if(!particion_ocupada->libre){
+
+                    // Movemos primero la memoria real
+                    memcpy(MEMORIA_PRINCIPAL + particion_libre->base,
+                           particion_ocupada->mensaje->puntero_a_memoria,
+                           particion_ocupada->mensaje->tam);
+                    particion_ocupada->mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
+
+                    // Despues acomodamos las estrucuras
                     particion_ocupada->base = particion_libre->base;
                     particion_libre->base += particion_ocupada->tam;
-
-                    // Mover memoria real
-                    particion_ocupada->mensaje->puntero_a_memoria = MEMORIA_PRINCIPAL + particion_libre->base;
-                    memcpy(particion_ocupada->mensaje->puntero_a_memoria,
-                            particion_libre->mensaje->puntero_a_memoria,
-                            particion_libre->mensaje->tam);
 
                     ordenar_particiones();
                     mergear_particiones_libres();
@@ -1249,6 +1341,7 @@ MessageType sub_to_men(MessageType cola) {
         case SUB_CAUGHT:
             return CAUGHT_POK;
         default:
+            log_error(logger, "Error en sub_to_men");
             exit(EXIT_FAILURE);
     }
 }
@@ -1268,6 +1361,7 @@ t_list* men_to_cola(MessageType tipo) {
         case CAUGHT_POK:
             return LIST_CAUGHT_POKEMON;
         default:
+            log_error(logger, "Error en men_to_cola");
             exit(EXIT_FAILURE);
     }
 }

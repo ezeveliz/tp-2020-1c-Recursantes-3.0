@@ -50,6 +50,8 @@ void *server_function(void *arg);
  * Configuration ends
  */
 
+pthread_mutex_t M_PROCESO;
+
 void* MEMORIA_PRINCIPAL;
 pthread_mutex_t M_MEMORIA_PRINCIPAL;
 
@@ -133,9 +135,10 @@ void mensaje_destroy(int id_mensaje);
 mensaje_subscriptor* mensaje_subscriptor_create(int id_mensaje, int id_sub);
 void* asignar_puntero_a_memoria();
 subscriptor* subscriptor_create(int id, char* ip, int puerto, int socket);
-bool existe_sub(int id, t_list* cola);
+bool existe_sub_en_lista(int id, t_list* cola);
 void subscriptor_delete(int id, t_list* cola);
 void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_cola, MessageType tipo);
+void subscriptor_actualizar_fd(int id, int fd);
 void mensaje_subscriptor_delete(int id_mensaje, int id_subscriptor);
 mensaje* find_mensaje(int id);
 subscriptor* find_subscriptor(int id);
@@ -145,8 +148,8 @@ void recursar_operativos();
 void* mandar_mensaje(void* coso);
 void* mensaje_subscriptor_a_void(mensaje_subscriptor* un_men_sub);
 mensaje_subscriptor* void_a_mensaje_subscriptor(void* stream);
-void* flag_enviado(uint32_t id_sub, uint32_t id_men);
-void* flag_ack(uint32_t id_sub, uint32_t id_men);
+void flag_enviado(uint32_t id_sub, uint32_t id_men);
+void flag_ack(uint32_t id_sub, uint32_t id_men);
 int send_message_test(t_paquete* paquete, int socket);
 particion* particion_create(int base, int tam, bool is_free);
 void particion_delete(int base);

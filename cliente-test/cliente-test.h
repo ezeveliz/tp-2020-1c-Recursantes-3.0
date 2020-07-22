@@ -15,6 +15,13 @@
 #include <commLib/connections.h>
 #include <commLib/structures.h>
 
+int CANTIDAD_MENSAJES_A_ENVIAR;
+
+typedef struct msj {
+    int id_mensaje;
+} msj;
+t_list* PENDIENTES;
+
 typedef struct ClienteTestCFG {
     int id_cliente;
     char* broker_ip;
@@ -32,7 +39,10 @@ int connect_to_broker();
 bool set_config();
 int subscribir_cola(MessageType cola);
 void server();
+void terminar();
 void mandar_mensaje();
+msj* create_msj(int id);
+void delete_msj(int id);
 
 
 #endif //BROKER_CLIENTE_TEST_H

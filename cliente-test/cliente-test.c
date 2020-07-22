@@ -8,31 +8,40 @@ gcc cliente-test.c -o cliente-test -Wall -lcommons -lcommLib -lpthread; ./client
 
 #include "cliente-test.h"
 
+pthread_mutex_t MUTEX;
+
 int main(int argc, char **argv) {
     logger = log_create("cliente_test.log", "CLIENTE_TEST", 1, LOG_LEVEL_TRACE);
-    log_info(logger,"Log started.");
+    log_info(logger, "Log started.");
     bool init_config = set_config();
-    init_config ? log_info(logger,"Config setted up successfully. :)") : log_info(logger,"Error while setting config :|");
+    init_config ? log_info(logger, "Config setted up successfully. :)") : log_info(logger,
+                                                                                   "Error while setting config :|");
     broker_fd = connect_to_broker();
     printf("%d\n", broker_fd);
 
-    if(subscribir_cola(SUB_NEW)){
+    PENDIENTES = list_create();
+    pthread_mutex_init(&MUTEX, NULL);
+
+    if (subscribir_cola(SUB_NEW)) {
         log_info(logger, "Se subscribio bien a NEW");
     }
-    if(subscribir_cola(SUB_APPEARED)){
-        log_info(logger, "Se subscribio bien a LOCALIZED");
+    if (subscribir_cola(SUB_APPEARED)) {
+        log_info(logger, "Se subscribio bien a APPEARED");
     }
 
     pthread_t server_thread;
     pthread_create(&server_thread, NULL, server, NULL);
     pthread_detach(server_thread);
 
-    for (int i = 0; i < 10; ++i) {
+    CANTIDAD_MENSAJES_A_ENVIAR = 100;
+
+    for (int i = 0; i < CANTIDAD_MENSAJES_A_ENVIAR; ++i) {
         int broker_socket_mensaje = connect_to_broker();
         mandar_mensaje(broker_socket_mensaje);
         close_socket(broker_socket_mensaje);
     }
-
+    sleep(1);
+    terminar();
 
     char x;
     scanf("%c", &x);
@@ -42,6 +51,7 @@ int main(int argc, char **argv) {
 void server(){
     bool xd = true;
     while(xd){
+        usleep(1000);
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
         log_info(logger, "Llego aca");
         if(receive_header(broker_fd, buffer_header) > 0) {
@@ -49,10 +59,14 @@ void server(){
             log_info(logger, "Recibi algo");
 
             switch (buffer_header->type) {
-                case (NEW_POK):
-                    log_info(logger, "Me llega un New");
+                case (NEW_POK):;
+                    pthread_mutex_lock(&MUTEX);
                     int id_mensaje = *(int*) list_get(rta_list, 0);
+                    log_debug(logger, "Me llega un New con id \033[1;31m%d\033[0m", id_mensaje);
                     int id_correlativo = *(int*) list_get(rta_list, 1);
+
+                    delete_msj(id_mensaje);
+
                     t_new_pokemon* new_pokemon = void_a_new_pokemon(list_get(rta_list,2));
 
                     // Mando el ACK
@@ -65,6 +79,7 @@ void server(){
                     // Limpieza
                     free_package(paquete);
                     free(new_pokemon);
+                    pthread_mutex_unlock(&MUTEX);
                     break;
 
                 case (APPEARED_POK):
@@ -169,5 +184,36 @@ void mandar_mensaje(int fd){
     // Recibo el id mensaje
     t_list* rta_list = receive_package(fd, buffer_header);
     int id_mensaje_new_pokemon = *(int*) list_get(rta_list, 0);
-    log_info(logger, "Tengo el id de mensaje: %d", id_mensaje_new_pokemon);
+    log_info(logger, "Mande el mensaje mensaje: \033[1;35m%d\033[0m", id_mensaje_new_pokemon);
+    list_add(PENDIENTES, create_msj(id_mensaje_new_pokemon));
+}
+
+void terminar(){
+    log_debug(logger, "Falto recibir los mensajes:");
+    int perdidos;
+    for (int i = 0; i < list_size(PENDIENTES); ++i) {
+        msj* m = list_get(PENDIENTES, i);
+        log_debug(logger, "\t%d", m->id_mensaje);
+        perdidos++;
+    }
+    log_error(logger, "Se perdieron %d/%d", perdidos, CANTIDAD_MENSAJES_A_ENVIAR);
+    log_debug(logger, "FIN");
+    exit(EXIT_SUCCESS);
+}
+
+msj* create_msj(int id){
+    msj* nuevo_msj = malloc(sizeof(msj));
+    nuevo_msj->id_mensaje = id;
+    return nuevo_msj;
+}
+
+void delete_msj(int id){
+    bool id_search(void* un_mensaje){
+        msj* m = (msj*) un_mensaje;
+        return m->id_mensaje == id;
+    }
+    void element_destroyer(void* element){
+        free(element);
+    }
+    list_remove_and_destroy_by_condition(PENDIENTES, id_search, element_destroyer);
 }

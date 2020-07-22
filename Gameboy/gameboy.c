@@ -466,7 +466,7 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             int id_correlativo = *(int*) list_get(rta_list, 1);
 
             //Libero la lista
-            //list_destroy_and_destroy_elements(rta_list, &free);
+            list_destroy_and_destroy_elements(rta_list, &free);
 
             // Mando el ACK
             t_paquete* paquete = create_package(ACK);
@@ -579,7 +579,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
 
             //Libero
             free(newPokemon->nombre_pokemon);
-            free(newPokemon);
+            //free(newPokemon);
             printf("Llego un mensaje new_pok\n");
             break;
         }
@@ -597,7 +597,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             log_info(logger, "Mensaje de cola APEPEARED_POKEMON Id correlativo: %d\n Nombre Pokemon: %s \nPosicion: (%d,%d)\n",
                      id_correlativo, appearedPokemon->nombre_pokemon, appearedPokemon->pos_x, appearedPokemon->pos_y);
             free(appearedPokemon->nombre_pokemon);
-            free(appearedPokemon);
+            //free(appearedPokemon);
             break;
         }
         case CATCH_POK: {
@@ -615,7 +615,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
                      id_correlativo,
                      catchPokemon->nombre_pokemon, catchPokemon->pos_x, catchPokemon->pos_y);
             free(catchPokemon->nombre_pokemon);
-            free(catchPokemon);
+            //free(catchPokemon);
             break;
         }
         case CAUGHT_POK: {
@@ -623,7 +623,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
 
             log_info(logger, "Mensaje de cola CAUGHT_POKEMON Id correlativo: %d\n Fue atrapado: %d\n", id_correlativo,
                      caughtPokemon->atrapado);
-            free(caughtPokemon);
+            //free(caughtPokemon);
             break;
         }
         case GET_POK: {
@@ -635,13 +635,13 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             nombre_pokemon[getPokemon->nombre_pokemon_length] = '\0';
 
 
-            //free(getPokemon->nombre_pokemon);
+            free(getPokemon->nombre_pokemon);
             getPokemon->nombre_pokemon = nombre_pokemon;
 
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
                      getPokemon->nombre_pokemon);
             free(getPokemon->nombre_pokemon);
-            free(getPokemon);
+            //free(getPokemon);
             break;
         }
         case LOCALIZED_POK: {
@@ -657,7 +657,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
             free(localizedPokemon->nombre_pokemon);
-            free(localizedPokemon);
+            //free(localizedPokemon);
             break;
         }
         default:

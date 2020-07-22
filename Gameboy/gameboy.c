@@ -466,7 +466,7 @@ void suscribir(char *cola_mensaje, char *tiempo) {
             int id_correlativo = *(int*) list_get(rta_list, 1);
 
             //Libero la lista
-            list_destroy_and_destroy_elements(rta_list, &free);
+            //list_destroy_and_destroy_elements(rta_list, &free);
 
             // Mando el ACK
             t_paquete* paquete = create_package(ACK);
@@ -635,7 +635,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             nombre_pokemon[getPokemon->nombre_pokemon_length] = '\0';
 
 
-            free(getPokemon->nombre_pokemon);
+            //free(getPokemon->nombre_pokemon);
             getPokemon->nombre_pokemon = nombre_pokemon;
 
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
@@ -652,7 +652,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             memcpy(nombre_pokemon, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
             nombre_pokemon[localizedPokemon->nombre_pokemon_length] = '\0';
 
-            free(localizedPokemon->nombre_pokemon);
+            //free(localizedPokemon->nombre_pokemon);
 
             log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);

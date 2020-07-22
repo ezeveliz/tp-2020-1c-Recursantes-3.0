@@ -351,88 +351,104 @@ void* subscribe_to_queue_thread(void* arg) {
                     // Obtengo el paquetito de appeared
                     t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
 
+                    // Obtengo el nombre de pokemon
+                    pokName = malloc(localizedPokemon->nombre_pokemon_length + 1);
+                    memcpy(pokName, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
+                    pokName[localizedPokemon->nombre_pokemon_length] = '\0';
+
                     // Logueo la llegada del localized
                     char* localized = string_new();
 
                     string_append(&localized, "Ha llegado un nuevo mensaje Localized indicando que ");
                     if (localizedPokemon->cantidad_coordenas > 1) {
 
-                        string_append(&localized, "llegaron ");
+                        string_append(&localized, "hay ");
                         char* cant = string_itoa(localizedPokemon->cantidad_coordenas);
                         string_append(&localized, cant);
                         free(cant);
                         string_append(&localized, " instancias del pokemon ");
+                    } else if(localizedPokemon->cantidad_coordenas == 1){
+
+                        string_append(&localized, "hay una instancia del pokemon ");
                     } else {
 
-                        string_append(&localized, "llego una instancia del pokemon ");
+                        string_append(&localized, "no hay ninguna instancia del pokemon ");
                     }
-                    string_append(&localized, localizedPokemon->nombre_pokemon);
-                    string_append(&localized, " en: [");
+                    string_append(&localized, pokName);
 
                     int i = localizedPokemon->cantidad_coordenas;
 
-                    int* coords = localizedPokemon->coordenadas;
+                    // Solo hago tod.o lo demas si hay alguna instancia
+                    if (i > 0) {
 
-                    while (i > 0) {
+                        string_append(&localized, " en: [");
 
-                        string_append(&localized, "(");
-                        char* pos_x = string_itoa(coords[i*2]);
-                        string_append(&localized, pos_x);
-                        free(pos_x);
-                        string_append(&localized, ", ");
-                        char* pos_y = string_itoa(coords[(i*2) + 1]);
-                        string_append(&localized, pos_y);
-                        free(pos_y);
-                        string_append(&localized, ")");
+                        int* coords = localizedPokemon->coordenadas;
 
-                        i--;
-                    }
-                    string_append(&localized, "]");
-                    log_info(logger, localized);
-                    free(localized);
+                        while (i > 0) {
 
-                    // Obtengo el nombre de pokemon
-                    pokName = localizedPokemon->nombre_pokemon;
+                            string_append(&localized, "(");
+                            char* pos_x = string_itoa(coords[i*2]);
+                            string_append(&localized, pos_x);
+                            free(pos_x);
+                            string_append(&localized, ", ");
+                            char* pos_y = string_itoa(coords[(i*2) + 1]);
+                            string_append(&localized, pos_y);
+                            free(pos_y);
+                            string_append(&localized, ")");
 
-                    // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
-                    if (!list_any_satisfy(pokemons_received, encontrador)) {
+                            i--;
+                        }
+                        string_append(&localized, "]");
+                        log_info(logger, localized);
+                        free(localized);
 
-                        // Hallo la cantidad de pokemones recibidos
-                        int cant = localizedPokemon->cantidad_coordenas;
+                        // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
+                        if (!list_any_satisfy(pokemons_received, encontrador)) {
 
-                        // Hallo el array de coordenadas recibidas
-                        int* coordenadas = localizedPokemon->coordenadas;
+                            // Hallo la cantidad de pokemones recibidos
+                            int cant = localizedPokemon->cantidad_coordenas;
 
-                        // Itero sobre los pokemones recibidos
-                        while(cant > 0) {
+                            // Hallo el array de coordenadas recibidas
+                            int* coordenadas = localizedPokemon->coordenadas;
 
-                            // Instancio un nuevo pokemon
-                            Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+                            // Itero sobre los pokemones recibidos
+                            while(cant > 0) {
 
-                            // Seteo los parametros de la estructura Pokemon
-                            pokemon->especie = pokName;
-                            pokemon->coordenada.pos_x = coordenadas[cant * 2];
-                            pokemon->coordenada.pos_y = coordenadas[(cant * 2) + 1];
+                                // Instancio un nuevo pokemon
+                                Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
-                            // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
-                            pthread_mutex_lock(&mutex_pokemon);
-                            list_add(pokemons, pokemon);
-                            pthread_mutex_unlock(&mutex_pokemon);
+                                // Seteo los parametros de la estructura Pokemon
+                                pokemon->especie = pokName;
+                                pokemon->coordenada.pos_x = coordenadas[cant * 2];
+                                pokemon->coordenada.pos_y = coordenadas[(cant * 2) + 1];
 
-                            cant --;
+                                // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
+                                pthread_mutex_lock(&mutex_pokemon);
+                                list_add(pokemons, pokemon);
+                                pthread_mutex_unlock(&mutex_pokemon);
+
+                                cant --;
+                            }
+
+                            // Agrego el pokemon a la lista de pokemones recibidos(solo nombre)
+                            pthread_mutex_lock(&mutex_pokemons_received);
+                            list_add(pokemons_received, (void*) pokName);
+                            pthread_mutex_unlock(&mutex_pokemons_received);
+
+                            algoritmo_de_cercania();
+
+                            // En este caso ya lo habia recibido, libero la memoria del paquete
+                        } else {
+
+                            // TODO: liberar memoria del paquete
                         }
 
-                        // Agrego el pokemon a la lista de pokemones recibidos(solo nombre)
-                        pthread_mutex_lock(&mutex_pokemons_received);
-                        list_add(pokemons_received, (void*) pokName);
-                        pthread_mutex_unlock(&mutex_pokemons_received);
-
-                        algoritmo_de_cercania();
-
-                        // En este caso ya lo habia recibido, libero la memoria del paquete
+                    // En este caso no se encontraron pokemons
                     } else {
 
-                        // TODO: liberar memoria del paquete
+                        log_info(logger, localized);
+                        free(localized);
                     }
                     break;
 

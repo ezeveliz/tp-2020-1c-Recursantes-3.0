@@ -43,9 +43,9 @@ int main(int argc, char *argv[]) {
 void leer_configuracion(){
     t_config * archConfig = config_create("../gameboy_config");
 
-    config_params.ip_broker = config_get_string_value(archConfig, "IP_GAMECARD");
+    config_params.ip_broker = config_get_string_value(archConfig, "IP_BROKER");
     config_params.puerto_broker = config_get_int_value(archConfig, "PUERTO_BROKER");
-    config_params.ip_team = config_get_string_value(archConfig, "IP_GAMECARD");
+    config_params.ip_team = config_get_string_value(archConfig, "IP_TEAM");
     config_params.puerto_team = config_get_int_value(archConfig, "PUERTO_TEAM");
     config_params.ip_gamecard = config_get_string_value(archConfig, "IP_GAMECARD");
     config_params.puerto_gamecard = config_get_int_value(archConfig, "PUERTO_GAMECARD");

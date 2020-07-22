@@ -43,7 +43,8 @@ TIEMPO_DE_REINTENTO_OPERACION="5"
 TIEMPO_DE_REINTENTO_CONEXION="10"
 MAC="92"
 PUERTO_GAMECARD="5004"
-
+PUNTO_LOG="gamecard.log"
+NIVEL_LOG="1"
 
 # Configuracion personalizada 
 if [ "$1" = "-p" ]
@@ -105,6 +106,10 @@ else
 	echo "MAC=$MAC" >> "$CONFIG"
 
 	echo "PUERTO_GAMECARD=$PUERTO_GAMECARD" >> "$CONFIG"
+	
+	echo "PUNTO_LOG=$PUNTO_LOG" >> "$CONFIG"
+
+	echo "NIVEL_LOG=$NIVEL_LOG" >> "$CONFIG"
 fi
 
 #./gamecard

@@ -638,7 +638,7 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             free(getPokemon->nombre_pokemon);
             getPokemon->nombre_pokemon = nombre_pokemon;
 
-            log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s\n", id_correlativo,
+            log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre: %s\n", id_correlativo,
                      getPokemon->nombre_pokemon);
             free(getPokemon->nombre_pokemon);
             //free(getPokemon);
@@ -652,9 +652,10 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
             memcpy(nombre_pokemon, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
             nombre_pokemon[localizedPokemon->nombre_pokemon_length] = '\0';
 
-            //free(localizedPokemon->nombre_pokemon);
+            free(localizedPokemon->nombre_pokemon);
+            localizedPokemon->nombre_pokemon = nombre_pokemon;
 
-            log_info(logger, "Mensaje de cola GET_POKEMON Id correlativo: %d\n Nombre; %s Cantidad de coordenadas: %d\n",
+            log_info(logger, "Mensaje de cola LOCALIZED_POKEMON Id correlativo: %d\n Nombre: %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
             free(localizedPokemon->nombre_pokemon);
             //free(localizedPokemon);

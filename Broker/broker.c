@@ -767,7 +767,8 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     for (int i = 0; i < list_size(MENSAJES); ++i) {
         mensaje* un_mensaje = list_get(MENSAJES, i);
         if (un_mensaje->tipo == sub_to_men(tipo)){
-            cargar_mensaje(una_cola, un_mensaje);
+            mensaje_subscriptor_create(un_mensaje->id, id);
+
         }
     }
 
@@ -822,7 +823,7 @@ void descargar_mensaje(t_list* una_cola, int un_mensaje){
 bool existe_mensaje_subscriptor(int id_mensaje, int id_subs){
     for (int i = 0; i < list_size(MENSAJE_SUBSCRIPTORE); ++i) {
         mensaje_subscriptor* relacion = list_get(MENSAJE_SUBSCRIPTORE, i);
-        if (relacion->id_mensaje == id_mensaje && relacion->id_subscriptor){
+        if (relacion->id_mensaje == id_mensaje && relacion->id_subscriptor == id_subs){
             return true;
         }
     }

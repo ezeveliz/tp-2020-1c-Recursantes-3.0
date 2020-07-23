@@ -13,7 +13,14 @@ pthread_mutex_t MUTEX;
 int main(int argc, char **argv) {
     logger = log_create("cliente_test.log", "CLIENTE_TEST", 1, LOG_LEVEL_TRACE);
     log_info(logger, "Log started.");
-    bool init_config = set_config();
+    long ID;
+    if (argc != 2) {
+        ID = 69;
+    } else {
+        ID = strtol(argv[1], NULL, 10);;
+    }
+    log_warning(logger, "El id del proceso es: %d", ID);
+    bool init_config = set_config((int)ID);
     init_config ? log_info(logger, "Config setted up successfully. :)") : log_info(logger,
                                                                                    "Error while setting config :|");
     broker_fd = connect_to_broker();
@@ -33,14 +40,17 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server, NULL);
     pthread_detach(server_thread);
 
-    CANTIDAD_MENSAJES_A_ENVIAR = 100;
+    CANTIDAD_MENSAJES_A_ENVIAR = 2;
 
+    sleep(4);
     for (int i = 0; i < CANTIDAD_MENSAJES_A_ENVIAR; ++i) {
         int broker_socket_mensaje = connect_to_broker();
         mandar_mensaje(broker_socket_mensaje);
         close_socket(broker_socket_mensaje);
+        sleep(1);
     }
-    sleep(1);
+//    sleep(10);
+    getchar();
     terminar();
 
     char x;
@@ -98,9 +108,9 @@ void server(){
 }
 
 
-bool set_config(){
+bool set_config(int ID){
 
-    config.id_cliente = 69;
+    config.id_cliente = ID;
     config.broker_ip = "127.0.0.1";
     config.broker_port = 5002;
     config.cliente_test_ip = "127.0.0.1";

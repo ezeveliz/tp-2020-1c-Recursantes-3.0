@@ -36,7 +36,7 @@ t_log * logger;
 int broker_fd;
 
 int connect_to_broker();
-bool set_config();
+bool set_config(int id);
 int subscribir_cola(MessageType cola);
 void server();
 void terminar();

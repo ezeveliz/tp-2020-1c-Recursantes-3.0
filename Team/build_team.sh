@@ -5,101 +5,327 @@
 # Buscanos en redes sociales
 #
 
-#Bajo las pruebas
-git clone https://github.com/sisoputnfrba/delibird-pruebas.git
-cd delibird-pruebas
+clear
 
-# Compilo
-cmake ..
-make
+echo ""
+echo " ████████╗███████╗ █████╗ ███╗   ███╗";
+echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║";
+echo "    ██║   █████╗  ███████║██╔████╔██║";
+echo "    ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║";
+echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║";
+echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝";
+echo "                                     ";
+echo "                   By Recursantes 3.0";
+echo "                                     ";
+echo ""
+echo ""
+
+
+
+
+# Variables prueba Modulo o default
+POSICIONES_ENTRENADORES="[1|3,2|3,3|2]"
+POKEMON_ENTRENADORES="[Pikachu]"
+OBJETIVOS_ENTRENADORES="[Pikachu|Squirtle,Pikachu|Gengar,Squirtle|Onix]"
+TIEMPO_RECONEXION="30"
+RETARDO_CICLO_CPU="5"
+ALGORITMO_PLANIFICACION="FIFO"
+QUANTUM="2"
+ALPHA="0.5"
+ESTIMACION_INICIAL="5"
+PUERTO_TEAM="5005"
+TEAM_ID="123"
+IP_BROKER="127.0.0.1"
+PUERTO_BROKER="5002"
+LOG_FILE="team.log"
 
 #Asigno una variable con el path del archivo de configuracion
 CONFIG="../team.config"
 
 
-# Datos del Team
-echo "Ingrese las posiciones de entrenadores"
-	echo -n "> "
-	read POSICIONES_ENTRENADORES
+conf1(){
+	#Team 1
+	POSICIONES_ENTRENADORES="[1|3,2|3,2|2]"
+	POKEMON_ENTRENADORES="[Pikachu]"
+	OBJETIVOS_ENTRENADORES="[Pikachu|Squirtle,Pikachu|Gengar,Squirtle|Onix]"
+	TIEMPO_RECONEXION="30"
+	RETARDO_CICLO_CPU="5"
+	ALGORITMO_PLANIFICACION="FIFO"
+	QUANTUM="0"
+	ALPHA="0.5"
+	ESTIMACION_INICIAL="5"
+	PUERTO_TEAM="5005"
+	TEAM_ID="123"
+}
 
-echo "POSICIONES_ENTRENADORES=$POSICIONES_ENTRENADORES" > "$CONFIG"
 
-echo "Ingrese los pokemons que tienen los entrenadores"
-	echo -n "> "
-	read POKEMON_ENTRENADORES
+conf2(){
+	#Team 2
+	POSICIONES_ENTRENADORES="[2|3,6|5,9|9,9|2,2|9]"
+	POKEMON_ENTRENADORES="[]"
+	OBJETIVOS_ENTRENADORES="[Vaporeon,Jolteon,Flareon,Umbreon,Espeon]"
+	TIEMPO_RECONEXION="30"
+	RETARDO_CICLO_CPU="5"
+	ALGORITMO_PLANIFICACION="RR"
+	QUANTUM="1"
+	ALPHA="0.5"
+	ESTIMACION_INICIAL="5"
+	PUERTO_TEAM="5006"
+	TEAM_ID="125"
+}
 
-echo "POKEMON_ENTRENADORES=$POKEMON_ENTRENADORES" >> "$CONFIG"
+#Escribo en el archivo
+escribir_config(){
+	echo "POSICIONES_ENTRENADORES=$POSICIONES_ENTRENADORES" > "$CONFIG"
+	echo "POKEMON_ENTRENADORES=$POKEMON_ENTRENADORES" >> "$CONFIG"
+	echo "OBJETIVOS_ENTRENADORES=$OBJETIVOS_ENTRENADORES" >> "$CONFIG"
+	echo "TIEMPO_RECONEXION=$TIEMPO_RECONEXION" >> "$CONFIG"
+	echo "RETARDO_CICLO_CPU=$RETARDO_CICLO_CPU" >> "$CONFIG"
+	echo "ALGORITMO_PLANIFICACION=$ALGORITMO_PLANIFICACION" >> "$CONFIG"
+	echo "ESTIMACION_INICIAL=$ESTIMACION_INICIAL" >> "$CONFIG"
+	echo "IP_BROKER=$IP_BROKER" >> "$CONFIG"
+	echo "PUERTO_BROKER=$PUERTO_BROKER" >> "$CONFIG"
+	echo "PUERTO_TEAM=$PUERTO_TEAM" >> "$CONFIG"
+	echo "LOG_FILE=$LOG_FILE" >> "$CONFIG"
+	echo "TEAM_ID=$TEAM_ID" >> "$CONFIG"
+	echo "QUANTUM=$QUANTUM" >> "$CONFIG"
+	echo "ALPHA=$ALPHA" >> "$CONFIG"
+	
+	echo -e "\t\t\tArchivo config:\n"
+	cat $CONFIG
+}
 
-echo "Ingrese los objetivos de los entrenadores"
-	echo -n "> "
-	read OBJETIVOS_ENTRENADORES
 
-echo "OBJETIVOS_ENTRENADORES=$OBJETIVOS_ENTRENADORES" >> "$CONFIG"
+personalizar(){
+# Si es personalizado las sobreescribo
+	echo -e "\t\t\tPersonalizar config:\n"
+	
+	cat $CONFIG
 
-echo "Ingrese el tiempo de reconexion"
-	echo -n "> "
-	read TIEMPO_RECONEXION
+	echo -e "\n[Enter] para saltear\n"
 
-echo "TIEMPO_RECONEXION=$TIEMPO_RECONEXION" >> "$CONFIG"
+		# Datos Broker
+	echo "Ingrese la IP del Broker"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			IP_BROKER=$X
+		fi
 
-echo "Ingrese el retardo de ciclo de CPU"
-	echo -n "> "
-	read RETARDO_CICLO_CPU
 
-echo "RETARDO_CICLO_CPU=$RETARDO_CICLO_CPU" >> "$CONFIG"
+	echo "Ingrese el Puerto del Broker"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			PUERTO_BROKER=$X
+		fi
 
-echo "Ingrese el algoritmo de planificacion"
-	echo -n "> "
-	read ALGORITMO_PLANIFICACION
 
-echo "ALGORITMO_PLANIFICACION=$ALGORITMO_PLANIFICACION" >> "$CONFIG"
+	# Datos Team
+	echo "Ingrese el Puerto del Team"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			PUERTO_TEAM=$X
+		fi
 
-echo "Ingrese el Quantum"
-	echo -n "> "
-	read QUANTUM
 
-echo "QUANTUM=$QUANTUM" >> "$CONFIG"
+	echo -e "Ingrese las posiciones de entrenadores"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			POSICIONES_ENTRENADORES=$X
+		fi
 
-echo "Ingrese el Alpha"
-	echo -n "> "
-	read ALPHA
 
-echo "ALPHA=$ALPHA" >> "$CONFIG"
+	echo "Ingrese los pokemons que tienen los entrenadores"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			POKEMON_ENTRENADORES=$X
+		fi
 
-echo "Ingrese la estimacion inicial"
-	echo -n "> "
-	read ESTIMACION_INICIAL
 
-echo "ESTIMACION_INICIAL=$ESTIMACION_INICIAL" >> "$CONFIG"
+	echo "Ingrese los objetivos de los entrenadores"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			OBJETIVOS_ENTRENADORES=$X
+		fi
 
-# Datos Broker
-echo "Ingrese la IP del Broker"
-	echo -n "> "
-	read IP_BROKER
 
-echo "IP_BROKER=$IP_BROKER" >> "$CONFIG"
+	echo "Ingrese el tiempo de reconexion"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			TIEMPO_RECONEXION=$X
+		fi
 
-echo "Ingrese el Puerto del Broker"
-	echo -n "> "
-	read PUERTO_BROKER
 
-echo "PUERTO_BROKER=$PUERTO_BROKER" >> "$CONFIG"
+	echo "Ingrese el retardo de ciclo de CPU"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			RETARDO_CICLO_CPU=$X
+		fi
 
-# Datos Team
-echo "Ingrese el Puerto del Team"
-	echo -n "> "
-	read PUERTO_TEAM
 
-echo "PUERTO_TEAM=$PUERTO_TEAM" >> "$CONFIG"
+	echo "Ingrese el algoritmo de planificacion"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			ALGORITMO_PLANIFICACION=$X
+		fi
 
-echo "Ingrese el path del Log File"
-	echo -n "> "
-	read LOG_FILE
 
-echo "LOG_FILE=$LOG_FILE" >> "$CONFIG"
+	echo "Ingrese el Quantum"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			QUANTUM=$X
+		fi
 
-echo "Ingrese el Team ID"
-	echo -n "> "
-	read TEAM_ID
 
-echo "TEAM_ID=$TEAM_ID" >> "$CONFIG"
+	echo "Ingrese el Alpha"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			ALPHA=X$
+		fi
+
+
+	echo "Ingrese la estimacion inicial"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			ESTIMACION_INICIAL=$X
+		fi
+
+
+
+	echo "Ingrese el path del Log File"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			LOG_FILE=$X
+		fi
+
+
+	echo "Ingrese el Team ID"
+		echo -n "> "
+		read X
+		if [[ -n $X ]]; then
+			TEAM_ID=$X
+		fi
+}
+
+
+bajar_pruebas(){
+	#Bajo las pruebas
+	if [ ! -d delibird-pruebas ]
+	then
+    	git clone https://github.com/sisoputnfrba/delibird-pruebas.git
+	else
+		cd delibird-pruebas
+		git pull
+		cd ..
+	fi
+}
+
+buildear(){
+	# Compilo
+	if [ ! -d delibird-pruebas ]
+	then
+		echo "|-----------|
+| TENES     |
+| QUE       |
+| BAJAR     |
+| LAS       |
+| PRUEBAS   |
+| PRIMERO   |
+|-----------|
+(\__/) ||
+(•ㅅ•) ||
+/ 　 づ"
+		sleep 3
+	else
+		cd delibird-pruebas
+		cmake ..
+		make
+		cd ..
+	fi
+}
+
+separador(){
+	echo -e "\n=^..^=   =^..^=   =^..^=    =^..^=    =^..^=    =^..^=    =^..^=\n"
+}
+
+
+menu(){
+	opcion1="ninguna"
+	while [ $opcion1 != "0"  ]
+		do 
+		
+		echo -e "\n\nConfiguraciones Pruebas Finales"
+		echo -e "\t1) Team 1"
+		echo -e "\t2) Team 2"
+		echo -e "\n"
+		echo -e "\tD) Descargar repo de Pruebas"
+		echo -e "\tB) Buildear"
+		echo -e "\tP) Personalizar"
+		echo -e "\n"
+		echo -e "\tE) Ejecutar Team"
+		echo -e "\n"
+		echo -e "\t0) Salir\n"
+		echo -e "\tOpcion: \c"
+
+		read -rn1 opcion1
+
+		if [ -z $opcion1 ] ; then opcion1="ninguna" ; fi
+
+		echo -e "\n"
+
+		separador
+		case $opcion1 in
+			"1" )
+				conf1
+				escribir_config
+				;;
+
+			"2" ) 
+				conf2
+				escribir_config
+				;;
+
+			[bB] )
+				buildear
+				;;
+
+			[dD] )
+				bajar_pruebas
+				;;
+
+			[pP] )
+				personalizar
+				escribir_config
+				;;
+	   
+	   		[eE] )
+				cd delibird-pruebas
+				./team
+				;;
+	   
+			
+			
+			"0" )
+				return
+				;;   
+	   
+			* )  
+				;;
+		esac
+		separador
+	done
+}
+
+menu

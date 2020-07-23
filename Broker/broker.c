@@ -28,6 +28,7 @@ int main(int argc, char **argv) {
     pthread_mutex_init(&M_ARBOL_BUDDY, NULL);
     pthread_mutex_init(&M_INTENTOS, NULL);
     pthread_mutex_init(&M_PROCESO, NULL);
+    pthread_mutex_init(&M_RECURSAR, NULL);
 
     signal(SIGUSR1, dump_cache);
 
@@ -132,6 +133,7 @@ int main(int argc, char **argv) {
     pthread_mutex_destroy(&M_IDENTIFICADOR_MENSAJE);
     pthread_mutex_destroy(&M_PARTICIONES);
     pthread_mutex_destroy(&M_PROCESO);
+    pthread_mutex_destroy(&M_RECURSAR);
 
     log_error(logger, "Salgo del Broker");
     return EXIT_SUCCESS;
@@ -265,9 +267,8 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_new_pokemon(new_pokemon));
                   
                     // Cargamos el un_mensaje a la lista de New_pokemon
-                    pthread_mutex_lock(&M_LIST_NEW_POKEMON);
                     cargar_mensaje(LIST_NEW_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_NEW_POKEMON);
+
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
                     t_paquete* paquete = create_package(NEW_POK);
@@ -275,11 +276,12 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(new_pokemon->nombre_pokemon);
                     free(new_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -297,9 +299,7 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_appeared_pokemon(appeared_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Appeared_pokemon
-                    pthread_mutex_lock(&M_LIST_APPEARED_POKEMON);
                     cargar_mensaje(LIST_APPEARED_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_APPEARED_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -308,11 +308,12 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(appeared_pokemon->nombre_pokemon);
                     free(appeared_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -330,9 +331,7 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_localized_pokemon(localized_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Localized_pokemon
-                    pthread_mutex_lock(&M_LIST_LOCALIZED_POKEMON);
                     cargar_mensaje(LIST_LOCALIZED_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_LOCALIZED_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -341,12 +340,13 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(localized_pokemon->nombre_pokemon);
                     free(localized_pokemon->coordenadas);
                     free(localized_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -364,9 +364,7 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,1), sizeof_caught_pokemon(caught_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Caught_pokemon
-                    pthread_mutex_lock(&M_LIST_CAUGHT_POKEMON);
                     cargar_mensaje(LIST_CAUGHT_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_CAUGHT_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -375,10 +373,11 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(caught_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -395,9 +394,7 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_get_pokemon(get_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Get_pokemon
-                    pthread_mutex_lock(&M_LIST_GET_POKEMON);
                     cargar_mensaje(LIST_GET_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_GET_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -406,11 +403,12 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(get_pokemon->nombre_pokemon);
                     free(get_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
@@ -427,9 +425,7 @@ void *server_function(void *arg) {
                     memcpy(un_mensaje->puntero_a_memoria, list_get(cosas,0), sizeof_catch_pokemon(catch_pokemon));
 
                     // Cargamos el un_mensaje a la lista de Catch_pokemon
-                    pthread_mutex_lock(&M_LIST_CATCH_POKEMON);
                     cargar_mensaje(LIST_CATCH_POKEMON, un_mensaje);
-                    pthread_mutex_unlock(&M_LIST_CATCH_POKEMON);
 
                     //Envio el ID de respuesta
                     int respuesta = un_mensaje->id;
@@ -438,25 +434,26 @@ void *server_function(void *arg) {
                     send_package(paquete, fd);
                     free_package(paquete);
 
+                    pthread_mutex_unlock(&M_PROCESO);
+
                     // Enviamos los mensajes pendientes
                     recursar_operativos();
                     free(catch_pokemon->nombre_pokemon);
                     free(catch_pokemon);
-                    pthread_mutex_unlock(&M_PROCESO);
                     break;
                 }
 
             case ACK:;
                 {
-                    pthread_mutex_lock(&M_PROCESO);
+                    pthread_mutex_lock(&M_RECURSAR);
                     int id_subscriptor = *(int*) list_get(cosas, 0);
                     int id_mensaje = *(int*) list_get(cosas, 1);
+                    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
                     log_info(tp_logger, "Recibimos el ACK del mensaje %d del suscriptor %d",
                              id_mensaje, id_subscriptor);
-                    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
                     flag_ack(id_subscriptor, id_mensaje);
                     pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
-                    pthread_mutex_unlock(&M_PROCESO);
+                    pthread_mutex_unlock(&M_RECURSAR);
                     break;
                 }
 
@@ -852,10 +849,7 @@ subscriptor* find_subscriptor(int id){
 
 // Esta funcion recorre la lista MENSAJE_SUBSCRIPTORE mandando los mensajes pendientes
 void recursar_operativos(){
-    pthread_mutex_lock(&M_MENSAJE_SUBSCRIPTORE);
-    pthread_mutex_lock(&M_PARTICIONES);
-    pthread_mutex_lock(&M_SUBSCRIPTORES);
-    pthread_mutex_lock(&M_MENSAJES);
+    pthread_mutex_lock(&M_RECURSAR);
 
     int cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     log_debug(logger, "Hay %d mensajes pendientes", cantidad_mensajes);
@@ -884,10 +878,7 @@ void recursar_operativos(){
         // Vuelvo a actualizar el tamaño por si entró alguien en el medio
         cantidad_mensajes = list_size(MENSAJE_SUBSCRIPTORE);
     }
-    pthread_mutex_unlock(&M_MENSAJES);
-    pthread_mutex_unlock(&M_SUBSCRIPTORES);
-    pthread_mutex_unlock(&M_PARTICIONES);
-    pthread_mutex_unlock(&M_MENSAJE_SUBSCRIPTORE);
+    pthread_mutex_unlock(&M_RECURSAR);
 }
 int send_message_test(t_paquete* paquete, int socket){
     return 1;
@@ -1091,6 +1082,10 @@ particion* best_fit_search(int tam){
 }
 
 void algoritmo_de_reemplazo(){
+    // Antes de reemplazar, envio los mensajes pendientes
+    recursar_operativos();
+
+
     particion* una_particion;
     if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
         log_debug(logger, "FIFO victim search starts...");

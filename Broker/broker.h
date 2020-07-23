@@ -51,6 +51,7 @@ void *server_function(void *arg);
  */
 
 pthread_mutex_t M_PROCESO;
+pthread_mutex_t M_RECURSAR;
 
 void* MEMORIA_PRINCIPAL;
 pthread_mutex_t M_MEMORIA_PRINCIPAL;

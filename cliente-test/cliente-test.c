@@ -7,6 +7,8 @@ gcc cliente-test.c -o cliente-test -Wall -lcommons -lcommLib -lpthread; ./client
  */
 
 #include "cliente-test.h"
+MessageType sub_to_men(MessageType cola);
+char* cola_to_string(MessageType cola);
 
 pthread_mutex_t MUTEX;
 
@@ -40,17 +42,17 @@ int main(int argc, char **argv) {
     pthread_create(&server_thread, NULL, server, NULL);
     pthread_detach(server_thread);
 
-    CANTIDAD_MENSAJES_A_ENVIAR = 2;
+    CANTIDAD_MENSAJES_A_ENVIAR = 100;
 
-    sleep(4);
+    sleep(3);
     for (int i = 0; i < CANTIDAD_MENSAJES_A_ENVIAR; ++i) {
         int broker_socket_mensaje = connect_to_broker();
         mandar_mensaje(broker_socket_mensaje);
         close_socket(broker_socket_mensaje);
-        sleep(1);
+        usleep(1000);
     }
-//    sleep(10);
-    getchar();
+    sleep(5);
+//    getchar();
     terminar();
 
     char x;
@@ -63,14 +65,14 @@ void server(){
     while(xd){
         usleep(1000);
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
-        log_info(logger, "Llego aca");
+        log_warning(logger, "Wait en SERVER");
+        pthread_mutex_lock(&MUTEX);
         if(receive_header(broker_fd, buffer_header) > 0) {
             t_list *rta_list = receive_package(broker_fd, buffer_header);
             log_info(logger, "Recibi algo");
 
             switch (buffer_header->type) {
                 case (NEW_POK):;
-                    pthread_mutex_lock(&MUTEX);
                     int id_mensaje = *(int*) list_get(rta_list, 0);
                     log_debug(logger, "Me llega un New con id \033[1;31m%d\033[0m", id_mensaje);
                     int id_correlativo = *(int*) list_get(rta_list, 1);
@@ -84,12 +86,12 @@ void server(){
                     add_to_package(paquete, (void*) &config.id_cliente, sizeof(int));
                     add_to_package(paquete, (void*) &id_mensaje, sizeof(int));
 
-                    send_package(paquete, broker_fd);
+                    int resultado_send = send_package(paquete, broker_fd);
+                    log_error(logger, "Resultado del send: %d", resultado_send);
 
                     // Limpieza
                     free_package(paquete);
                     free(new_pokemon);
-                    pthread_mutex_unlock(&MUTEX);
                     break;
 
                 case (APPEARED_POK):
@@ -104,6 +106,8 @@ void server(){
             exit(EXIT_SUCCESS);
         }
         free(buffer_header);
+        log_warning(logger, "Signal en SERVER");
+        pthread_mutex_unlock(&MUTEX);
     }
 }
 
@@ -135,6 +139,8 @@ int connect_to_broker(){
 }
 
 int subscribir_cola(MessageType cola){
+    log_warning(logger, "Wait en SUB");
+    pthread_mutex_lock(&MUTEX);
     // Creo un paquete para la suscripcion a una cola
     t_paquete* paquete = create_package(cola);
 
@@ -158,6 +164,7 @@ int subscribir_cola(MessageType cola){
     // Recibo la confirmacion
     t_list* rta_list = receive_package(broker_fd, buffer_header);
     int rta = *(int*) list_get(rta_list, 0);
+//    log_warning(logger, "Respuesta de subscripcion a %s", cola_to_string(sub_to_men(buffer_header->type)));
 
     // Limpieza
     free(buffer_header);
@@ -166,6 +173,8 @@ int subscribir_cola(MessageType cola){
     }
     list_destroy_and_destroy_elements(rta_list, element_destroyer);
 
+    log_warning(logger, "Signal en SUB");
+    pthread_mutex_unlock(&MUTEX);
     return rta == 1;
 }
 
@@ -226,4 +235,43 @@ void delete_msj(int id){
         free(element);
     }
     list_remove_and_destroy_by_condition(PENDIENTES, id_search, element_destroyer);
+}
+
+MessageType sub_to_men(MessageType cola) {
+    switch (cola) {
+        case SUB_NEW:
+            return NEW_POK;
+        case SUB_GET:
+            return GET_POK;
+        case SUB_CATCH:
+            return CATCH_POK;
+        case SUB_APPEARED:
+            return APPEARED_POK;
+        case SUB_LOCALIZED:
+            return LOCALIZED_POK;
+        case SUB_CAUGHT:
+            return CAUGHT_POK;
+        default:
+            log_error(logger, "Error en sub_to_men");
+            exit(EXIT_FAILURE);
+    }
+}
+
+char* cola_to_string(MessageType cola) {
+    switch (cola) {
+        case NEW_POK:
+            return "NEW_POK";
+        case GET_POK:
+            return "GET_POK";
+        case CATCH_POK:
+            return "CATCH_POK";
+        case APPEARED_POK:
+            return "APPEARED_POK";
+        case LOCALIZED_POK:
+            return "LOCALIZED_POK";
+        case CAUGHT_POK:
+            return "CAUGHT_POK";
+        default:
+            return "No es una cola";
+    }
 }

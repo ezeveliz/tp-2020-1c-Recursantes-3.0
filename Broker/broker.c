@@ -767,7 +767,7 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
     for (int i = 0; i < list_size(MENSAJES); ++i) {
         mensaje* un_mensaje = list_get(MENSAJES, i);
         if (un_mensaje->tipo == sub_to_men(tipo)){
-            cargar_mensaje(una_cola, un_mensaje);
+            mensaje_subscriptor_create(un_mensaje->id, id);
         }
     }
 

@@ -28,36 +28,39 @@ buddy (){
 menu_dos(){
 	opcion1="ninguna"
 	while [ $opcion1 != "0"  ]
-	    do 
+		do 
 		
-		echo -e "\nAlgoritmo de Reemplazo"
+		echo -e "\n\n\nAlgoritmo de Reemplazo"
 		echo -e "\t1) FIFO"
 		echo -e "\t2) LRU"
 		echo -e "\n\t0) Salir\n"
 		echo -e "\tOpcion: \c"
 
-		read opcion1
-	       
-	        if [ -z $opcion1 ] ; then opcion1="ninguna" ; fi
+		read -rn1 opcion1
 
-	        case $opcion1 in 
+		echo -e "\n\n"
+
+		if [ -z $opcion1 ] ; then opcion1="ninguna" ; fi
+
+		case $opcion1 in
 			"1" )
-	              lru_a_fifo $CONFIG     
-	              ./broker $CONFIG
-	  		      ;;
+				lru_a_fifo $CONFIG
+				./broker $CONFIG
+				;;
+
 			"2" ) 
-			      fifo_a_lru $CONFIG
-			      ./broker $CONFIG
-			      ;;
+				fifo_a_lru $CONFIG
+				./broker $CONFIG
+				;;
 	   
 			
 			"0" ) 
-				  clear
-			      return
-			      ;;   
+				clear
+				return
+				;;   
 	   
-	        * )  
-			      ;;
+			* )  
+				;;
 
 		esac
 	done
@@ -67,38 +70,56 @@ menu_dos(){
 
 opcion="ninguna"
 while [ $opcion != "0"  ]
-    do 
+	do 
 	
 	echo -e "\nPruebas Broker"
 	echo -e "\t1) Consolidacion"
 	echo -e "\t2) Compactacion"
 	echo -e "\t3) Buddy System"
-	echo -e "\n\t0) Salir de la herramienta\n"
+	echo -e "\t4) Prueba Final"
+	echo -e "\n\tb) Buildear Broker\n"
+	echo -e "\t0) Salir de la herramienta\n"
 	echo -e "\tOpcion: \c"
 
-	read opcion
-       
-        if [ -z $opcion ] ; then opcion="ninguna" ; fi
+	read -rn1 opcion
 
-        case $opcion in 
+	if [ -z $opcion ] ; then opcion="ninguna" ; fi
+
+	case $opcion in 
 		"1" )
-              consolidacion	     
-  		      ;;
+			consolidacion
+			menu_dos
+  			;;
 		"2" ) 
-		      compactacion
-		      ;;
+			compactacion
+			menu_dos
+			;;
    
 		"3" ) 
-		      buddy
-		      ;;   
+			buddy
+			menu_dos
+			;;   
+
+		"4" )
+			echo -e "\n\n"
+			buddy
+			./broker $CONFIG
+			return
+			;;
+
+		[bB] )
+			echo -e "\n\n"
+			./build_broker.sh
+			echo -e "\n\n=^..^=   =^..^=   =^..^=    =^..^=    =^..^=    =^..^=    =^..^=\n"
+			;;   
 		
 		"0" ) 
-		      exit
-		      ;;   
-   
-        * )  
-		      ;;
-	esac	 
-	menu_dos
+			exit
+			;;
+
+		* )
+			clear  
+			;;
+	esac
 done
 	/usr/bin/clear

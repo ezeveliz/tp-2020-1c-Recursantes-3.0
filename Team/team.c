@@ -388,11 +388,11 @@ void* subscribe_to_queue_thread(void* arg) {
                         while (i > 0) {
 
                             string_append(&localized, "(");
-                            char* pos_x = string_itoa(coords[i*2]);
+                            char* pos_x = string_itoa(coords[(i*2) -2 ]);
                             string_append(&localized, pos_x);
                             free(pos_x);
                             string_append(&localized, ", ");
-                            char* pos_y = string_itoa(coords[(i*2) + 1]);
+                            char* pos_y = string_itoa(coords[(i*2) -1 ]);
                             string_append(&localized, pos_y);
                             free(pos_y);
                             string_append(&localized, ")");
@@ -420,8 +420,8 @@ void* subscribe_to_queue_thread(void* arg) {
 
                                 // Seteo los parametros de la estructura Pokemon
                                 pokemon->especie = pokName;
-                                pokemon->coordenada.pos_x = coordenadas[cant * 2];
-                                pokemon->coordenada.pos_y = coordenadas[(cant * 2) + 1];
+                                pokemon->coordenada.pos_x = coordenadas[(cant * 2) -2];
+                                pokemon->coordenada.pos_y = coordenadas[(cant * 2) -1];
 
                                 // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
                                 pthread_mutex_lock(&mutex_pokemon);

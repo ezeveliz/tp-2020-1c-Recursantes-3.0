@@ -717,7 +717,7 @@ void* mensaje_catch_pokemon(void* parametros){
             add_to_package(paquete, mensaje_serializado, sizeof_caught_pokemon(caught_pokemon));
             envio_mensaje(paquete,configuracion.ip_broker,configuracion.puerto_broker);
 
-            log_debug(logger, "Finalizo a la ejecucion de new pokemon de catch pokemon del hilo: %d ", syscall(SYS_gettid));
+            log_debug(logger, "Finalizo a la ejecucio de catch pokemon del hilo: %d ", syscall(SYS_gettid));
 
             //Libero
             free(mensaje_serializado);

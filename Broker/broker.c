@@ -768,7 +768,6 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
         mensaje* un_mensaje = list_get(MENSAJES, i);
         if (un_mensaje->tipo == sub_to_men(tipo)){
             mensaje_subscriptor_create(un_mensaje->id, id);
-
         }
     }
 

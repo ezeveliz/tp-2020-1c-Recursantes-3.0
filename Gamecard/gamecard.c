@@ -192,15 +192,17 @@ void* subscribe_to_queue_thread(void* arg) {
             // La posicion 0 de la lista recibida es siempre el id correlacional correspondiente
             // El resto del mensajes usa las estructuras locas del Broker(detalladas en la commLib)
 
+
             // En la posicion 0 viene el id de mensaje correlativo
             int idMensaje = *(int *) list_get(rta_list, 0);
-
+            free(list_get(rta_list, 0));
             int idCorrelativo = *(int *) list_get(rta_list, 1);
-
+            free(list_get(rta_list, 1));
             pthread_t funcion_thread;
             estructura_para_hilo* parametros_hilo = malloc(sizeof(estructura_para_hilo));
             parametros_hilo->id = idMensaje;
             parametros_hilo->estructura_pokemon = list_get(rta_list,2);
+
 
             // Switch case que seleccione que hacer con la respuesta segun el tipo de cola
             switch (buffer_header->type) {
@@ -234,6 +236,8 @@ void* subscribe_to_queue_thread(void* arg) {
             // Envio confirmacion al Broker
             send_package(paquete, broker);
 
+            free_package(paquete);
+            list_destroy(rta_list);
             // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
             log_info(logger, conexionPerdida);
@@ -790,10 +794,14 @@ void* mensaje_get_pokemon(void* parametros){
         log_debug(logger,"Finalizo la ejecucion de get pokemon del Hilo: %d ", syscall(SYS_gettid));
 
         //Libero
+        free(path_file);
+        free(path_archvio);
         free_package(paquete);
         free(mensaje_serializado);
         free(datos_param->estructura_pokemon);
         free(parametros);
+        free(localized_pokemon->nombre_pokemon);
+        free(localized_pokemon);
     }else{
 
         //Abro el archivo
@@ -867,7 +875,6 @@ void* mensaje_get_pokemon(void* parametros){
     //Libero los datos del pokemon
     //free(pokemon->nombre_pokemon);
     free(pokemon);
-
     //TODO sacar
 //    mostrar_bitmap();
 

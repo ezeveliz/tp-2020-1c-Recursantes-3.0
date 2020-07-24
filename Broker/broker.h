@@ -77,6 +77,7 @@ typedef struct subscriptor {
     char* ip_subs;
     int puerto_subs;
     int socket;
+    bool conectado;
 } subscriptor;
 t_list* SUBSCRIPTORES;
 pthread_mutex_t M_SUBSCRIPTORES;
@@ -178,5 +179,6 @@ void particion_destroy(particion * unaparticion);
 t_nodo* buscar_nodo_particion(struct t_nodo* nodo, particion* una_particion);
 void buddy_liberar_particion(particion* particion_victima);
 t_nodo* crear_nodo(particion* particion, struct t_nodo* izq, struct t_nodo* der, struct t_nodo* padre, struct t_nodo* buddy, bool es_hoja);
+void disconnect_subscriptor_by_fd(int fd);
 
 #endif //TEAM_BROKER_H

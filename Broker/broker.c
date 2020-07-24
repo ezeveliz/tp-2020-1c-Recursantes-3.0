@@ -188,6 +188,8 @@ void *server_function(void *arg) {
     void lost(int fd, char *ip, int port) {
         //Cierro la conexión fallida
         log_info(logger, "Se perdió una conexión");
+        disconnect_subscriptor_by_fd(fd);
+        log_info(logger, "Se desconecto el fd: %d", fd);
         close(fd);
     }
 
@@ -751,8 +753,8 @@ void subscribir_a_cola(t_list* cosas, char* ip, int puerto, int fd, t_list* una_
         log_debug(logger, "Se crea un nuevo subscriptor de %s - ID:%d FD:%d", cola_to_string(sub_to_men(tipo)), id, fd);
         subscriptor* nuevo_subscriptor = subscriptor_create(id, ip, puerto, fd);
         list_add(una_cola, nuevo_subscriptor);
+        nuevo_subscriptor->conectado = true;
     }
-
 
     int respuesta = 1;
     t_paquete* paquete = create_package(tipo);
@@ -783,6 +785,7 @@ void subscriptor_actualizar_fd(int id, int fd){
         if (un_sub->id_subs == id){
             log_debug(logger, "Actualizamos el subscriptor %d con el fd:%d", id, fd);
             un_sub->socket = fd;
+            un_sub->conectado = true;
         }
     }
 }
@@ -846,6 +849,16 @@ subscriptor* find_subscriptor(int id){
     return encontrado;
 }
 
+void disconnect_subscriptor_by_fd(int fd){
+    bool id_search(void* un_sub){
+        subscriptor* sub = (subscriptor*) un_sub;
+        return sub->socket == fd;
+    }
+
+    subscriptor* encontrado = list_find(SUBSCRIPTORES, id_search);
+    if(encontrado != null){encontrado->conectado = false;}
+}
+
 
 // Esta funcion recorre la lista MENSAJE_SUBSCRIPTORE mandando los mensajes pendientes
 void recursar_operativos(){
@@ -904,7 +917,8 @@ void* mandar_mensaje(void* cosito){
     add_to_package(paquete, (void*) &un_mensaje->id, sizeof(int));
     add_to_package(paquete, (void*) &un_mensaje->id_correlacional, sizeof(int));
     add_to_package(paquete, un_mensaje->puntero_a_memoria, un_mensaje->tam);
-
+    log_error(logger, "Estoy justo antes del send_package()");
+    if(!un_subscriptor->conectado){log_warning(logger,"El subscriptor no se encuentra conectado");return null;}
     if (send_package(paquete, un_subscriptor->socket) > 0){
         log_info(tp_logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
         log_debug(logger, "Se envia el mensaje %d al suscriptor %d", un_mensaje->id, un_subscriptor->id_subs);
@@ -918,6 +932,7 @@ void* mandar_mensaje(void* cosito){
         }
         una_particion->ultimo_uso = unix_epoch();
     }
+    log_error(logger, "Estoy justo despues del send_package()");
     free(coso);
     free(cosito);
     free_package(paquete);

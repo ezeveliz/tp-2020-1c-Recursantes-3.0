@@ -7,18 +7,32 @@
 
 clear
 
-echo ""
-echo " ████████╗███████╗ █████╗ ███╗   ███╗";
-echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║";
-echo "    ██║   █████╗  ███████║██╔████╔██║";
-echo "    ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║";
-echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║";
-echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝";
-echo "                                     ";
-echo "                   By Recursantes 3.0";
-echo "                                     ";
-echo ""
-echo ""
+encabezado(){
+	echo ""
+	echo " ████████╗███████╗ █████╗ ███╗   ███╗";
+	echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║";
+	echo "    ██║   █████╗  ███████║██╔████╔██║";
+	echo "    ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║";
+	echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║";
+	echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝";
+	echo "                                     ";
+	echo "                   By Recursantes 3.0";
+	echo "                                     ";
+	echo ""
+	echo ""
+	echo -e "\n\nConfiguraciones Pruebas Finales"
+	echo -e "\t1) Team 1"
+	echo -e "\t2) Team 2"
+	echo -e "\n"
+	echo -e "\tD) Descargar repo de Pruebas"
+	echo -e "\tB) Buildear"
+	echo -e "\tP) Personalizar"
+	echo -e "\n"
+	echo -e "\tE) Ejecutar Team"
+	echo -e "\n"
+	echo -e "\t0) Salir\n"
+	echo -e "\tOpcion: \c"
+}
 
 
 
@@ -247,24 +261,26 @@ separador(){
 	echo -e "\n=^..^=   =^..^=   =^..^=    =^..^=    =^..^=    =^..^=    =^..^=\n"
 }
 
+# trap ctrl-c and call ctrl_c()
+EJECUTANDO="0"
+function ctrl_c() {
+	if [[ $EJECUTANDO == "1" ]]; then
+		# killall team
+		EJECUTANDO="0"
+		opcion1="ninguna" #Para reiniciar el menu
+	else
+		exit
+	fi
+}
+trap ctrl_c SIGINT
+
 
 menu(){
 	opcion1="ninguna"
 	while [ $opcion1 != "0"  ]
 		do 
 		
-		echo -e "\n\nConfiguraciones Pruebas Finales"
-		echo -e "\t1) Team 1"
-		echo -e "\t2) Team 2"
-		echo -e "\n"
-		echo -e "\tD) Descargar repo de Pruebas"
-		echo -e "\tB) Buildear"
-		echo -e "\tP) Personalizar"
-		echo -e "\n"
-		echo -e "\tE) Ejecutar Team"
-		echo -e "\n"
-		echo -e "\t0) Salir\n"
-		echo -e "\tOpcion: \c"
+		encabezado
 
 		read -rn1 opcion1
 
@@ -309,13 +325,15 @@ menu(){
 (\__/) ||
 (•ㅅ•) ||
 / 　 づ"
+					separador
 					sleep 2
+					buildear
+					separador
 				fi
-				buildear
-				separador
 				echo -e "\t\t\tArchivo config:\n"
 				cat $CONFIG
 				separador
+				EJECUTANDO="1"
 				./team
 				;;
 	   
@@ -326,6 +344,7 @@ menu(){
 				;;   
 	   
 			* )  
+				echo -e "Opcion \"$opcion1\" no reconocida"
 				;;
 		esac
 		separador

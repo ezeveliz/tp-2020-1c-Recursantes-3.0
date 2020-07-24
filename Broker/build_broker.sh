@@ -65,11 +65,33 @@ mostrar_archivo(){
 	separador
 }
 
+ejecutar(){
+	if [ ! -f broker ]
+	then
+		separador
+		echo "|-----------|
+| FALTO     |
+| BUILDEAR, |
+| YO LO     |
+| HAGO      |
+|-----------|
+(\__/) ||
+(•ㅅ•) ||
+/ 　 づ"
+		separador
+		sleep 2
+		buildear
+	fi
+	mostrar_archivo
+	EJECUTANDO="1"
+	./broker $CONFIG
+}
+
 # trap ctrl-c and call ctrl_c()
 EJECUTANDO="0"
 function ctrl_c() {
 	if [[ $EJECUTANDO == "1" ]]; then
-		killall broker
+		# killall broker
 		EJECUTANDO="0"
 		opcion1="0" #Para salir del segundo menu
 		separador
@@ -99,16 +121,12 @@ menu_dos(){
 		case $opcion1 in
 			"1" )
 				lru_a_fifo $CONFIG
-				mostrar_archivo
-				EJECUTANDO="1"
-				./broker $CONFIG
+				ejecutar
 				;;
 
 			"2" ) 
 				fifo_a_lru $CONFIG
-				mostrar_archivo
-				EJECUTANDO="1"
-				./broker $CONFIG
+				ejecutar
 				;;
 	   
 			

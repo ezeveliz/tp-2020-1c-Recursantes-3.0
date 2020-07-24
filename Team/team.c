@@ -1341,12 +1341,12 @@ void* message_function(void* message_package){
                 if (header == CATCH_POK) {
 
                     // Instancio una cosa y la agrego a la lista de mensajes en espera por una rta
-                    WaitingMessage cosa;
-                    cosa.tid = tid;
-                    cosa.id_correlativo = id;
+                    WaitingMessage* cosa = (WaitingMessage*) malloc(sizeof(WaitingMessage));
+                    cosa->tid = tid;
+                    cosa->id_correlativo = id;
 
                     pthread_mutex_lock(&mutex_waiting_list);
-                    list_add(waiting_list, &cosa);
+                    list_add(waiting_list, cosa);
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 

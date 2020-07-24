@@ -196,8 +196,8 @@ int main() {
 }
 
 int read_config_options() {
-    //TODO: Cambiar para la entrega a ../team.config
-    config_file = config_create("team.config");
+
+    config_file = config_create("./team.config");
     if (!config_file) {
         return -1;
     }
@@ -348,108 +348,112 @@ void* subscribe_to_queue_thread(void* arg) {
 
                 case (LOCALIZED_POK):;
 
-                    // Obtengo el paquetito de appeared
-                    t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
 
-                    // Obtengo el nombre de pokemon
-                    pokName = malloc(localizedPokemon->nombre_pokemon_length + 1);
-                    memcpy(pokName, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
-                    pokName[localizedPokemon->nombre_pokemon_length] = '\0';
+                        // Obtengo el paquetito de appeared
+                        t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
 
-                    // Logueo la llegada del localized
-                    char* localized = string_new();
+                        // Obtengo el nombre de pokemon
+                        pokName = malloc(localizedPokemon->nombre_pokemon_length + 1);
+                        memcpy(pokName, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
+                        pokName[localizedPokemon->nombre_pokemon_length] = '\0';
 
-                    string_append(&localized, "Ha llegado un nuevo mensaje Localized indicando que ");
-                    if (localizedPokemon->cantidad_coordenas > 1) {
+                        if(dictionary_has_key(objetivo_global, pokName)){
+                        // Logueo la llegada del localized
+                        char* localized = string_new();
 
-                        string_append(&localized, "hay ");
-                        char* cant = string_itoa(localizedPokemon->cantidad_coordenas);
-                        string_append(&localized, cant);
-                        free(cant);
-                        string_append(&localized, " instancias del pokemon ");
-                    } else if(localizedPokemon->cantidad_coordenas == 1){
+                        string_append(&localized, "Ha llegado un nuevo mensaje Localized indicando que ");
+                        if (localizedPokemon->cantidad_coordenas > 1) {
 
-                        string_append(&localized, "hay una instancia del pokemon ");
-                    } else {
+                            string_append(&localized, "hay ");
+                            char* cant = string_itoa(localizedPokemon->cantidad_coordenas);
+                            string_append(&localized, cant);
+                            free(cant);
+                            string_append(&localized, " instancias del pokemon ");
+                        } else if(localizedPokemon->cantidad_coordenas == 1){
 
-                        string_append(&localized, "no hay ninguna instancia del pokemon ");
-                    }
-                    string_append(&localized, pokName);
-
-                    int i = localizedPokemon->cantidad_coordenas;
-
-                    // Solo hago tod.o lo demas si hay alguna instancia
-                    if (i > 0) {
-
-                        string_append(&localized, " en: [");
-
-                        int* coords = localizedPokemon->coordenadas;
-
-                        while (i > 0) {
-
-                            string_append(&localized, "(");
-                            char* pos_x = string_itoa(coords[(i*2) -2 ]);
-                            string_append(&localized, pos_x);
-                            free(pos_x);
-                            string_append(&localized, ", ");
-                            char* pos_y = string_itoa(coords[(i*2) -1 ]);
-                            string_append(&localized, pos_y);
-                            free(pos_y);
-                            string_append(&localized, ")");
-
-                            i--;
-                        }
-                        string_append(&localized, "]");
-                        log_info(logger, localized);
-                        free(localized);
-
-                        // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
-                        if (!list_any_satisfy(pokemons_received, encontrador)) {
-
-                            // Hallo la cantidad de pokemones recibidos
-                            int cant = localizedPokemon->cantidad_coordenas;
-
-                            // Hallo el array de coordenadas recibidas
-                            int* coordenadas = localizedPokemon->coordenadas;
-
-                            // Itero sobre los pokemones recibidos
-                            while(cant > 0) {
-
-                                // Instancio un nuevo pokemon
-                                Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
-
-                                // Seteo los parametros de la estructura Pokemon
-                                pokemon->especie = pokName;
-                                pokemon->coordenada.pos_x = coordenadas[(cant * 2) -2];
-                                pokemon->coordenada.pos_y = coordenadas[(cant * 2) -1];
-
-                                // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
-                                pthread_mutex_lock(&mutex_pokemon);
-                                list_add(pokemons, pokemon);
-                                pthread_mutex_unlock(&mutex_pokemon);
-
-                                cant --;
-                            }
-
-                            // Agrego el pokemon a la lista de pokemones recibidos(solo nombre)
-                            pthread_mutex_lock(&mutex_pokemons_received);
-                            list_add(pokemons_received, (void*) pokName);
-                            pthread_mutex_unlock(&mutex_pokemons_received);
-
-                            algoritmo_de_cercania();
-
-                            // En este caso ya lo habia recibido, libero la memoria del paquete
+                            string_append(&localized, "hay una instancia del pokemon ");
                         } else {
 
-                            // TODO: liberar memoria del paquete
+                            string_append(&localized, "no hay ninguna instancia del pokemon ");
                         }
+                        string_append(&localized, pokName);
 
-                    // En este caso no se encontraron pokemons
-                    } else {
+                        int i = localizedPokemon->cantidad_coordenas;
 
-                        log_info(logger, localized);
-                        free(localized);
+                        // Solo hago tod.o lo demas si hay alguna instancia
+                        if (i > 0) {
+
+                            string_append(&localized, " en: [");
+
+                            int* coords = localizedPokemon->coordenadas;
+
+                            while (i > 0) {
+
+                                string_append(&localized, "(");
+                                char* pos_x = string_itoa(coords[(i*2) -2 ]);
+                                string_append(&localized, pos_x);
+                                free(pos_x);
+                                string_append(&localized, ", ");
+                                char* pos_y = string_itoa(coords[(i*2) -1 ]);
+                                string_append(&localized, pos_y);
+                                free(pos_y);
+                                string_append(&localized, ")");
+
+                                i--;
+                            }
+                            string_append(&localized, "]");
+                            log_info(logger, localized);
+                            free(localized);
+
+                            // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
+                            if (!list_any_satisfy(pokemons_received, encontrador)) {
+
+                                // Hallo la cantidad de pokemones recibidos
+                                int cant = localizedPokemon->cantidad_coordenas;
+
+                                // Hallo el array de coordenadas recibidas
+                                int* coordenadas = localizedPokemon->coordenadas;
+
+                                // Itero sobre los pokemones recibidos
+                                while(cant > 0) {
+
+                                    // Instancio un nuevo pokemon
+                                    Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
+
+                                    // Seteo los parametros de la estructura Pokemon
+                                    pokemon->especie = pokName;
+                                    pokemon->coordenada.pos_x = coordenadas[(cant * 2) -2];
+                                    pokemon->coordenada.pos_y = coordenadas[(cant * 2) -1];
+
+                                    // Agrego al pokemon a la lista de pokemones que voy a asignar a los entrenadores
+                                    pthread_mutex_lock(&mutex_pokemon);
+                                    list_add(pokemons, pokemon);
+                                    pthread_mutex_unlock(&mutex_pokemon);
+
+                                    cant --;
+                                }
+
+                                // Agrego el pokemon a la lista de pokemones recibidos(solo nombre)
+                                pthread_mutex_lock(&mutex_pokemons_received);
+                                list_add(pokemons_received, (void*) pokName);
+                                pthread_mutex_unlock(&mutex_pokemons_received);
+
+                                algoritmo_de_cercania();
+
+                                // En este caso ya lo habia recibido, libero la memoria del paquete
+                            } else {
+
+                                // TODO: liberar memoria del paquete
+                            }
+
+                            // En este caso no se encontraron pokemons
+                        } else {
+
+                            log_info(logger, localized);
+                            free(localized);
+                        }
                     }
+
                     break;
 
                 case (CAUGHT_POK):;

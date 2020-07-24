@@ -40,7 +40,7 @@ PUERTO_BROKER="5002"
 LOG_FILE="team.log"
 
 #Asigno una variable con el path del archivo de configuracion
-CONFIG="../team.config"
+CONFIG="./team.config"
 
 
 conf1(){

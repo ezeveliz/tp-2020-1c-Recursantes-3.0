@@ -234,26 +234,13 @@ bajar_pruebas(){
 
 buildear(){
 	# Compilo
-	if [ ! -d delibird-pruebas ]
-	then
-		echo "|-----------|
-| TENES     |
-| QUE       |
-| BAJAR     |
-| LAS       |
-| PRUEBAS   |
-| PRIMERO   |
-|-----------|
-(\__/) ||
-(•ㅅ•) ||
-/ 　 づ"
-		sleep 3
-	else
-		cd delibird-pruebas
-		cmake ..
-		make
-		cd ..
-	fi
+	mkdir build/
+	cd build
+	cmake ..
+	make
+	mv team ..
+	cd ..
+	rm -r build/
 }
 
 separador(){
@@ -311,7 +298,24 @@ menu(){
 				;;
 	   
 	   		[eE] )
-				cd delibird-pruebas
+				if [ ! -f team ]
+				then
+					echo "|-----------|
+| FALTO     |
+| BUILDEAR, |
+| YO LO     |
+| HAGO      |
+|-----------|
+(\__/) ||
+(•ㅅ•) ||
+/ 　 づ"
+					sleep 2
+				fi
+				buildear
+				separador
+				echo -e "\t\t\tArchivo config:\n"
+				cat $CONFIG
+				separador
 				./team
 				;;
 	   

@@ -1085,7 +1085,7 @@ void algoritmo_de_reemplazo(){
     // Antes de reemplazar, envio los mensajes pendientes
     recursar_operativos();
 
-
+    pthread_mutex_lock(&M_RECURSAR);
     particion* una_particion;
     if(strcmp(config.mem_swap_algorithm, "FIFO") == 0){
         log_debug(logger, "FIFO victim search starts...");
@@ -1115,6 +1115,7 @@ void algoritmo_de_reemplazo(){
         log_error(logger, "Unexpected algorithm");
         exit(EXIT_FAILURE);
     }
+    pthread_mutex_unlock(&M_RECURSAR);
 }
 
 /*
@@ -1544,9 +1545,7 @@ void buddy_mergear(t_nodo* nodo){
     list_add(PARTICIONES, particion_padre);
     papuchi->particion = particion_padre;
     particion_destroy(nodo_izq->particion);
-    free(nodo_izq->particion);
     particion_destroy(nodo_der->particion);
-    free(nodo_der->particion);
 
     ordenar_particiones();
 
@@ -1562,6 +1561,7 @@ void particion_destroy(particion * unaparticion){
         return sub == unaparticion;
     }
     list_remove_by_condition(PARTICIONES, id_search);
+    free(unaparticion);
 }
 
 void buddy_liberar_particion(particion* particion_victima){

@@ -320,7 +320,7 @@ void* subscribe_to_queue_thread(void* arg) {
         MessageHeader* buffer_header = malloc(sizeof(MessageHeader));
         if(receive_header(broker, buffer_header) > 0) {
 
-            char* pokName;
+            char* pokName = NULL;
 
             // Recibo la respuesta del Broker
             t_list* rta_list = receive_package(broker, buffer_header);
@@ -420,7 +420,8 @@ void* subscribe_to_queue_thread(void* arg) {
                                     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
                                     // Seteo los parametros de la estructura Pokemon
-                                    pokemon->especie = pokName;
+                                    pokemon->especie = malloc(strlen(pokName));
+                                    memcpy(pokemon->especie, pokName, strlen(pokName));
                                     pokemon->coordenada.pos_x = coordenadas[(cant * 2) -2];
                                     pokemon->coordenada.pos_y = coordenadas[(cant * 2) -1];
 
@@ -442,20 +443,26 @@ void* subscribe_to_queue_thread(void* arg) {
                                 // En este caso ya lo habia recibido, libero la memoria del paquete
                             } else {
 
+                                free(pokName);
                                 // TODO: liberar memoria del paquete
                             }
 
                             // En este caso no se encontraron pokemons
                         } else {
 
+                            free(pokName);
                             log_info(logger, localized);
                             free(localized);
                         }
+                    } else {
+
+                        free(pokName);
                     }
 
                     free(localizedPokemon->nombre_pokemon);
                     free(localizedPokemon->coordenadas);
                     free(localizedPokemon);
+                    free(rta_list);
                     break;
 
                 case (CAUGHT_POK):;
@@ -477,6 +484,7 @@ void* subscribe_to_queue_thread(void* arg) {
 
                         // Llamo a la funcion que resuelve los caughts
                         caught_pokemon(mensaje->tid, caughtPokemon->atrapado);
+                        free(mensaje);
                     } else {
 
                         // Logueo el mensaje catch que no era para nosotros
@@ -485,6 +493,12 @@ void* subscribe_to_queue_thread(void* arg) {
                         log_info(logger, caught);
                         free(caught);
                     }
+
+                    free(caughtPokemon);
+
+                    free(list_get(rta_list, 0));
+                    free(list_get(rta_list, 1));
+                    free(rta_list);
                     break;
 
             }
@@ -1356,6 +1370,8 @@ void* message_function(void* message_package){
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 
+                free(list_get(rta_list, 0));
+                free(list_get(rta_list, 1));
                 list_destroy(rta_list);
 
             }
@@ -1803,8 +1819,9 @@ void appeared_pokemon(t_list* paquete){
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
-            pokemon->especie = appearedPokemon->nombre_pokemon;
-            //pokemon->especie = strndup(appearedPokemon->nombre_pokemon, appearedPokemon->nombre_pokemon_length);
+            pokemon->especie = malloc(strlen(appearedPokemon->nombre_pokemon));
+            memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, strlen(appearedPokemon->nombre_pokemon));
+
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
 
@@ -1820,8 +1837,9 @@ void appeared_pokemon(t_list* paquete){
 
     free(list_get(paquete, 0));
     free(list_get(paquete, 1));
+    //free(list_get(paquete, 2));
 
-    //free(appearedPokemon->nombre_pokemon);
+    free(appearedPokemon->nombre_pokemon);
     free(appearedPokemon);
 
     // Destruyo el paquete recibido
@@ -2211,7 +2229,7 @@ void free_resources(){
     list_destroy(estado_block);
     list_destroy(waiting_list);
     list_destroy(pokemons);
-    list_destroy(pokemons_received);
+    free_list(pokemons_received, free);
     void destructor_de_entrenadores(void* _entrenador){
         Entrenador* entrenador = (Entrenador*)_entrenador;
 
@@ -2223,6 +2241,7 @@ void free_resources(){
         free(entrenador);
     }
     list_destroy_and_destroy_elements(estado_finish, destructor_de_entrenadores);
+    dictionary_destroy_and_destroy_elements(objetivo_global, free);
 
     config_destroy(config_file);
     log_destroy(logger);

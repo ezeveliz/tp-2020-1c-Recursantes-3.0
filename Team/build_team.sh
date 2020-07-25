@@ -68,7 +68,9 @@ encabezado(){
 	echo -e "\n\nSetear configuraciones para las Pruebas"
 	echo -e "\t1) Team 1"
 	echo -e "\t2) Team 2"
-	echo -e "\t3) Pruebas Base"
+	echo -e "\t3) Team 1 - 2 da prueba"
+	echo -e "\t4) Team 2 - 2 da prueba"
+	echo -e "\t5) Pruebas Base"
 	echo -e "\n"
 	echo -e "\tD) Descargar repo de Pruebas"
 	echo -e "\tB) Buildear"
@@ -118,6 +120,21 @@ conf1(){
 	TEAM_ID="123"
 }
 
+conf1-1(){
+	#Team 1
+	POSICIONES_ENTRENADORES="[1|3,2|3,2|2]"
+	POKEMON_ENTRENADORES="[Pikachu]"
+	OBJETIVOS_ENTRENADORES="[Pikachu|Squirtle,Pikachu|Gengar,Squirtle|Onix]"
+	TIEMPO_RECONEXION="30"
+	RETARDO_CICLO_CPU="5"
+	ALGORITMO_PLANIFICACION="SJF-SD"
+	QUANTUM="0"
+	ALPHA="0.5"
+	ESTIMACION_INICIAL="5"
+	PUERTO_TEAM="5005"
+	TEAM_ID="123"
+}
+
 
 conf2(){
 	#Team 2
@@ -127,6 +144,21 @@ conf2(){
 	TIEMPO_RECONEXION="30"
 	RETARDO_CICLO_CPU="5"
 	ALGORITMO_PLANIFICACION="RR"
+	QUANTUM="1"
+	ALPHA="0.5"
+	ESTIMACION_INICIAL="5"
+	PUERTO_TEAM="5006"
+	TEAM_ID="125"
+}
+
+conf2-1(){
+	#Team 2
+	POSICIONES_ENTRENADORES="[2|3,6|5,9|9,9|2,2|9]"
+	POKEMON_ENTRENADORES="[]"
+	OBJETIVOS_ENTRENADORES="[Vaporeon,Jolteon,Flareon,Umbreon,Espeon]"
+	TIEMPO_RECONEXION="30"
+	RETARDO_CICLO_CPU="5"
+	ALGORITMO_PLANIFICACION="SJF-CD"
 	QUANTUM="1"
 	ALPHA="0.5"
 	ESTIMACION_INICIAL="5"
@@ -375,8 +407,24 @@ menu(){
 				separador
 				ejecutar
 				;;
-
+			
 			"3" )
+				conf1-1
+				TITULO="3"
+				escribir_config
+				separador
+				ejecutar
+				;;
+
+			"4" ) 
+				conf2-1
+				TITULO="4"
+				escribir_config
+				separador
+				ejecutar
+				;;
+
+			"5" )
 				escribir_config
 				separador
 				ejecutar

@@ -197,7 +197,7 @@ int main() {
 
 int read_config_options() {
 
-    config_file = config_create("./team.config");
+    config_file = config_create("../team.config");
     if (!config_file) {
         return -1;
     }
@@ -348,16 +348,15 @@ void* subscribe_to_queue_thread(void* arg) {
 
                 case (LOCALIZED_POK):;
 
+                    // Obtengo el paquetito de appeared
+                    t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
 
-                        // Obtengo el paquetito de appeared
-                        t_localized_pokemon* localizedPokemon = void_a_localized_pokemon(list_get(rta_list, 2));
+                    // Obtengo el nombre de pokemon
+                    pokName = malloc(localizedPokemon->nombre_pokemon_length + 1);
+                    memcpy(pokName, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
+                    pokName[localizedPokemon->nombre_pokemon_length] = '\0';
 
-                        // Obtengo el nombre de pokemon
-                        pokName = malloc(localizedPokemon->nombre_pokemon_length + 1);
-                        memcpy(pokName, localizedPokemon->nombre_pokemon, localizedPokemon->nombre_pokemon_length);
-                        pokName[localizedPokemon->nombre_pokemon_length] = '\0';
-
-                        if(dictionary_has_key(objetivo_global, pokName)){
+                    if(dictionary_has_key(objetivo_global, pokName)){
                         // Logueo la llegada del localized
                         char* localized = string_new();
 
@@ -454,6 +453,9 @@ void* subscribe_to_queue_thread(void* arg) {
                         }
                     }
 
+                    free(localizedPokemon->nombre_pokemon);
+                    free(localizedPokemon->coordenadas);
+                    free(localizedPokemon);
                     break;
 
                 case (CAUGHT_POK):;
@@ -1354,7 +1356,11 @@ void* message_function(void* message_package){
                     pthread_mutex_unlock(&mutex_waiting_list);
                 }
 
+                list_destroy(rta_list);
+
             }
+
+            free(buffer_header);
         }
 
         // Me desconecto del Broker
@@ -2019,7 +2025,9 @@ bool algoritmo_deadlock(){
                     // Asigno los objetivos correspondientes (entrenadores y pokemons)
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
 
-                    strcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer);
+                    free(entrenador_segundo->pokemon_objetivo->especie);
+                    entrenador_segundo->pokemon_objetivo->especie = malloc(strlen(pokemon_inncesario_primer));
+                    memcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer, strlen(pokemon_inncesario_primer));
                     free(entrenador_primero->pokemon_objetivo->especie);
                     entrenador_primero->pokemon_objetivo->especie = pokemon_intercambiar;
 

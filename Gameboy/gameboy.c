@@ -657,6 +657,9 @@ void logear_mensaje(MessageHeader *buffer_header, t_list *rta_list) {
 
             log_info(logger, "Mensaje de cola LOCALIZED_POKEMON Id correlativo: %d\n Nombre: %s Cantidad de coordenadas: %d\n",
                      id_correlativo, localizedPokemon->nombre_pokemon, localizedPokemon->cantidad_coordenas);
+            for (int i = 0; i < (localizedPokemon->cantidad_coordenas*2); i+=2) {
+                printf("Coordenadas (%d, %d)\n", localizedPokemon->coordenadas[i], localizedPokemon->coordenadas[i+1]);
+            }
             free(localizedPokemon->nombre_pokemon);
             //free(localizedPokemon);
             break;

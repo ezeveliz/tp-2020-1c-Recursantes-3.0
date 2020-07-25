@@ -197,7 +197,7 @@ int main() {
 
 int read_config_options() {
 
-    config_file = config_create("../team.config");
+    config_file = config_create("./team.config");
     if (!config_file) {
         return -1;
     }

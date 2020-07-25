@@ -197,7 +197,7 @@ int main() {
 
 int read_config_options() {
 
-    config_file = config_create("./team.config");
+    config_file = config_create("../team.config");
     if (!config_file) {
         return -1;
     }
@@ -420,8 +420,8 @@ void* subscribe_to_queue_thread(void* arg) {
                                     Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
                                     // Seteo los parametros de la estructura Pokemon
-                                    pokemon->especie = malloc(strlen(pokName));
-                                    memcpy(pokemon->especie, pokName, strlen(pokName));
+                                    pokemon->especie = malloc(strlen(pokName)+1);
+                                    memcpy(pokemon->especie, pokName, strlen(pokName)+1);
                                     pokemon->coordenada.pos_x = coordenadas[(cant * 2) -2];
                                     pokemon->coordenada.pos_y = coordenadas[(cant * 2) -1];
 
@@ -444,7 +444,6 @@ void* subscribe_to_queue_thread(void* arg) {
                             } else {
 
                                 free(pokName);
-                                // TODO: liberar memoria del paquete
                             }
 
                             // En este caso no se encontraron pokemons
@@ -462,6 +461,9 @@ void* subscribe_to_queue_thread(void* arg) {
                     free(localizedPokemon->nombre_pokemon);
                     free(localizedPokemon->coordenadas);
                     free(localizedPokemon);
+                    free(list_get(rta_list, 0));
+                    free(list_get(rta_list, 1));
+                    free(list_get(rta_list, 2));
                     free(rta_list);
                     break;
 
@@ -498,20 +500,20 @@ void* subscribe_to_queue_thread(void* arg) {
 
                     free(list_get(rta_list, 0));
                     free(list_get(rta_list, 1));
+                    free(list_get(rta_list, 2));
                     free(rta_list);
                     break;
 
             }
 
-            // Creo paquete para confirmar recepcion de mesaje al Broker
+            // Creo paquete para confirmar recepcion de mensaje al Broker
             t_paquete* paquete = create_package(ACK);
-            add_to_package(paquete,  (void*)&(config.team_id), sizeof(int));
+            add_to_package(paquete, (void*) &(config.team_id), sizeof(int));
             add_to_package(paquete, (void*) &idMensaje, sizeof(int));
 
             // Envio confirmacion al Broker
             send_package(paquete, broker);
             free_package(paquete);
-            //list_destroy(rta_list);
 
             // Si surgio algun error durante el receive header, me reconecto y vuelvo a iterar
         } else {
@@ -528,7 +530,6 @@ void* subscribe_to_queue_thread(void* arg) {
     free(confirmacion);
     free(conexionPerdida);
     free(conexionReestablecida);
-    // TODO: si eventualmente se sale del while, hacerle free al arg recibido por parametro
     return null;
 }
 
@@ -1819,8 +1820,8 @@ void appeared_pokemon(t_list* paquete){
             // Instancio la estructura pokemon y le seteo todos los parametros recibidos antes
             Pokemon *pokemon = (Pokemon*) malloc(sizeof(Pokemon));
 
-            pokemon->especie = malloc(strlen(appearedPokemon->nombre_pokemon));
-            memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, strlen(appearedPokemon->nombre_pokemon));
+            pokemon->especie = malloc(strlen(appearedPokemon->nombre_pokemon) + 1);
+            memcpy(pokemon->especie, appearedPokemon->nombre_pokemon, strlen(appearedPokemon->nombre_pokemon) + 1);
 
             pokemon->coordenada.pos_x = appearedPokemon->pos_x;
             pokemon->coordenada.pos_y = appearedPokemon->pos_y;
@@ -1837,7 +1838,6 @@ void appeared_pokemon(t_list* paquete){
 
     free(list_get(paquete, 0));
     free(list_get(paquete, 1));
-    //free(list_get(paquete, 2));
 
     free(appearedPokemon->nombre_pokemon);
     free(appearedPokemon);
@@ -2046,9 +2046,12 @@ bool algoritmo_deadlock(){
                     free(entrenador_segundo->pokemon_objetivo->especie);
                     entrenador_segundo->pokemon_objetivo->especie = malloc(strlen(pokemon_inncesario_primer)+1);
                     memcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer, strlen(pokemon_inncesario_primer)+1);
+
                     free(entrenador_primero->pokemon_objetivo->especie);
                     entrenador_primero->pokemon_objetivo->especie = malloc(strlen(pokemon_intercambiar)+1);
                     memcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_intercambiar,strlen(pokemon_intercambiar)+1);
+
+                    free(pokemon_intercambiar);
 
                     entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
                     entrenador_primero->razon_bloqueo = DEADLOCK;

@@ -197,7 +197,7 @@ int main() {
 
 int read_config_options() {
 
-    config_file = config_create("../team.config");
+    config_file = config_create("./team.config");
     if (!config_file) {
         return -1;
     }
@@ -2026,10 +2026,11 @@ bool algoritmo_deadlock(){
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
 
                     free(entrenador_segundo->pokemon_objetivo->especie);
-                    entrenador_segundo->pokemon_objetivo->especie = malloc(strlen(pokemon_inncesario_primer));
-                    memcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer, strlen(pokemon_inncesario_primer));
+                    entrenador_segundo->pokemon_objetivo->especie = malloc(strlen(pokemon_inncesario_primer)+1);
+                    memcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer, strlen(pokemon_inncesario_primer)+1);
                     free(entrenador_primero->pokemon_objetivo->especie);
-                    entrenador_primero->pokemon_objetivo->especie = pokemon_intercambiar;
+                    entrenador_primero->pokemon_objetivo->especie = malloc(strlen(pokemon_intercambiar)+1);
+                    memcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_intercambiar,strlen(pokemon_intercambiar)+1);
 
                     entrenador_primero->razon_movimiento = RESOLUCION_DEADLOCK;
                     entrenador_primero->razon_bloqueo = DEADLOCK;

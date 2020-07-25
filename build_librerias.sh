@@ -42,4 +42,4 @@ sudo make install
 
 cd ../..
 
-
+cp -R Team/ ./Tdos

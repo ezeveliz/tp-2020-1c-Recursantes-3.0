@@ -35,21 +35,33 @@ MAC="15"
 
 
 # Datos obligatorios
+echo "Default: 127.0.0.1"
 echo "Ingrese la ip del Broker"
 	echo -n "> "
 	read IP_BROKER
+	if [[ -z  $IP_BROKER ]]; then
+		IP_BROKER="127.0.0.1"
+	fi
 
 echo "IP_BROKER=$IP_BROKER" > "$CONFIG"
 
+echo "Default: 127.0.0.1"
 echo "Ingrese la ip del Team"
 	echo -n "> "
 	read IP_TEAM
+	if [[ -z  $IP_TEAM ]]; then
+		IP_TEAM="127.0.0.1"
+	fi
 
 echo "IP_TEAM=$IP_TEAM" >> "$CONFIG"
 
+echo "Default: 127.0.0.1"
 echo "Ingrese la ip del Gamecard"
 	echo -n "> "
 	read IP_GAMECARD
+	if [[ -z  $IP_GAMECARD ]]; then
+		IP_GAMECARD="127.0.0.1"
+	fi
 
 echo "IP_GAMECARD=$IP_GAMECARD" >> "$CONFIG"
 

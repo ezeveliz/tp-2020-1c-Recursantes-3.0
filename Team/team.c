@@ -402,7 +402,6 @@ void* subscribe_to_queue_thread(void* arg) {
                             }
                             string_append(&localized, "]");
                             log_info(logger, localized);
-                            free(localized);
 
                             // Verifico que no haya recibido el pokemon ya, si ya lo recibi no lo utilizo
                             if (!list_any_satisfy(pokemons_received, encontrador)) {
@@ -451,8 +450,9 @@ void* subscribe_to_queue_thread(void* arg) {
 
                             free(pokName);
                             log_info(logger, localized);
-                            free(localized);
                         }
+
+                        free(localized);
                     } else {
 
                         free(pokName);
@@ -751,6 +751,7 @@ int initialize_structures() {
         entrenador->tengo_que_desalojar = false;
         entrenador->calcular_estimado = true;
         entrenador->pokemon_objetivo = malloc(sizeof(Pokemon));
+        entrenador->pokemon_objetivo->especie = NULL;
 
         // Obtengo los objetivos y los pokemones que posee el entrenador actual
         char **objetivos_entrenador = string_split(config.objetivos_entrenadores[pos], "|");
@@ -1113,19 +1114,19 @@ void* trainer_thread(void* arg){
                 pokemon_first_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador el pokemon, si existe la key le sumo uno al value, si no existe la creo
-                add_to_dictionary(pokemon_first_trainer,entrenador->stock_pokemons);
+                add_to_dictionary(pokemon_first_trainer, entrenador->stock_pokemons);
 
                 char* pokemon_second_trainer[2];
                 pokemon_second_trainer[0] = entrenador->entrenador_objetivo->pokemon_objetivo->especie;
                 pokemon_second_trainer[1] = NULL;
 
                 //Agrego al stock del entrenador objetivo el pokemon
-                add_to_dictionary(pokemon_second_trainer,entrenador->entrenador_objetivo->stock_pokemons);
+                add_to_dictionary(pokemon_second_trainer, entrenador->entrenador_objetivo->stock_pokemons);
 
                 remover_de_stock(entrenador, *pokemon_first_trainer, *pokemon_second_trainer);
 
-                (*(int*) dictionary_get(entrenador->objetivos_particular,entrenador->pokemon_objetivo->especie))-1;
-                (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular,entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
+                (*(int*) dictionary_get(entrenador->objetivos_particular, entrenador->pokemon_objetivo->especie))-1;
+                (*(int*) dictionary_get(entrenador->entrenador_objetivo->objetivos_particular, entrenador->entrenador_objetivo->pokemon_objetivo->especie))-1;
 
                 list_remove(estado_exec, 0);
                 entrenador->razon_bloqueo = SIN_ESPACIO;
@@ -1893,6 +1894,14 @@ bool algoritmo_de_cercania() {
             //Obtengo el primero que es el mas cercano
             Entrenador *entrenador_cercano = (Entrenador *) list_remove(lista_intermedia, 0);
 
+            if (entrenador_cercano->pokemon_objetivo->especie) {
+                free(entrenador_cercano->pokemon_objetivo->especie);
+            }
+            entrenador_cercano->pokemon_objetivo->especie = malloc(strlen(pokemon->especie)+1);
+            memcpy(entrenador_cercano->pokemon_objetivo->especie, pokemon->especie, strlen(pokemon->especie) + 1);
+            entrenador_cercano->pokemon_objetivo->coordenada.pos_x = pokemon->coordenada.pos_x;
+            entrenador_cercano->pokemon_objetivo->coordenada.pos_y = pokemon->coordenada.pos_y;
+
             bool remover(void *_entrenador) {
                 Entrenador *entrenador = (Entrenador *) _entrenador;
                 return entrenador->tid == entrenador_cercano->tid;
@@ -1903,12 +1912,9 @@ bool algoritmo_de_cercania() {
 
                     list_remove_by_condition(estado_new, remover);
 
-                    memcpy(entrenador_cercano->pokemon_objetivo, pokemon, sizeof(Pokemon));
                     entrenador_cercano->razon_movimiento = CATCH;
                     list_add(estado_ready, entrenador_cercano);
                     entrenador_cercano->estado = READY;
-
-                    free(pokemon);
 
                     sem_post(&new_ready_transition[entrenador_cercano->tid]);
                     break;
@@ -1917,12 +1923,9 @@ bool algoritmo_de_cercania() {
 
                     list_remove_by_condition(estado_block, remover);
 
-                    memcpy(entrenador_cercano->pokemon_objetivo, pokemon, sizeof(Pokemon));
                     entrenador_cercano->razon_movimiento = CATCH;
                     list_add(estado_ready, entrenador_cercano);
                     entrenador_cercano->estado = READY;
-
-                    free(pokemon);
 
                     sem_post(&block_ready_transition[entrenador_cercano->tid]);
                     break;
@@ -1930,6 +1933,9 @@ bool algoritmo_de_cercania() {
                 default:
                     break;
             }
+
+            free(pokemon->especie);
+            free(pokemon);
 
             char* ready = string_new();
             string_append(&ready,"El entrenador ");
@@ -2043,11 +2049,15 @@ bool algoritmo_deadlock(){
                     // Asigno los objetivos correspondientes (entrenadores y pokemons)
                     entrenador_primero->entrenador_objetivo = entrenador_segundo;
 
-                    free(entrenador_segundo->pokemon_objetivo->especie);
+                    if (entrenador_segundo->pokemon_objetivo->especie) {
+                        free(entrenador_segundo->pokemon_objetivo->especie);
+                    }
                     entrenador_segundo->pokemon_objetivo->especie = malloc(strlen(pokemon_inncesario_primer)+1);
                     memcpy(entrenador_segundo->pokemon_objetivo->especie, pokemon_inncesario_primer, strlen(pokemon_inncesario_primer)+1);
 
-                    free(entrenador_primero->pokemon_objetivo->especie);
+                    if (entrenador_primero->pokemon_objetivo->especie) {
+                        free(entrenador_primero->pokemon_objetivo->especie);
+                    }
                     entrenador_primero->pokemon_objetivo->especie = malloc(strlen(pokemon_intercambiar)+1);
                     memcpy(entrenador_primero->pokemon_objetivo->especie, pokemon_intercambiar,strlen(pokemon_intercambiar)+1);
 

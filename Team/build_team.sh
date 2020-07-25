@@ -7,7 +7,7 @@
 
 clear
 
-encabezado(){
+titulo(){
 	echo ""
 	echo " ████████╗███████╗ █████╗ ███╗   ███╗";
 	echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║";
@@ -16,13 +16,56 @@ encabezado(){
 	echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║";
 	echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝";
 	echo "                                     ";
+}
+
+titulo_1(){
+	echo ""
+	echo " ████████╗███████╗ █████╗ ███╗   ███╗     ██╗"
+	echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║    ███║"
+	echo "    ██║   █████╗  ███████║██╔████╔██║    ╚██║"
+	echo "    ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║     ██║"
+	echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║     ██║"
+	echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝     ╚═╝"
+	echo ""
+}
+
+titulo_2(){
+	echo ""
+	echo " ████████╗███████╗ █████╗ ███╗   ███╗    ██████╗ "
+	echo " ╚══██╔══╝██╔════╝██╔══██╗████╗ ████║    ╚════██╗"
+	echo "    ██║   █████╗  ███████║██╔████╔██║     █████╔╝"
+	echo "    ██║   ██╔══╝  ██╔══██║██║╚██╔╝██║    ██╔═══╝ "
+	echo "    ██║   ███████╗██║  ██║██║ ╚═╝ ██║    ███████╗"
+	echo "    ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝     ╚═╝    ╚══════╝"
+	echo ""
+
+}
+
+TITULO="0"
+encabezado(){
+
+	case $TITULO in
+			"1" )
+				titulo_1
+				;;
+
+			"2" ) 
+				titulo_2
+				;;   
+	   
+			* )  
+				titulo
+				;;
+		esac
+
 	echo "                   By Recursantes 3.0";
 	echo "                                     ";
 	echo ""
 	echo ""
-	echo -e "\n\nConfiguraciones Pruebas Finales"
+	echo -e "\n\nSetear configuraciones para las Pruebas"
 	echo -e "\t1) Team 1"
 	echo -e "\t2) Team 2"
+	echo -e "\t3) Pruebas Base"
 	echo -e "\n"
 	echo -e "\tD) Descargar repo de Pruebas"
 	echo -e "\tB) Buildear"
@@ -274,6 +317,30 @@ function ctrl_c() {
 }
 trap ctrl_c SIGINT
 
+ejecutar(){
+	if [ ! -f team ]
+	then
+		echo "|-----------|
+| FALTO     |
+| BUILDEAR, |
+| YO LO     |
+| HAGO      |
+|-----------|
+(\__/) ||
+(•ㅅ•) ||
+/ 　 づ"
+		separador
+		sleep 2
+		buildear
+		separador
+	fi
+	encabezado
+	echo ""
+	separador
+	sleep 1
+	EJECUTANDO="1"
+	./team
+}
 
 menu(){
 	opcion1="ninguna"
@@ -292,12 +359,24 @@ menu(){
 		case $opcion1 in
 			"1" )
 				conf1
+				TITULO="1"
 				escribir_config
+				separador
+				ejecutar
 				;;
 
 			"2" ) 
 				conf2
+				TITULO="2"
 				escribir_config
+				separador
+				ejecutar
+				;;
+
+			"3" )
+				escribir_config
+				separador
+				ejecutar
 				;;
 
 			[bB] )
@@ -314,27 +393,10 @@ menu(){
 				;;
 	   
 	   		[eE] )
-				if [ ! -f team ]
-				then
-					echo "|-----------|
-| FALTO     |
-| BUILDEAR, |
-| YO LO     |
-| HAGO      |
-|-----------|
-(\__/) ||
-(•ㅅ•) ||
-/ 　 づ"
-					separador
-					sleep 2
-					buildear
-					separador
-				fi
 				echo -e "\t\t\tArchivo config:\n"
 				cat $CONFIG
 				separador
-				EJECUTANDO="1"
-				./team
+				ejecutar
 				;;
 	   
 			

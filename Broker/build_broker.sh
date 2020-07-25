@@ -3,7 +3,9 @@
 CONFIG=configs/
 
 encabezado(){
-	echo "
+	clear
+
+	./rainbow.py 5 "
 	██████╗ ██████╗  ██████╗ ██╗  ██╗███████╗██████╗ 
 	██╔══██╗██╔══██╗██╔═══██╗██║ ██╔╝██╔════╝██╔══██╗
 	██████╔╝██████╔╝██║   ██║█████╔╝ █████╗  ██████╔╝
@@ -12,11 +14,12 @@ encabezado(){
 	╚═════╝ ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝
 
 	                               By Recursantes 3.0
-	"
+"
 	echo -e "\nPruebas Broker"
 	echo -e "\t1) Consolidacion"
 	echo -e "\t2) Compactacion"
 	echo -e "\t3) Buddy System / Prueba Final"
+	echo -e "\t4) Prueba Final"
 	echo -e "\n\tB) Buildear Broker\n"
 	echo -e "\t0) Salir de la herramienta\n"
 	echo -e "\tOpcion: \c"	
@@ -101,6 +104,48 @@ function ctrl_c() {
 }
 trap ctrl_c SIGINT
 
+menu_tres(){
+	opcion1="ninguna"
+	while [ $opcion1 != "0" ]
+		do 
+		
+		echo -e "\n\n\nAlgoritmo Memoria"
+		echo -e "\t1) Particiones Dinamicas"
+		echo -e "\t2) Buddy System"
+		echo -e "\n\t0) Salir\n"
+		echo -e "\tOpcion: \c"
+
+		read -rn1 opcion1
+
+		echo -e "\n\n"
+
+		if [ -z $opcion1 ] ; then opcion1="ninguna" ; fi
+
+		case $opcion1 in
+			"1" )
+				CONFIG=configs/final_particiones.cfg
+				ejecutar
+				;;
+
+			"2" ) 
+				CONFIG=configs/final_buddy.cfg
+				ejecutar
+				;;
+	   
+			
+			"0" ) 
+				clear
+				return
+				;;   
+	   
+			* )  
+				;;
+
+		esac
+	done
+
+}
+
 menu_dos(){
 	opcion1="ninguna"
 	while [ $opcion1 != "0"  ]
@@ -144,11 +189,11 @@ menu_dos(){
 }
 
 menu(){
-	encabezado
 	opcion="ninguna"
 	while [ $opcion != "0"  ]
 		do 
 		
+		encabezado 0
 		
 
 		read -rn1 opcion
@@ -169,6 +214,10 @@ menu(){
 			"3" ) 
 				buddy
 				menu_dos
+				;;
+
+			"4" )
+				menu_tres
 				;;   
 
 			[bB] )
@@ -178,7 +227,7 @@ menu(){
 				separador
 				;;   
 			
-			"0" ) 
+			[q0] ) 
 				exit
 				;;
 
@@ -186,10 +235,10 @@ menu(){
 				clear  
 				;;
 		esac
-		encabezado
+		separador
 	done
 		/usr/bin/clear
 }
 
-clear
+#clear
 menu

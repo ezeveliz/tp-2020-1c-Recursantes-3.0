@@ -234,7 +234,7 @@ int read_config_options() {
 //TODO: cambiar el 1 por un 0 para la entrega
 int start_log() {
 
-    logger = log_create(config.log_file, "team", 1, LOG_LEVEL_TRACE);
+    logger = log_create(config.log_file, "team", 0, LOG_LEVEL_TRACE);
     if (!logger) {
         return -1;
     }

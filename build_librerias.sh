@@ -42,4 +42,5 @@ sudo make install
 
 cd ../..
 
+rm -rf ./Tdos
 cp -R Team/ ./Tdos

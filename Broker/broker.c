@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     // Logs propios
     s = fopen(".broker-log-propio.log", "w");
     fclose(s);
-    logger = log_create(".broker-log-propio.log", "BROKER", 1, LOG_LEVEL_TRACE);
+    logger = log_create(".broker-log-propio.log", "BROKER", 0, LOG_LEVEL_TRACE);
     log_info(logger,"Log started.");
 
     set_config();
@@ -85,19 +85,6 @@ int main(int argc, char **argv) {
         log_debug(logger, "Se crea la 'cola' para FIFO");
     }
 
-//    log_warning(logger, "\n░░░░█─────────────█──▀──\n"
-//                      "░░░░▓█───────▄▄▀▀█──────\n"
-//                      "░░░░▒░█────▄█▒░░▄░█─────\n"
-//                      "░░░░░░░▀▄─▄▀▒▀▀▀▄▄▀──DO─\n"
-//                      "░░░░░░░░░█▒░░░░▄▀────IT──\n"
-//                      "▒▒▒░░░░▄▀▒░░░░▄▀───FOR──\n"
-//                      "▓▓▓▓▒░█▒░░░░░█▄───RODRI──\n"
-//                      "█████▀▒░░░░░█░▀▄────────\n"
-//                      "█████▒▒░░░▒█░░░▀▄───────\n"
-//                      "███▓▓▒▒▒▀▀▀█▄░░░░█──────\n"
-//                      "▓██▓▒▒▒▒▒▒▒▒▒█░░░░█─────\n"
-//                      "▓▓█▓▒▒▒▒▒▒▓▒▒█░░░░░█────\n"
-//                      "░▒▒▀▀▄▄▄▄█▄▄▀░░░░░░░█─");
 
 //    tests_broker();
 
